@@ -1,5 +1,7 @@
 package pom;
 
+import java.io.IOException;
+
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -9,8 +11,6 @@ import generic.Verification;
 
 public class LoginPage extends Verification  // super, base, parent
 {
-	public static WebDriver driver;
-	
 	// 1. find all the Webelements in your page.(private)
 	// 2. initialize all the webelements. 
 	// 3. make functions to perform actions in those web elements.
@@ -45,7 +45,7 @@ public class LoginPage extends Verification  // super, base, parent
 	@FindBy(xpath="//button[@type='submit']")
 	private WebElement loginButton;
 	
-	public LoginPage()
+	public LoginPage(WebDriver driver)
 	{
 		super(driver);
 		PageFactory.initElements(driver, this);
@@ -97,13 +97,13 @@ public class LoginPage extends Verification  // super, base, parent
 	}
 	
 	// verify the title of the login page. 
-	public static void verifyLoginPageTitle(String expectedTitle)
+	public void verifyLoginPageTitle(String expectedTitle) throws IOException
 	{
 		verifyTitle(expectedTitle);
 	}
 	
-	public static void verifyLoginPageUrl(String expectedUrl)
+	public void verifyLoginPageUrl(String expectedUrl) throws IOException
 	{
-		verifyUrl(expectedUrl);
+		verifyUrl(expectedUrl);  // verication
 	}
 }
