@@ -1,5 +1,7 @@
 package pom;
 
+import java.io.IOException;
+
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.support.FindBy;
@@ -148,12 +150,12 @@ public class RegisterPage extends Verification  // super, base, parent
 	}
 	
 	// verify the title of the login page. 
-	public static void verifyRegisterPageTitle(String expectedTitle)
+	public void verifyRegisterPageTitle(String expectedTitle) throws IOException
 	{
 		verifyTitle(expectedTitle);
 	}
 	
-	public static void verifyRegisterPageUrl(String expectedUrl)
+	public void verifyRegisterPageUrl(String expectedUrl) throws IOException
 	{
 		verifyUrl(expectedUrl);
 	}
