@@ -8,10 +8,10 @@ import org.testng.annotations.BeforeMethod;
 
 public abstract class OpenClose implements Constants
 {
-	public static WebDriver driver;
+	public WebDriver driver;
 	
 	@BeforeMethod
-	public static void openApplication()
+	public void openApplication()
 	{
 	    driver = new ChromeDriver();
 	    driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
@@ -21,7 +21,7 @@ public abstract class OpenClose implements Constants
 	}
 
 	@AfterMethod
-	public static void closeApplication()
+	public void closeApplication()
 	{
 		driver.quit();
 	}
