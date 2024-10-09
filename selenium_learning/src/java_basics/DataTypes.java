@@ -10,8 +10,6 @@ public class DataTypes {
 		System.out.println("hello world");
 		System.out.println(true);
 		System.out.println(false);
-		
-
+	
 	}
-
 }
