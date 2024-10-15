@@ -62,6 +62,12 @@ const BugHistory = require("./models/BugHistoryModel");
 // import DefectAssignment
 const DefectAssignment = require("./models/DefectAssignmentModel");
 
+// import instructor , course, student, exam modules from CourseModel.js file. 
+const Student = require("./models/CourseModel");
+const Instructor  = require("./models/CourseModel");
+const Course  = require("./models/CourseModel");
+const Exam = require("./models/CourseModel");
+
 // registering a new user , into the application code is working perfectly fine.
 app.post("/register", async (req, res) => {
   const { name, email, password } = req.body;
