@@ -1,1 +1,12 @@
 /.metadata/
+# Ignoring Eclipse files and folders for Core_java
+Core_java/.classpath
+Core_java/.gitignore
+Core_java/.project
+Core_java/.settings/
+
+# Ignoring Eclipse files and folders for crm_hybrid_framework
+crm_hybrid_framework/.classpath
+crm_hybrid_framework/.gitignore
+crm_hybrid_framework/.project
+crm_hybrid_framework/test-output/
