@@ -649,9 +649,6 @@ function App() {
           }
         />
 
-        {/* Bug routes */}
-        {/* route to add a new bug.  */}
-
         <Route
           path="/single-project/:projectId/add-defect"
           element={
