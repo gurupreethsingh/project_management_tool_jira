@@ -81,3 +81,4 @@ selenium_learning/.classpath
 selenium_learning/.gitignore
 selenium_learning/.project
 selenium_learning/.settings/
+/bin/
