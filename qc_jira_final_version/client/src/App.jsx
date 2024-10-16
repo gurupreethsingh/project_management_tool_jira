@@ -61,6 +61,8 @@ import ViewAssignedTasks from "./pages/task_pages/ViewAssignedTasks";
 import TaskHistory from "./pages/task_pages/TaskHistory";
 import AssignDefect from "./pages/developer_pages/AssignDefect";
 import DeveloperAssignedDefects from "./pages/developer_pages/DeveloperAssignedDefects";
+import ProjectManagerDashboard from "./pages/project_manager_pages/ProjectManagerDashboard";
+import DeveloperLeadDashboard from "./pages/developer_pages/DeveloperLeadDashboard";
 
 const PageTitle = ({ title }) => {
   useEffect(() => {
@@ -120,6 +122,8 @@ const TitleUpdater = () => {
       return "Developer Dashboard";
     } else if (pathname === "/create-project") {
       return "Create Project";
+    } else if (pathname === "/project-manager-dashboard") {
+      return "Project Manager Dashboard";
     } else if (pathname === "/all-projects") {
       return "All Projects";
     } else if (pathname === "/all-admins") {
@@ -816,10 +820,44 @@ function App() {
           }
         />
 
+
+
+        {/* project manager dashboard..  */}
+        <Route
+          path="/project-manager-dashboard"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+              ]}
+            >
+              <ProjectManagerDashboard />{" "}
+            </PrivateRoute>
+          }
+        />
+
+        {/* developer lead dashboard.  */}
+        <Route
+          path="/developer-lead-dashboard"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "developer_lead",
+              ]}
+            >
+              <DeveloperLeadDashboard />{" "}
+            </PrivateRoute>
+          }
+        />
+
         <Route path="/page-not-found" element={<PageNotFound />} />
         <Route path="/*" element={<PageNotFound />} />
       </Routes>
-
       <WorkWithUs />
       <NewsLetter />
       <Footer />
