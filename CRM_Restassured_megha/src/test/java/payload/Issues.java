@@ -52,6 +52,4 @@ public class Issues
 		this.assigned_employee_id = assigned_employee_id;
 	}
     
-
-
 }
