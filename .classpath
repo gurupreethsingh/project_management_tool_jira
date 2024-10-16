@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="src" path="Core_java/src"/>
+	<classpathentry kind="src" path="crm_hybrid_framework/src"/>
+	<classpathentry kind="src" path="CRM_Restassured_Iresh/src/main/java"/>
+	<classpathentry kind="src" path="CRM_Restassured_megha/src/test/java"/>
+	<classpathentry kind="src" path="crm_restassured_sunil/src/test/java"/>
+	<classpathentry kind="src" path="selenium_learning/src"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
