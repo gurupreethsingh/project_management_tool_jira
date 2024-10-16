@@ -1,4 +1,4 @@
-package scripts;
+ package scripts;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
@@ -49,7 +49,7 @@ public class EmployeeTest {
 
 	}
 	
-	@Test(priority = 1)
+	@Test(priority = 3)
     public void testGetEmployeeById() {
         // Hardcoded Employee ID for testing
         String hardcodedEmployeeId = "670665d4562c3c0f235f3a52"; // Replace with a valid employee ID from your database
@@ -73,7 +73,7 @@ public class EmployeeTest {
 	}
 	
 	String HARDCODED_EMPLOYEE_ID1= "670665d4562c3c0f235f3a52";
-	@Test(priority = 2)
+	@Test(priority = 5)
 	public void testUpdateEmployeeById() {
 		Response response = EmployeeEndpoints.updatedEmployeeById(HARDCODED_EMPLOYEE_ID1, employee);
 		response.then().log().all();
