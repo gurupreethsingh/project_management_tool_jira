@@ -10,88 +10,74 @@ crm_hybrid_framework/.classpath
 crm_hybrid_framework/.gitignore
 crm_hybrid_framework/.project
 crm_hybrid_framework/test-output/
+crm_hybrid_framework/failed_Screenshots/
 
 crm_automation_java/.classpath
 crm_automation_java/.gitignore
 crm_automation_java/.project
 crm_automation_java/.settings/
-crm_automation_java/test-output/
 
 crm_maven_automation/.classpath
 crm_maven_automation/.gitignore
 crm_maven_automation/.project
 crm_maven_automation/.settings/
-crm_maven_automation/test-output/
 
 CRM_Restassured_Iresh/.classpath
 CRM_Restassured_Iresh/.gitignore
 CRM_Restassured_Iresh/.project
 CRM_Restassured_Iresh/.settings/
-CRM_Restassured_Iresh/test-output/
 
 CRM_Restassured_megha/.classpath
 CRM_Restassured_megha/.gitignore
 CRM_Restassured_megha/.project
 CRM_Restassured_megha/.settings/
-CRM_Restassured_megha/test-output/
 
 srm_restassured_sunil/.classpath
 srm_restassured_sunil/.gitignore
 srm_restassured_sunil/.project
 srm_restassured_sunil/.settings/
-srm_restassured_sunil/test-output/
 
 project_management_tool_jira_automation/.classpath
 project_management_tool_jira_automation/.gitignore
 project_management_tool_jira_automation/.project
 project_management_tool_jira_automation/.settings/
-project_management_tool_jira_automation/test-output/
 
 project_management_tool_jira_hybrid_framework/.classpath
 project_management_tool_jira_hybrid_framework/.gitignore
 project_management_tool_jira_hybrid_framework/.project
 project_management_tool_jira_hybrid_framework/.settings/
-project_management_tool_jira_hybrid_framework/test-output/
 
 
 project_management_tool_jira_rest_assured/.classpath
 project_management_tool_jira_rest_assured/.gitignore
 project_management_tool_jira_rest_assured/.project
 project_management_tool_jira_rest_assured/.settings/
-project_management_tool_jira_rest_assured/test-output/
 
 
 project_management_tool_jira_moven_project/.classpath
 project_management_tool_jira_moven_project/.gitignore
 project_management_tool_jira_moven_project/.project
 project_management_tool_jira_moven_project/.settings/
-project_management_tool_jira_moven_project/test-output/
+
 
 sanashwa_hybrid_framework_maven_project/.classpath
 sanashwa_hybrid_framework_maven_project/.gitignore
 sanashwa_hybrid_framework_maven_project/.project
 sanashwa_hybrid_framework_maven_project/.settings/
-sanashwa_hybrid_framework_maven_project/test-output/
 
 sanashwa_hybrid_java_framework/.classpath
 sanashwa_hybrid_java_framework/.gitignore
 sanashwa_hybrid_java_framework/.project
 sanashwa_hybrid_java_framework/.settings/
-sanashwa_hybrid_java_framework/test-output/
 
 
 sanashwa_normal_java_automation/.classpath
 sanashwa_normal_java_automation/.gitignore
 sanashwa_normal_java_automation/.project
 sanashwa_normal_java_automation/.settings/
-sanashwa_normal_java_automation/test-output/
-
 
 
 selenium_learning/.classpath
 selenium_learning/.gitignore
 selenium_learning/.project
 selenium_learning/.settings/
-selenium_learning/test-output/
-
-/bin/
