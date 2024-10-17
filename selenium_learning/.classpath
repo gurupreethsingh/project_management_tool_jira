@@ -92,6 +92,7 @@
 =======
 	<classpathentry kind="src" path="src"/>
 	<classpathentry exported="true" kind="con" path="org.testng.TESTNG_CONTAINER"/>
+<<<<<<< HEAD
 	<classpathentry kind="lib" path="C:/Users/hp/Desktop/Selenium_4_jarFlies/auto-service-annotations-1.1.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/hp/Desktop/Selenium_4_jarFlies/byte-buddy-1.14.12.jar"/>
 	<classpathentry kind="lib" path="C:/Users/hp/Desktop/Selenium_4_jarFlies/checker-qual-3.41.0.jar"/>
@@ -153,5 +154,7 @@
 	<classpathentry kind="lib" path="C:/Users/hp/Desktop/Selenium_4_jarFlies/selenium-support-4.18.1.jar"/>
 	<classpathentry kind="lib" path="C:/Users/hp/Desktop/Selenium_4_jarFlies/selenium-support-4.18.1-sources.jar"/>
 >>>>>>> 2c656acc8c7c9326784be61f97af129d561e660b
+=======
+>>>>>>> 7247e3953537aafaebfc0e3bde1f075fc2740f0e
 	<classpathentry kind="output" path="bin"/>
 </classpath>
