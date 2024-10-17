@@ -32,10 +32,10 @@ CRM_Restassured_megha/.gitignore
 CRM_Restassured_megha/.project
 CRM_Restassured_megha/.settings/
 
-srm_restassured_sunil/.classpath
-srm_restassured_sunil/.gitignore
-srm_restassured_sunil/.project
-srm_restassured_sunil/.settings/
+crm_restassured_sunil/.classpath
+crm_restassured_sunil/.gitignore
+crm_restassured_sunil/.project
+crm_restassured_sunil/.settings/
 
 project_management_tool_jira_automation/.classpath
 project_management_tool_jira_automation/.gitignore
