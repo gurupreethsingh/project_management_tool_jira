@@ -70,6 +70,8 @@ export default function Header() {
       qa_lead: "/qa-dashboard",
       test_engineer: "/test-engineer-dashboard",
       developer: "/developer-dashboard",
+      developer_lead: "/developer-lead-dashboard",
+      project_manager : "/project-manager-dashboard",
     };
     return dashboardLinks[role] || "/dashboard";
   };
