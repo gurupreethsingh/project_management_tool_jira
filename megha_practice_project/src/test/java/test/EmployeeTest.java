@@ -39,9 +39,50 @@ public class EmployeeTest
 public void testEmployeecreation() 
 {
 	Response response =EmployeeFunction.createEmployee(employee);
-    {
+{
 		response.then().log().all();
 		Assert.assertEquals(response.getStatusCode(), 201);	
+}
+} @Test
+ public void testGetAllemployee()
+{
+    	Response response =EmployeeFunction.getAllemployee();
+{
+    		response.then().log().all();
+    		Assert.assertEquals(response.getStatusCode(), 200);
+}
+}@Test
+ public void testGetemployeeById()
+ {
+	String hardcodedEmployeeId = "670665d4562c3c0f235f3a52"; // Replace with a valid employee ID from your database
+	Response response =EmployeeFunction.getEmployeeByid(hardcodedEmployeeId);
+	{
+	response.then().log().all();
+	Assert.assertEquals(response.getStatusCode(), 200);
+	
+	}			
+ }
+String hardcodedEmployeeId1 = "670665d4562c3c0f235f3a52";
+@Test
+public void testUpdateEmployeeById()
+{
+Response response =EmployeeFunction.updateEmployeebyid(hardcodedEmployeeId1, employee);
+{
+	response.then().log().all();
+	Assert.assertEquals(response.getStatusCode(), 200);
+}
+}
+String HARDCODED_EMPLOYEE_ID1 = "670665d4562c3c0f235f3a52";
+@Test
+public void testDeleteEmployeeById() {
+System.out.println("deleteing employee id: " + HARDCODED_EMPLOYEE_ID1 );
+
+Response response =EmployeeFunction.deleteEmployee( HARDCODED_EMPLOYEE_ID1 );
+{
+	response.then().log().all();
+	Assert.assertEquals(response.getStatusCode(), 200);
 	}
 }
+
+
 }

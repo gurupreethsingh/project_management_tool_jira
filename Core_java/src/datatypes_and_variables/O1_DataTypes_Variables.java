@@ -1,3 +1,4 @@
+
 package datatypes_and_variables;
 
 public class O1_DataTypes_Variables {
