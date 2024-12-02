@@ -11,6 +11,7 @@ public class O2_printing_size_in_bytes
 	        float floatVar = 3.14f;
 	        double doubleVar = 3.14159;
 	        char charVar = 'A';
+	        
 	        boolean booleanVar = true;
 
 	        // Printing each data type

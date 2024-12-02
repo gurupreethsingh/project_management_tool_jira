@@ -1,5 +1,6 @@
 /.metadata/
 # Ignoring Eclipse files and folders for Core_java
+selenium_learning/.classpath
 Core_java/.classpath
 Core_java/.gitignore
 Core_java/.project
@@ -32,10 +33,10 @@ CRM_Restassured_megha/.gitignore
 CRM_Restassured_megha/.project
 CRM_Restassured_megha/.settings/
 
-srm_restassured_sunil/.classpath
-srm_restassured_sunil/.gitignore
-srm_restassured_sunil/.project
-srm_restassured_sunil/.settings/
+crm_restassured_sunil/.classpath
+crm_restassured_sunil/.gitignore
+crm_restassured_sunil/.project
+crm_restassured_sunil/.settings/
 
 project_management_tool_jira_automation/.classpath
 project_management_tool_jira_automation/.gitignore
@@ -69,6 +70,7 @@ sanashwa_hybrid_java_framework/.classpath
 sanashwa_hybrid_java_framework/.gitignore
 sanashwa_hybrid_java_framework/.project
 sanashwa_hybrid_java_framework/.settings/
+sanashwa_hybrid_java_framework/failed_screenshots/
 
 
 sanashwa_normal_java_automation/.classpath
@@ -87,3 +89,9 @@ megha_practice_project/.gitignore
 megha_practice_project/.project
 megha_practice_project/.settings/
 megha_practice_project/test-output/
+
+corejava_project_sunil/.classpath
+corejava_project_sunil/.gitignore
+corejava_project_sunil/.project
+corejava_project_sunil/test-output/
+

@@ -1,4 +1,5 @@
- package scripts;
+
+package scripts;
 
 import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
