@@ -1,5 +1,6 @@
 /.metadata/
 # Ignoring Eclipse files and folders for Core_java
+selenium_learning/.classpath
 Core_java/.classpath
 Core_java/.gitignore
 Core_java/.project
@@ -94,6 +95,3 @@ corejava_project_sunil/.gitignore
 corejava_project_sunil/.project
 corejava_project_sunil/test-output/
 
-
-
-/bin/
