@@ -68,6 +68,9 @@ import CreateRequirement from "./pages/requirement_pages/CreateRequirement";
 // event pages.
 import CreateEvent from "./pages/event_pages/CreateEvent";
 
+// attendence page. 
+import GetAllAttendence from "./pages/attendence_pages/GetAllAttendence";
+
 const PageTitle = ({ title }) => {
   useEffect(() => {
     document.title = `Ecoders - ${title}`;
@@ -876,6 +879,25 @@ function App() {
           element={
             <PrivateRoute>
               <CreateEvent />
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/get-all-attendence"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "developer_lead",
+                "developer",
+                "test_lead",
+                "test_engineer",
+              ]}
+            >
+              <GetAllAttendence />
             </PrivateRoute>
           }
         />

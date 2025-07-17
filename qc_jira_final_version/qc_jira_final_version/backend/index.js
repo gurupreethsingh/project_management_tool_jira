@@ -10,12 +10,15 @@ const multer = require("multer");
 const fs = require("fs");
 const bodyParser = require("body-parser");
 
+const attendenceRoutes = require("./routes/AttendanceRoutes");
+
 app.use(cors());
 
 // import the developer routes.
 const developerRoutes = require("./routes/developer_routes");
 
 app.use("/api/developers", developerRoutes);
+app.use("/api", attendenceRoutes);
 
 app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
