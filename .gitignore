@@ -1,97 +1,136 @@
+########################################
+# 1. EXISTING IGNORES FROM YOUR LIST
+########################################
+
 /.metadata/
-# Ignoring Eclipse files and folders for Core_java
+
+# Eclipse files and folders
 selenium_learning/.classpath
 Core_java/.classpath
 Core_java/.gitignore
 Core_java/.project
 Core_java/.settings/
 
-# Ignoring Eclipse files and folders for crm_hybrid_framework
-crm_hybrid_framework/.classpath
-crm_hybrid_framework/.gitignore
-crm_hybrid_framework/.project
-crm_hybrid_framework/test-output/
-crm_hybrid_framework/failed_Screenshots/
-
-crm_automation_java/.classpath
-crm_automation_java/.gitignore
-crm_automation_java/.project
-crm_automation_java/.settings/
-
-crm_maven_automation/.classpath
-crm_maven_automation/.gitignore
-crm_maven_automation/.project
-crm_maven_automation/.settings/
-
-CRM_Restassured_Iresh/.classpath
-CRM_Restassured_Iresh/.gitignore
-CRM_Restassured_Iresh/.project
-CRM_Restassured_Iresh/.settings/
-
-CRM_Restassured_megha/.classpath
-CRM_Restassured_megha/.gitignore
-CRM_Restassured_megha/.project
-CRM_Restassured_megha/.settings/
-
-crm_restassured_sunil/.classpath
-crm_restassured_sunil/.gitignore
-crm_restassured_sunil/.project
-crm_restassured_sunil/.settings/
-
-project_management_tool_jira_automation/.classpath
-project_management_tool_jira_automation/.gitignore
-project_management_tool_jira_automation/.project
-project_management_tool_jira_automation/.settings/
-
-project_management_tool_jira_hybrid_framework/.classpath
-project_management_tool_jira_hybrid_framework/.gitignore
-project_management_tool_jira_hybrid_framework/.project
-project_management_tool_jira_hybrid_framework/.settings/
-
-
-project_management_tool_jira_rest_assured/.classpath
-project_management_tool_jira_rest_assured/.gitignore
-project_management_tool_jira_rest_assured/.project
-project_management_tool_jira_rest_assured/.settings/
-
-
-project_management_tool_jira_moven_project/.classpath
-project_management_tool_jira_moven_project/.gitignore
-project_management_tool_jira_moven_project/.project
-project_management_tool_jira_moven_project/.settings/
-
-
-sanashwa_hybrid_framework_maven_project/.classpath
-sanashwa_hybrid_framework_maven_project/.gitignore
-sanashwa_hybrid_framework_maven_project/.project
-sanashwa_hybrid_framework_maven_project/.settings/
-
-sanashwa_hybrid_java_framework/.classpath
-sanashwa_hybrid_java_framework/.gitignore
-sanashwa_hybrid_java_framework/.project
-sanashwa_hybrid_java_framework/.settings/
-sanashwa_hybrid_java_framework/failed_screenshots/
-
-
-sanashwa_normal_java_automation/.classpath
-sanashwa_normal_java_automation/.gitignore
-sanashwa_normal_java_automation/.project
-sanashwa_normal_java_automation/.settings/
-
-
 selenium_learning/.classpath
 selenium_learning/.gitignore
 selenium_learning/.project
 selenium_learning/.settings/
-
-megha_practice_project/.classpath
-megha_practice_project/.gitignore
-megha_practice_project/.project
-megha_practice_project/.settings/
-megha_practice_project/test-output/
 
 corejava_project_sunil/.classpath
 corejava_project_sunil/.gitignore
 corejava_project_sunil/.project
 corejava_project_sunil/test-output/
 
+########################################
+# 2. GENERAL FILES TO IGNORE
+########################################
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.idea/
+.vscode/
+*.iml
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+
+########################################
+# 3. MERN STACK (Node.js + React)
+########################################
+
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# Coverage & debug
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Cache
+.cache/
+.next/
+.nuxt/
+out/
+.sass-cache/
+.eslintcache
+
+# React testing
+jest-html-reporters-*
+
+# Firebase / AWS / Supabase config files
+firebase-debug.log
+.aws/
+
+
+########################################
+# 4. JAVA SELENIUM AUTOMATION PROJECTS
+########################################
+
+# Java build
+bin/
+out/
+target/
+classes/
+build/
+
+# Test output
+test-output/
+failed_screenshots/
+surefire-reports/
+extent-reports/
+
+# IDE
+*.project
+*.classpath
+*.settings/
+*.prefs
+
+# Logs & temp files
+*.log
+*.tmp
+
+
+########################################
+# 5. MAVEN AUTOMATION PROJECTS
+########################################
+
+# Maven target folder
+target/
+
+# Maven wrapper files (optional)
+.mvn/wrapper/maven-wrapper.jar
+
+# Reports
+surefire-reports/
+failsafe-reports/
+cucumber-reports/
+allure-results/
+allure-report/
+
+# Temporary screenshots
+screenshots/
+failed_screenshots/
