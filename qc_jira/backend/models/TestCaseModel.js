@@ -94,6 +94,14 @@ const TestCaseTemplateSchema = new Schema({
   test_execution_time: {
     type: String,
   },
+
+  // NEW: execution type (defaults to Manual)
+  test_execution_type: {
+    type: String,
+    enum: ["Manual", "Automation", "Both"],
+    default: "Manual",
+  },
+
   testing_steps: [
     {
       step_number: Number,

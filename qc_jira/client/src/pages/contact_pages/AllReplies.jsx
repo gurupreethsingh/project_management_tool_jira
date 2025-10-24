@@ -8,6 +8,7 @@ import {
   FaThLarge,
   FaTh,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AllReplies = () => {
   const [messages, setMessages] = useState([]);
@@ -18,14 +19,18 @@ const AllReplies = () => {
 
   useEffect(() => {
     fetchMessages();
+    // eslint-disable-next-line
   }, []);
 
   const fetchMessages = async () => {
     try {
       const token = localStorage.getItem("adminToken");
-      const response = await axios.get("http://localhost:5000/all-messages", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await axios.get(
+        `${globalBackendRoute}/api/all-messages`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
       setMessages(
         response.data.map((msg) => ({
           ...msg,
@@ -65,16 +70,13 @@ const AllReplies = () => {
     currentPage * itemsPerPage
   );
 
-  const goToNextPage = () => {
+  const goToNextPage = () =>
     setCurrentPage((prev) => Math.min(prev + 1, totalPages));
-  };
-
-  const goToPreviousPage = () => {
+  const goToPreviousPage = () =>
     setCurrentPage((prev) => Math.max(prev - 1, 1));
-  };
 
-  const renderMessages = () => {
-    return currentMessages.map((message, index) => (
+  const renderMessages = () =>
+    currentMessages.map((message, index) => (
       <div
         key={index}
         className={`shadow rounded-lg p-2 ${
@@ -122,7 +124,6 @@ const AllReplies = () => {
         )}
       </div>
     ));
-  };
 
   return (
     <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -159,6 +160,7 @@ const AllReplies = () => {
       </div>
 
       {view === "list" && <div>{renderMessages()}</div>}
+
       {view === "grid" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {currentMessages.map((message, index) => (
@@ -196,6 +198,7 @@ const AllReplies = () => {
           ))}
         </div>
       )}
+
       {view === "card" && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {currentMessages.map((message, index) => (

@@ -2,6 +2,9 @@ import React, { useState } from "react";
 import axios from "axios";
 import { CalendarDaysIcon, HandRaisedIcon } from "@heroicons/react/24/outline";
 
+// ✅ use the shared API base
+import globalBackendRoute from "../config/Config";
+
 const NewsLetter = () => {
   const [email, setEmail] = useState("");
   const [subscriptionType, setSubscriptionType] = useState("weekly");
@@ -10,7 +13,8 @@ const NewsLetter = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post("http://localhost:5000/api/subscribe", {
+      // ✅ now uses global base + /api
+      const response = await axios.post(`${globalBackendRoute}/api/subscribe`, {
         email,
         subscriptionType,
       });

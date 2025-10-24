@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaThList, FaThLarge, FaTh, FaSearch } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config"; // ✅ use your backend base URL
 
 const AllTestEngineers = () => {
-  const [testEngineers, setTestEngineers] = useState([]); // State to hold fetched test engineers
+  const [testEngineers, setTestEngineers] = useState([]);
   const [view, setView] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -11,7 +12,7 @@ const AllTestEngineers = () => {
     const fetchTestEngineers = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/all-test-engineers" // Use the new API endpoint for test engineers
+          `${globalBackendRoute}/api/users/test-engineers` // ✅ updated path
         );
         setTestEngineers(response.data);
       } catch (error) {
@@ -24,16 +25,15 @@ const AllTestEngineers = () => {
 
   const getImageUrl = (avatar) => {
     if (avatar) {
-      // Replace backslashes with forward slashes and ensure proper relative path usage
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`; // ✅ use backend base
     }
     return "https://via.placeholder.com/150";
   };
 
   const filteredTestEngineers = testEngineers.filter((testEngineer) =>
     [testEngineer.name, testEngineer.email, testEngineer.role]
-      .map((field) => field.toLowerCase())
+      .map((field) => (field || "").toLowerCase())
       .some((field) => field.includes(searchQuery.toLowerCase()))
   );
 
@@ -80,7 +80,7 @@ const AllTestEngineers = () => {
         </div>
 
         {/* Test Engineers Count */}
-        <div className="mb-4 text-lg  text-gray-700">
+        <div className="mb-4 text-lg text-gray-700">
           Total Test Engineers: {filteredTestEngineers.length}
         </div>
 

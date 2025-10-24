@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -9,18 +9,24 @@ import {
   FaArrowLeft,
   FaArrowRight,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
-const TraceabilityMatrix = () => {
+export default function TraceabilityMatrix() {
   const { projectId } = useParams();
-  const [matrix, setMatrix] = useState([]);
-  const [view, setView] = useState("list");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filteredMatrix, setFilteredMatrix] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [cardsPerPage, setCardsPerPage] = useState(6);
 
-  // Count states
+  // raw data
+  const [matrix, setMatrix] = useState([]);
+  const [scenarios, setScenarios] = useState([]);
+
+  // ui state
+  const [view, setView] = useState("list"); // list | grid | card
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [cardsPerPage, setCardsPerPage] = useState(6);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // counters (top summary)
   const [totalScenarios, setTotalScenarios] = useState(0);
   const [totalTestCases, setTotalTestCases] = useState(0);
   const [passCount, setPassCount] = useState(0);
@@ -28,333 +34,471 @@ const TraceabilityMatrix = () => {
   const [defectReportCount, setDefectReportCount] = useState(0);
   const [missingTestCasesCount, setMissingTestCasesCount] = useState(0);
 
-  useEffect(() => {
-    fetchTraceabilityMatrix();
-    adjustCardsPerPage();
-    window.addEventListener("resize", adjustCardsPerPage);
+  // module filter (same behavior as AllScenarios)
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
 
-    return () => {
-      window.removeEventListener("resize", adjustCardsPerPage);
+  // fetch matrix + scenarios (so modules match AllScenarios 1:1)
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+
+        const [matrixRes, scenariosRes] = await Promise.all([
+          axios.get(`${globalBackendRoute}/api/projects/${projectId}/traceability-matrix`, auth),
+          axios.get(`${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`, auth),
+        ]);
+
+        const m = Array.isArray(matrixRes.data) ? matrixRes.data : [];
+        const s = Array.isArray(scenariosRes.data) ? scenariosRes.data : [];
+
+        setMatrix(m);
+        setScenarios(s);
+
+        // counters from matrix
+        setTotalScenarios(m.length);
+        setTotalTestCases(m.filter((i) => i.testCaseNumber).length);
+        setPassCount(m.filter((i) => i.testCaseStatus === "Pass").length);
+        setFailCount(m.filter((i) => i.testCaseStatus === "Fail").length);
+        setDefectReportCount(m.filter((i) => i.defectReportStatus === "Present").length);
+        setMissingTestCasesCount(
+          m.filter((i) => !i.testCaseNumber || i.testCaseNumber === "Missing").length
+        );
+
+        setCurrentPage(1);
+      } catch (err) {
+        console.error("Error fetching data:", err?.message || err);
+      }
+    })();
+  }, [projectId]);
+
+  // responsive page size
+  useEffect(() => {
+    const apply = () => {
+      const w = window.innerWidth;
+      if (view === "card") setCardsPerPage(w >= 1024 ? 6 : 4);
+      else if (view === "grid") setCardsPerPage(w >= 1024 ? 8 : 6);
+      else setCardsPerPage(w >= 1366 ? 5 : 4); // list
     };
-  }, [projectId, view]);
+    apply();
+    const onResize = () => apply();
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [view]);
 
-  const fetchTraceabilityMatrix = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/projects/${projectId}/traceability-matrix`
-      );
-      const matrixData = response.data;
-
-      // Set counts
-      setMatrix(matrixData);
-      setFilteredMatrix(matrixData);
-      setTotalScenarios(matrixData.length);
-      setTotalTestCases(
-        matrixData.filter((item) => item.testCaseNumber).length
-      );
-      setPassCount(
-        matrixData.filter((item) => item.testCaseStatus === "Pass").length
-      );
-      setFailCount(
-        matrixData.filter((item) => item.testCaseStatus === "Fail").length
-      );
-      setDefectReportCount(
-        matrixData.filter((item) => item.defectReportStatus === "Present")
-          .length
-      );
-      setMissingTestCasesCount(
-        matrixData.filter(
-          (item) => !item.testCaseNumber || item.testCaseNumber === "Missing"
-        ).length
-      );
-    } catch (error) {
-      console.error("Error fetching traceability matrix:", error.message);
-    }
-  };
-
-  const adjustCardsPerPage = () => {
-    const width = window.innerWidth;
-
-    // Dynamic card/grid count based on screen width
-    if (view === "card") {
-      if (width >= 1920) setCardsPerPage(6); // 1920×1080: 6 cards
-      else if (width >= 1366) setCardsPerPage(6); // 1366×768: 6 cards
-      else if (width >= 1280) setCardsPerPage(6); // 1280×1024: 6 cards
-      else if (width >= 1024) setCardsPerPage(6); // 1024×768: 6 cards
-    } else if (view === "grid") {
-      if (width >= 1920) setCardsPerPage(10); // 1920×1080: 10 cards
-      else if (width >= 1366) setCardsPerPage(8); // 1366×768: 8 cards
-      else if (width >= 1280) setCardsPerPage(8); // 1280×1024: 8 cards
-      else if (width >= 1024) setCardsPerPage(8); // 1024×768: 8 cards
-    } else if (view === "list") {
-      if (width >= 1920) setCardsPerPage(6);
-      else if (width >= 1366) setCardsPerPage(5);
-      else setCardsPerPage(4);
-    }
-  };
-
-  const getNumberOfColumns = (viewType) => {
-    const width = window.innerWidth;
-
-    if (viewType === "grid") {
-      if (width >= 1920) return "grid-cols-5";
-      if (width >= 1366) return "grid-cols-4";
-      return "grid-cols-3";
-    } else if (viewType === "card") {
-      if (width >= 1920) return "grid-cols-3"; // 1920x1080: 3 cards
-      if (width >= 1366) return "grid-cols-2";
-      return "grid-cols-1";
-    }
-  };
-
+  // debounce search
   useEffect(() => {
-    const searchFilteredMatrix = matrix.filter((item) =>
-      [
-        item.scenarioNumber?.toString(),
-        item.scenarioText,
-        item.testCaseNumber?.toString(),
-        item.defectNumber?.toString(),
-        item.testCaseStatus,
-        item.defectReportStatus,
-      ].some((field) =>
-        field
-          ? field.toString().toLowerCase().includes(searchQuery.toLowerCase())
-          : false
-      )
-    );
-    setFilteredMatrix(searchFilteredMatrix);
-    setTotalPages(Math.ceil(searchFilteredMatrix.length / cardsPerPage));
-  }, [searchQuery, matrix, cardsPerPage]);
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 180);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+  const norm = (v) => (v ?? "").toString().toLowerCase();
+
+  // --- build a lookup from scenarioNumber -> module { _id, name } using the exact AllScenarios shape
+  const scenarioNumToModule = useMemo(() => {
+    const map = new Map();
+    for (const s of scenarios) {
+      // AllScenarios data shape: s.module?._id / s.module?.name
+      const key = s?.scenario_number?.toString();
+      if (!key) continue;
+      map.set(key, {
+        _id: s?.module?._id || "__unassigned__",
+        name: s?.module?.name || "Unassigned",
+      });
+    }
+    return map;
+  }, [scenarios]);
+
+  // module chips (+ counts) using the same logic as AllScenarios
+  const modules = useMemo(() => {
+    const counts = new Map(); // id -> { _id, name, count }
+    // count by module id from scenario lookup
+    for (const row of matrix) {
+      const sn = row?.scenarioNumber?.toString();
+      const m = scenarioNumToModule.get(sn) || { _id: "__unassigned__", name: "Unassigned" };
+      if (!counts.has(m._id)) counts.set(m._id, { _id: m._id, name: m.name, count: 0 });
+      counts.get(m._id).count += 1;
+    }
+    return Array.from(counts.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+  }, [matrix, scenarioNumToModule]);
+
+  // filter (search + module)
+  const filtered = useMemo(() => {
+    const q = norm(debouncedQuery);
+    return matrix.filter((row) => {
+      // module filter identical to AllScenarios (by id)
+      if (selectedModuleId) {
+        const sn = row?.scenarioNumber?.toString();
+        const m = scenarioNumToModule.get(sn) || { _id: "__unassigned__" };
+        if (m._id !== selectedModuleId) return false;
+      }
+      // search fields
+      const fields = [
+        row.scenarioNumber,
+        row.scenarioText,
+        row.testCaseNumber,
+        row.defectNumber,
+        row.testCaseStatus,
+        row.defectReportStatus,
+        (scenarioNumToModule.get(row?.scenarioNumber?.toString()) || {}).name || "Unassigned",
+      ].map(norm);
+      return q ? fields.some((f) => f.includes(q)) : true;
+    });
+  }, [matrix, debouncedQuery, selectedModuleId, scenarioNumToModule]);
+
+  // pagination
+  useEffect(() => {
+    const pages = Math.max(1, Math.ceil(filtered.length / cardsPerPage));
+    setTotalPages(pages);
+    setCurrentPage((p) => Math.min(p, pages) || 1);
+  }, [filtered, cardsPerPage]);
+
+  const indexOfLast = currentPage * cardsPerPage;
+  const indexOfFirst = indexOfLast - cardsPerPage;
+  const current = filtered.slice(indexOfFirst, indexOfLast);
+
+  // view helpers
+  const getNumberOfColumns = (viewType) => {
+    const w = window.innerWidth;
+    if (viewType === "grid") return w >= 1366 ? "grid-cols-4" : "grid-cols-3";
+    if (viewType === "card") return w >= 1366 ? "grid-cols-2" : "grid-cols-1";
+    return "grid-cols-1";
   };
 
-  const renderGridOrCardView = (viewType) => {
-    const columnClass = getNumberOfColumns(viewType);
+  const onModuleClick = (id) => {
+    setSelectedModuleId((prev) => (prev === id ? null : id));
+    setCurrentPage(1);
+  };
+  const clearModuleSelection = () => {
+    setSelectedModuleId(null);
+    setCurrentPage(1);
+  };
 
-    return (
-      <div className={`grid ${columnClass} gap-4 mt-10`}>
-        {filteredMatrix
-          .slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage)
-          .map((item, index) => (
-            <div
-              key={index}
-              className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-            >
-              <div>
-                <div className="text-sm font-semibold text-gray-600">
-                  Scenario Number: {item.scenarioNumber}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Scenario Description: {item.scenarioText}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Test Case Number: {item.testCaseNumber || "N/A"}
-                </div>
-                <div className="text-sm text-gray-600">
-                  Test Case Status:{" "}
-                  {item.testCaseStatus === "Fail" ? (
-                    <span className="text-red-500">Fail</span>
-                  ) : (
-                    <span className="text-green-500">Pass</span>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-      </div>
-    );
+  const getRowModule = (row) => {
+    const sn = row?.scenarioNumber?.toString();
+    return scenarioNumToModule.get(sn) || { _id: "__unassigned__", name: "Unassigned" };
   };
 
   return (
-    <div className="bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex justify-between items-center flex-wrap">
+    <div className="bg-white py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header / Controls (matches AllScenarios) */}
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
-            <h2 className="text-left font-semibold tracking-tight text-indigo-600 sm:text-1xl">
+            <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
               Traceability Matrix for Project: {projectId}
             </h2>
+            <p className="text-xs text-gray-600 mt-1">
+              Total Scenarios: {totalScenarios} | Expected TestCases: {totalTestCases} |{" "}
+              <span className="text-rose-600">Missing Test Cases: {missingTestCasesCount}</span> |{" "}
+              <span className="text-emerald-600">Pass: {passCount}</span> |{" "}
+              <span className="text-rose-600">Fail: {failCount}</span> |{" "}
+              <span className="text-rose-600">Missing Defect Reports: {defectReportCount}</span>
+            </p>
+            {searchQuery && (
+              <p className="text-xs text-gray-600">
+                Showing {filtered.length} result(s) for “{searchQuery}”
+              </p>
+            )}
           </div>
-          <div className="flex items-center space-x-4 flex-wrap">
+
+          <div className="flex items-center gap-3 flex-wrap">
             <FaThList
-              className={`text-xl cursor-pointer ${
-                view === "list" ? "text-blue-400" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "list" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("list")}
+              title="List view"
             />
             <FaThLarge
-              className={`text-xl cursor-pointer ${
-                view === "card" ? "text-blue-400" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "card" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("card")}
+              title="Card view"
             />
             <FaTh
-              className={`text-xl cursor-pointer ${
-                view === "grid" ? "text-blue-400" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "grid" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("grid")}
+              title="Grid view"
             />
+
             <div className="relative">
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
               <input
                 type="text"
-                className="pl-10 pr-4 py-2 border rounded-md focus:outline-none"
+                className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
                 placeholder="Search..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <div>
-              <Link
-                to={`/single-project/${projectId}`}
-                className="bg-indigo-700 text-white px-3 py-2 rounded-md hover:bg-indigo-900"
-              >
-                Project Dashboard
-              </Link>
-            </div>
+
+            <Link
+              to={`/single-project/${projectId}`}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+            >
+              Project Dashboard
+            </Link>
           </div>
         </div>
-        <div>
-          <p className="text-sm text-gray-600 mt-2">
-            Total Scenarios: {totalScenarios} | Expected TestCases:{" "}
-            {totalTestCases} |{" "}
-            <span className="text-red-600">
-              Missing Test Cases: {missingTestCasesCount}
-            </span>{" "}
-            |{" "}
-            <span className="text-green-600">
-              Pass Test Cases: {passCount}{" "}
-            </span>{" "}
-            |{" "}
-            <span className="text-red-600">Fail Test Cases : {failCount}</span>{" "}
-            |
-            <span className="text-red-600">
-              Missing Defect Reports: {defectReportCount}
-            </span>{" "}
-          </p>
-          {searchQuery && (
-            <p className="text-sm text-gray-600">
-              Showing {filteredMatrix.length} result(s) for "{searchQuery}"
-            </p>
-          )}
+
+        {/* Module chips row — identical behavior to AllScenarios */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-slate-700">Filter by Module</h3>
+            <button
+              onClick={clearModuleSelection}
+              className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {modules.map((m) => {
+              const active = selectedModuleId === m._id;
+              return (
+                <button
+                  key={m._id}
+                  onClick={() => onModuleClick(m._id)}
+                  className={[
+                    "whitespace-nowrap px-3 py-1 rounded-full border text-[12px]",
+                    active
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
+                  ].join(" ")}
+                  title={`${m.name} (${m.count})`}
+                >
+                  {m.name} <span className="opacity-70 ml-1">({m.count})</span>
+                </button>
+              );
+            })}
+            {modules.length === 0 && (
+              <span className="text-slate-500 text-sm">No modules found</span>
+            )}
+          </div>
         </div>
 
-        {view === "list" ? (
-          <div className="mt-10 space-y-6">
-            {filteredMatrix
-              .slice(
-                (currentPage - 1) * cardsPerPage,
-                currentPage * cardsPerPage
-              )
-              .map((item, index) => (
+        {/* LIST VIEW — compact, single global header (same layout spirit as AllScenarios) */}
+        {view === "list" && (
+          <div className="mt-5">
+            <div className="grid grid-cols-[56px,120px,1fr,160px,140px,120px,120px,120px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
+              <div>#</div>
+              <div>Scenario</div>
+              <div>Text</div>
+              <div>Module</div>
+              <div>TestCase #</div>
+              <div>Status</div>
+              <div>Defect #</div>
+              <div>Defect Report</div>
+            </div>
+
+            <div className="divide-y divide-slate-200">
+              {current.map((it, idx) => {
+                const m = getRowModule(it);
+                return (
+                  <div
+                    key={`${it.scenarioNumber}-${idx}`}
+                    className="grid grid-cols-[56px,120px,1fr,160px,140px,120px,120px,120px] items-center text-[12px] px-3 py-2"
+                  >
+                    <div className="text-slate-700">{indexOfFirst + idx + 1}</div>
+
+                    <div className="text-slate-900 font-medium truncate">
+                      {it.scenarioNumber}
+                    </div>
+
+                    <div className="text-slate-700 line-clamp-2">
+                      {it.scenarioText}
+                    </div>
+
+                    <div className="truncate">
+                      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                        {m.name}
+                      </span>
+                    </div>
+
+                    <div
+                      className={`truncate ${
+                        it.testCaseNumber === "Missing"
+                          ? "text-rose-600 font-semibold"
+                          : "text-slate-800"
+                      }`}
+                    >
+                      {it.testCaseNumber || "N/A"}
+                    </div>
+
+                    <div
+                      className={`font-semibold ${
+                        it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
+                      }`}
+                    >
+                      {it.testCaseStatus || "N/A"}
+                    </div>
+
+                    <div className="text-slate-800 truncate">
+                      {it.defectNumber || "N/A"}
+                    </div>
+
+                    <div
+                      className={`font-semibold ${
+                        it.defectReportStatus === "Present"
+                          ? "text-emerald-600"
+                          : "text-rose-600"
+                      }`}
+                    >
+                      {it.defectReportStatus || "N/A"}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* GRID VIEW */}
+        {view === "grid" && (
+          <div className={`grid ${getNumberOfColumns("grid")} gap-4 mt-8`}>
+            {current.map((it, idx) => {
+              const m = getRowModule(it);
+              return (
                 <div
-                  key={index}
-                  className="flex items-center justify-between bg-white rounded-lg shadow p-4"
+                  key={`${it.scenarioNumber}-grid-${idx}`}
+                  className="bg-white rounded-lg shadow p-4 border border-slate-200"
                 >
-                  <div className="flex flex-1 space-x-4">
-                    <div className="flex flex-col w-1/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Serial Number
-                      </span>
-                      <span className="text-sm text-gray-900">{index + 1}</span>
-                    </div>
-                    <div className="flex flex-col w-1/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Scenario Number
-                      </span>
-                      <span className="text-sm text-gray-700 font-semibold">
-                        {item.scenarioNumber}
-                      </span>
-                    </div>
-                    <div className="flex flex-col w-4/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Scenario Description
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {item.scenarioText}
-                      </span>
-                    </div>
-                    <div className="flex flex-col w-1/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Test Case Number
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          item.testCaseNumber === "Missing"
-                            ? "text-red-500 font-bold"
-                            : "text-gray-700 font-semibold"
+                  <div className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                    <span>Scenario: {it.scenarioNumber}</span>
+                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                      {m.name}
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-700 mt-1">{it.scenarioText}</div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Test Case #</div>
+                      <div
+                        className={`font-medium ${
+                          it.testCaseNumber === "Missing" ? "text-rose-600" : "text-slate-800"
                         }`}
                       >
-                        {item.testCaseNumber || "N/A"}
-                      </span>
+                        {it.testCaseNumber || "N/A"}
+                      </div>
                     </div>
-                    <div className="flex flex-col w-1/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Test Case Status
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          item.testCaseStatus === "Fail"
-                            ? "text-red-500"
-                            : "text-green-500"
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Status</div>
+                      <div
+                        className={`font-semibold ${
+                          it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
                         }`}
                       >
-                        {item.testCaseStatus || "N/A"}
-                      </span>
+                        {it.testCaseStatus || "N/A"}
+                      </div>
                     </div>
-                    <div className="flex flex-col w-1/12 border-r pr-2">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Defect Number
-                      </span>
-                      <span className="text-sm text-gray-900">
-                        {item.defectNumber || "N/A"}
-                      </span>
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Defect #</div>
+                      <div className="font-medium text-slate-800">
+                        {it.defectNumber || "N/A"}
+                      </div>
                     </div>
-                    <div className="flex flex-col w-1/12">
-                      <span className="text-sm font-semibold text-gray-600">
-                        Defect Report
-                      </span>
-                      <span
-                        className={`text-sm font-bold ${
-                          item.defectReportStatus === "Present"
-                            ? "text-green-500"
-                            : "text-red-500"
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Defect Report</div>
+                      <div
+                        className={`font-semibold ${
+                          it.defectReportStatus === "Present" ? "text-emerald-600" : "text-rose-600"
                         }`}
                       >
-                        {item.defectReportStatus || "N/A"}
-                      </span>
+                        {it.defectReportStatus || "N/A"}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              );
+            })}
           </div>
-        ) : (
-          renderGridOrCardView(view)
         )}
 
-        <div className="flex justify-center items-center space-x-2 mt-10">
+        {/* CARD VIEW */}
+        {view === "card" && (
+          <div className={`grid ${getNumberOfColumns("card")} gap-4 mt-8`}>
+            {current.map((it, idx) => {
+              const m = getRowModule(it);
+              return (
+                <div
+                  key={`${it.scenarioNumber}-card-${idx}`}
+                  className="bg-white rounded-lg shadow p-4 border border-slate-200"
+                >
+                  <div className="text-sm font-semibold text-slate-700 flex items-center justify-between">
+                    <span>Scenario: {it.scenarioNumber}</span>
+                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                      {m.name}
+                    </span>
+                  </div>
+                  <div className="text-sm text-slate-700 mt-1">{it.scenarioText}</div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Test Case #</div>
+                      <div
+                        className={`font-medium ${
+                          it.testCaseNumber === "Missing" ? "text-rose-600" : "text-slate-800"
+                        }`}
+                      >
+                        {it.testCaseNumber || "N/A"}
+                      </div>
+                    </div>
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Status</div>
+                      <div
+                        className={`font-semibold ${
+                          it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
+                        }`}
+                      >
+                        {it.testCaseStatus || "N/A"}
+                      </div>
+                    </div>
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Defect #</div>
+                      <div className="font-medium text-slate-800">
+                        {it.defectNumber || "N/A"}
+                      </div>
+                    </div>
+                    <div className="border rounded-md p-2">
+                      <div className="text-slate-500">Defect Report</div>
+                      <div
+                        className={`font-semibold ${
+                          it.defectReportStatus === "Present" ? "text-emerald-600" : "text-rose-600"
+                        }`}
+                      >
+                        {it.defectReportStatus || "N/A"}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Pagination */}
+        <div className="flex justify-center items-center gap-2 mt-8">
           <button
-            className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+            className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
           >
-            <FaArrowLeft className="text-xl" />
+            <FaArrowLeft className="text-lg" />
           </button>
-          <span>
+          <span className="text-sm">
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+            className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
           >
-            <FaArrowRight className="text-xl" />
+            <FaArrowRight className="text-lg" />
           </button>
         </div>
       </div>
     </div>
   );
-};
-
-export default TraceabilityMatrix;
+}

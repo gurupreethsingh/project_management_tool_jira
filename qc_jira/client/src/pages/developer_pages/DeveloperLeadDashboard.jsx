@@ -14,6 +14,7 @@ import {
   FaTasks,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+import globalBackendRoute from "../../config/Config";
 
 const DeveloperLeadDashboard = () => {
   const [view, setView] = useState("grid");
@@ -27,68 +28,35 @@ const DeveloperLeadDashboard = () => {
 
   useEffect(() => {
     fetchCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // const fetchCounts = async () => {
-  //   try {
-  //     const projectRes = await axios.get(
-  //       "http://localhost:5000/count-projects"
-  //     );
-  //     setTotalProjects(projectRes.data.totalProjects);
-
-  //     const developerRes = await axios.get(
-  //       "http://localhost:5000/count-developers"
-  //     );
-  //     setTotalDevelopers(developerRes.data.totalDevelopers);
-
-  //     const tasksRes = await axios.get(
-  //       `http://localhost:5000/developer-lead/${userId}/assigned-tasks`
-  //     );
-  //     setAssignedTasks(tasksRes.data.tasks.length);
-
-  //     const defectRes = await axios.get(
-  //       `http://localhost:5000/developer-lead/${userId}/assigned-defects`
-  //     );
-  //     setDefectCount(defectRes.data.defects.length);
-
-  //     const notificationRes = await axios.get(
-  //       `http://localhost:5000/user/${userId}`
-  //     );
-  //     setNotifications(notificationRes.data.notifications || 0);
-  //   } catch (error) {
-  //     console.error("Error fetching counts:", error);
-  //   }
-  // };
 
   const fetchCounts = async () => {
     try {
       const projectRes = await axios.get(
-        "http://localhost:5000/count-projects"
+        `${globalBackendRoute}/api/count-projects`
       );
-      setTotalProjects(projectRes.data.totalProjects);
+      setTotalProjects(projectRes.data.totalProjects || 0);
 
       const developerRes = await axios.get(
-        "http://localhost:5000/count-developers"
+        `${globalBackendRoute}/api/count-developers`
       );
-      setTotalDevelopers(developerRes.data.totalDevelopers);
+      setTotalDevelopers(developerRes.data.totalDevelopers || 0);
 
-      // ✅ New Task Count Route
       const tasksRes = await axios.get(
-        `http://localhost:5000/developer-lead/${userId}/assigned-tasks`
+        `${globalBackendRoute}/api/developer-lead/${userId}/assigned-tasks`
       );
-      setAssignedTasks(tasksRes.data.tasks.length);
+      setAssignedTasks((tasksRes.data?.tasks || []).length);
 
-      // ✅ New Defect Count Route
       const defectRes = await axios.get(
-        `http://localhost:5000/developer-lead/${userId}/assigned-defects`
+        `${globalBackendRoute}/api/developer-lead/${userId}/assigned-defects`
       );
-      setDefectCount(defectRes.data.defects.length);
+      setDefectCount((defectRes.data?.defects || []).length);
 
-      // ✅ Notifications
       const notificationRes = await axios.get(
-        `http://localhost:5000/user/${userId}`
+        `${globalBackendRoute}/api/user/${userId}`
       );
-      setNotifications(notificationRes.data.notifications || 0);
+      setNotifications(notificationRes.data?.notifications || 0);
     } catch (error) {
       console.error("Error fetching counts:", error);
     }

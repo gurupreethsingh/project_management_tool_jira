@@ -11,6 +11,7 @@ import { MdEdit } from "react-icons/md";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
+import globalBackendRoute from "../../config/Config";
 
 export default function Profile() {
   const [userData, setUserData] = useState(null);
@@ -23,7 +24,7 @@ export default function Profile() {
       if (user && user.id) {
         try {
           const response = await axios.get(
-            `http://localhost:5000/user/${user.id}`
+            `${globalBackendRoute}/api/user/${user.id}`
           );
           setUserData(response.data);
         } catch (error) {
@@ -47,9 +48,8 @@ export default function Profile() {
 
   const getImageUrl = (avatar) => {
     if (avatar) {
-      // Ensure the avatar path is correctly constructed using only the relevant relative path
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
     return "https://via.placeholder.com/150";
   };
@@ -70,7 +70,7 @@ export default function Profile() {
           src={getImageUrl(userData.avatar)}
           alt={userData.name}
           className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-lg sm:rounded-xl mb-4 sm:mb-0 sm:mr-6"
-          style={{ maxWidth: "100%", height: "auto" }} // Ensure image is responsive
+          style={{ maxWidth: "100%", height: "auto" }}
         />
 
         <div className="w-full">

@@ -1,11 +1,7 @@
-import { useState, useEffect } from "react";
-import {
-  BrowserRouter as Router,
-  Routes,
-  Route,
-  useLocation,
-} from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
+
 import Homepage from "./pages/common_pages/Homepage";
 import Header from "./components/Header";
 import Login from "./pages/common_pages/Login";
@@ -16,188 +12,210 @@ import PrivateRoute from "./components/PrivateRoute";
 import Profile from "./pages/common_pages/Profile";
 import UpdateProfile from "./pages/common_pages/UpdateProfile";
 import AllUsers from "./pages/admin_pages/AllUsers";
+// contact pages
 import ContactUs from "./pages/contact_pages/ContactUs";
 import AllMessages from "./pages/contact_pages/AllMessages";
 import AllReplies from "./pages/contact_pages/AllReplies";
 import ReplyMessage from "./pages/contact_pages/ReplyMessage";
+// common pages
 import PrivacyPolicy from "./pages/common_pages/PrivacyPolicy";
-import AllBlogs from "./pages/blog_pages/AllBlogs";
-import AddBlog from "./pages/blog_pages/AddBlog";
-import SingleBlog from "./pages/blog_pages/SingleBlog";
 import AboutUs from "./pages/common_pages/AboutUs";
-
 import NewsLetter from "./components/NewsLetter";
 import WorkWithUs from "./components/WorkWithUs";
 import Footer from "./components/Footer";
+// blog pages.
+import AllBlogs from "./pages/blog_pages/AllBlogs";
+import AddBlog from "./pages/blog_pages/AddBlog";
+import SingleBlog from "./pages/blog_pages/SingleBlog";
+// subscription pages.
 import Subscriptions from "./pages/subscription_pages/Subscriptions";
-import SuperAdminDashboard from "./pages/admin_pages/SuperAdminDashboard";
+// super admin pages
+import SuperAdminDashboard from "./pages/superadmin_pages/SuperAdminDashboard";
+// admin pages
 import AdminDashboard from "./pages/admin_pages/AdminDashboard";
+// qa lead pages
 import QaDashboard from "./pages/tester_dashboard/QaDashboard";
+// test engineer pages.
 import TestEngineerDashboard from "./pages/tester_dashboard/TestEngineerDashboard";
+// developer pages.
 import DeveloperDashboard from "./pages/developer_pages/DeveloperDashboard";
+// project pages.
 import CreateProject from "./pages/project_pages/CreateProject";
 import AllProjects from "./pages/project_pages/AllProjects";
 import SingleProject from "./pages/project_pages/SingleProject";
+// scenario pages.
 import AddScenario from "./pages/scenario_pages/AddScenario";
 import AllScenarios from "./pages/scenario_pages/AllScenarios";
 import SingleScenario from "./pages/scenario_pages/SingleScenario";
+// admin pages.
 import AllAdmins from "./pages/admin_pages/AllAdmins";
+// developer pages.
 import AllDevelopers from "./pages/developer_pages/AllDevelopers";
+// test engineer pages.
 import AllTestEngineers from "./pages/tester_dashboard/AllTestEngineers";
+// test case pages
 import AddTestCase from "./pages/tester_dashboard/AddTestCase";
 import AllTestCases from "./pages/tester_dashboard/AllTestCases";
 import SingleTestCase from "./pages/tester_dashboard/SingleTestCase";
 import TestCaseDetail from "./pages/tester_dashboard/TestCaseDetail";
 import TestCaseDashboard from "./pages/tester_dashboard/TestCaseDashboard";
 import TraceabilityMatrix from "./pages/tester_dashboard/TraceabilityMatrix";
+// task pages.
 import AssignTask from "./pages/task_pages/AssignTask";
 import ViewAllTasks from "./pages/task_pages/ViewAllTasks";
+import ViewAssignedTasks from "./pages/task_pages/ViewAssignedTasks";
+import TaskHistory from "./pages/task_pages/TaskHistory";
+// defect pages.
 import AddDefect from "./pages/defect_report_pages/AddDefect";
 import AllDefects from "./pages/defect_report_pages/AllDefects";
 import SingleDefect from "./pages/defect_report_pages/SingleDefect";
-import BugHistory from "./pages/defect_report_pages/BugHistory";
-import AllAssignedProjects from "./pages/project_pages/AllAssignedProjects";
-import ViewAssignedTasks from "./pages/task_pages/ViewAssignedTasks";
-import TaskHistory from "./pages/task_pages/TaskHistory";
 import AssignDefect from "./pages/developer_pages/AssignDefect";
 import DeveloperAssignedDefects from "./pages/developer_pages/DeveloperAssignedDefects";
+import BugHistory from "./pages/defect_report_pages/BugHistory";
+// project pages.
+import AllAssignedProjects from "./pages/project_pages/AllAssignedProjects";
 import ProjectManagerDashboard from "./pages/project_manager_pages/ProjectManagerDashboard";
 import DeveloperLeadDashboard from "./pages/developer_pages/DeveloperLeadDashboard";
 import CreateRequirement from "./pages/requirement_pages/CreateRequirement";
-
-// event pages.
+// event pages
 import CreateEvent from "./pages/event_pages/CreateEvent";
+import UserEvents from "./pages/event_pages/UserEvents";
+import AllEvents from "./pages/event_pages/AllEvents";
+import SingleEvent from "./pages/event_pages/SingleEvent";
+import SingleUserEvent from "./pages/event_pages/SingleUserEvent";
+import UpdateEvent from "./pages/event_pages/UpdateEvent";
 
-// attendence page.
+// attendance pages
 import GetAllAttendance from "./pages/attendence_pages/GetAllAttendance";
 import CreateAttendance from "./pages/attendence_pages/CreateAttendance";
 import SingleAttendance from "./pages/attendence_pages/SingleAttendance";
 import EditAttendance from "./pages/attendence_pages/EditAttendance";
-
-// notification pages.
+// notification pages
 import CreateNotification from "./pages/notification_pages/CreateNotification";
 import AllNotifications from "./pages/notification_pages/AllNotifications";
+import UserNotifications from "./pages/notification_pages/UserNotifications";
+import UserNotificationDetail from "./pages/notification_pages/UserNotificationDetail";
+// requirement pages.
 import AllRequirements from "./pages/requirement_pages/AllRequirements";
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
-import UpdateRequirement from "./pages/notification_pages/UpdateRequirement";
+import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
 
-const PageTitle = ({ title }) => {
+/** Match the “PageTitle” pattern from your sample */
+const PageTitle = ({ title, children }) => {
   useEffect(() => {
-    document.title = `Ecoders - ${title}`;
+    document.title = title ? `${title} | ECODERS` : "ECODERS";
   }, [title]);
-
-  return null;
-};
-
-const TitleUpdater = () => {
-  const location = useLocation();
-
-  const getPageTitle = (pathname) => {
-    if (pathname === "/" || pathname === "/home" || pathname === "/homepage") {
-      return "Home";
-    } else if (pathname === "/login") {
-      return "Login";
-    } else if (pathname === "/register") {
-      return "Register";
-    } else if (pathname === "/contact") {
-      return "Contact Us";
-    } else if (pathname === "/about-us") {
-      return "About Us";
-    } else if (pathname === "/privacy-policy") {
-      return "Privacy Policy";
-    } else if (pathname === "/all-blogs") {
-      return "All Blogs";
-    } else if (/^\/single-blog\/\w+/.test(pathname)) {
-      return "Single Blog";
-    } else if (pathname === "/dashboard") {
-      return "Dashboard";
-    } else if (/^\/profile\/\w+/.test(pathname)) {
-      return "Profile";
-    } else if (/^\/update-profile\/\w+/.test(pathname)) {
-      return "Update Profile";
-    } else if (pathname === "/all-users") {
-      return "All Users";
-    } else if (pathname === "/add-blog") {
-      return "Add Blog";
-    } else if (pathname === "/all-messages") {
-      return "All Messages";
-    } else if (/^\/reply-message\/\w+/.test(pathname)) {
-      return "Reply Message";
-    } else if (pathname === "/all-replies") {
-      return "All Replies";
-    } else if (pathname === "/all-subscriptions") {
-      return "All Subscriptions";
-    } else if (pathname === "/super-admin-dashboard") {
-      return "Super Admin Dashboard";
-    } else if (pathname === "/admin-dashboard") {
-      return "Admin Dashboard";
-    } else if (pathname === "/qa-dashboard") {
-      return "QA Dashboard";
-    } else if (pathname === "/test-engineer-dashboard") {
-      return "Test Engineer Dashboard";
-    } else if (pathname === "/developer-dashboard") {
-      return "Developer Dashboard";
-    } else if (pathname === "/create-project") {
-      return "Create Project";
-    } else if (pathname === "/project-manager-dashboard") {
-      return "Project Manager Dashboard";
-    } else if (pathname === "/all-projects") {
-      return "All Projects";
-    } else if (pathname === "/all-admins") {
-      return "All Admins";
-    } else if (pathname === "/all-developers") {
-      return "All Developers";
-    } else if (pathname === "/all-test-engineers") {
-      return "All Test Engineers";
-    } else if (/^\/single-project\/\w+\/add-scenario/.test(pathname)) {
-      return "Add Scenario";
-    } else if (/^\/single-project\/\w+\/view-all-scenarios/.test(pathname)) {
-      return "View Scenarios";
-    } else if (/^\/single-project\/\w+\/scenario-history/.test(pathname)) {
-      return "Scenario History";
-    } else if (
-      /^\/single-project\/\w+\/scenarios\/\w+\/add-test-case/.test(pathname)
-    ) {
-      return "Add Test Case"; // New condition for Add Test Case page
-    } else if (/^\/single-project\/\w+\/add-defect/.test(pathname)) {
-      return "Add Defect"; // New condition for Add Defect page
-    } else if (/^\/single-project\/\w+/.test(pathname)) {
-      return "Single Project";
-    } else if (pathname === "/page-not-found") {
-      return "Page Not Found";
-    } else {
-      return "Page Not Found";
-    }
-  };
-
-  const pageTitle = getPageTitle(location.pathname);
-
-  return <PageTitle title={pageTitle} />;
+  return children;
 };
 
 function App() {
-  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0); // State for unread messages count
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   return (
     <Router>
       <Header />
-      <TitleUpdater />
       <Routes>
-        <Route path="/" element={<Homepage />} />
-        <Route path="/home" element={<Homepage />} />
-        <Route path="/homepage" element={<Homepage />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/contact" element={<ContactUs />} />
-        <Route path="/privacy-policy" element={<PrivacyPolicy />} />
-        <Route path="/all-blogs" element={<AllBlogs />} />
-        <Route path="/single-blog/:slug/:id" element={<SingleBlog />} />
-        <Route path="/about-us" element={<AboutUs />} />
+        <Route
+          path="/"
+          element={
+            <PageTitle title="Home">
+              <Homepage />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/home"
+          element={
+            <PageTitle title="Home">
+              <Homepage />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/homepage"
+          element={
+            <PageTitle title="Home">
+              <Homepage />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/login"
+          element={
+            <PageTitle title="Login">
+              <Login />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/register"
+          element={
+            <PageTitle title="Register">
+              <Register />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/contact"
+          element={
+            <PageTitle title="Contact Us">
+              <ContactUs />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/privacy-policy"
+          element={
+            <PageTitle title="Privacy Policy">
+              <PrivacyPolicy />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/about-us"
+          element={
+            <PageTitle title="About Us">
+              <AboutUs />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/all-blogs"
+          element={
+            <PageTitle title="All Blogs">
+              <AllBlogs />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/single-blog/:slug/:id"
+          element={
+            <PageTitle title="Single Blog">
+              <SingleBlog />
+            </PageTitle>
+          }
+        />
+        <Route
+          path="/add-blog"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="Add Blog">
+                <AddBlog />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
         <Route
           path="/dashboard"
           element={
             <PrivateRoute>
-              <Dashboard />
+              <PageTitle title="Dashboard">
+                <Dashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -205,7 +223,9 @@ function App() {
           path="/profile/:id"
           element={
             <PrivateRoute>
-              <Profile />
+              <PageTitle title="Profile">
+                <Profile />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -213,23 +233,20 @@ function App() {
           path="/update-profile/:id"
           element={
             <PrivateRoute>
-              <UpdateProfile />
+              <PageTitle title="Update Profile">
+                <UpdateProfile />
+              </PageTitle>
             </PrivateRoute>
           }
         />
+
         <Route
           path="/all-users"
           element={
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <AllUsers />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          path="/add-blog"
-          element={
-            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <AddBlog />
+              <PageTitle title="All Users">
+                <AllUsers />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -238,7 +255,9 @@ function App() {
           path="/all-subscriptions"
           element={
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <Subscriptions />
+              <PageTitle title="Subscriptions">
+                <Subscriptions />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -247,20 +266,22 @@ function App() {
           path="/super-admin-dashboard"
           element={
             <PrivateRoute allowedRoles={["superadmin"]}>
-              <SuperAdminDashboard />
+              <PageTitle title="Super Admin Dashboard">
+                <SuperAdminDashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/admin-dashboard"
           element={
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <AdminDashboard />
+              <PageTitle title="Admin Dashboard">
+                <AdminDashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/qa-dashboard"
           element={
@@ -272,11 +293,12 @@ function App() {
                 "project_manager",
               ]}
             >
-              <QaDashboard />
+              <PageTitle title="QA Dashboard">
+                <QaDashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/test-engineer-dashboard"
           element={
@@ -289,7 +311,29 @@ function App() {
                 "project_manager",
               ]}
             >
-              <TestEngineerDashboard />
+              <PageTitle title="Test Engineer Dashboard">
+                <TestEngineerDashboard />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/developer-dashboard"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Developer Dashboard">
+                <DeveloperDashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -306,11 +350,12 @@ function App() {
                 "project_manager",
               ]}
             >
-              <CreateProject />
+              <PageTitle title="Create Project">
+                <CreateProject />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/all-projects"
           element={
@@ -325,58 +370,12 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AllProjects />
+              <PageTitle title="All Projects">
+                <AllProjects />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        <Route
-          path="/all-admins"
-          element={
-            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <AllAdmins />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/all-developers"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AllDevelopers />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/all-test-engineers"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AllTestEngineers />
-            </PrivateRoute>
-          }
-        />
-
         <Route
           path="/single-project/:projectId"
           element={
@@ -391,7 +390,9 @@ function App() {
                 "project_manager",
               ]}
             >
-              <SingleProject />
+              <PageTitle title="Single Project">
+                <SingleProject />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -410,11 +411,12 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AddScenario />
+              <PageTitle title="Add Scenario">
+                <AddScenario />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/single-project/:projectId/view-all-scenarios"
           element={
@@ -429,11 +431,12 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AllScenarios />
+              <PageTitle title="View Scenarios">
+                <AllScenarios />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
         <Route
           path="/single-project/:projectId/scenario-history/:scenarioId"
           element={
@@ -448,12 +451,14 @@ function App() {
                 "project_manager",
               ]}
             >
-              <SingleScenario />
+              <PageTitle title="Scenario History">
+                <SingleScenario />
+              </PageTitle>
             </PrivateRoute>
           }
         />
 
-        {/* add test case route */}
+        {/* add test case */}
         <Route
           path="/single-project/:projectId/scenario/:scenarioId/add-test-case"
           element={
@@ -468,12 +473,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AddTestCase />
+              <PageTitle title="Add Test Case">
+                <AddTestCase />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* fetch all test case route */}
+        {/* all test cases for a project */}
         <Route
           path="/single-project/:projectId/all-test-cases"
           element={
@@ -488,12 +494,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AllTestCases />
+              <PageTitle title="All Test Cases">
+                <AllTestCases />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* fetch test case by id route */}
+        {/* get test case by id */}
         <Route
           path="/get-test-case/:id"
           element={
@@ -508,12 +515,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <SingleTestCase />
+              <PageTitle title="Single Test Case">
+                <SingleTestCase />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* fetch test case by id route for updating*/}
+        {/* test case detail (update) */}
         <Route
           path="/test-case-detail/:id"
           element={
@@ -528,12 +536,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <TestCaseDetail />
+              <PageTitle title="Test Case Detail">
+                <TestCaseDetail />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* route for test case dashboard.*/}
+        {/* test case dashboard */}
         <Route
           path="/test-case-dashboard"
           element={
@@ -548,12 +557,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <TestCaseDashboard />
+              <PageTitle title="Test Case Dashboard">
+                <TestCaseDashboard />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* route for test case traceability matrix.*/}
+        {/* traceability matrix */}
         <Route
           path="/single-project/:projectId/traceability-matrix"
           element={
@@ -568,12 +578,14 @@ function App() {
                 "project_manager",
               ]}
             >
-              <TraceabilityMatrix />
+              <PageTitle title="Traceability Matrix">
+                <TraceabilityMatrix />
+              </PageTitle>
             </PrivateRoute>
           }
         />
 
-        {/* route for assigning task to test engineers by qa.*/}
+        {/* assign task */}
         <Route
           path="/projects/:projectId/assign-task"
           element={
@@ -586,12 +598,13 @@ function App() {
                 "project_manager",
               ]}
             >
-              <AssignTask />
+              <PageTitle title="Assign Task">
+                <AssignTask />
+              </PageTitle>
             </PrivateRoute>
           }
         />
-
-        {/* route for assigning task to test engineers by qa.*/}
+        {/* view all tasks in project */}
         <Route
           path="/single-project/:projectId/view-all-tasks"
           element={
@@ -606,14 +619,16 @@ function App() {
                 "project_manager",
               ]}
             >
-              <ViewAllTasks />
+              <PageTitle title="All Tasks">
+                <ViewAllTasks />
+              </PageTitle>
             </PrivateRoute>
           }
         />
 
-        {/* route to go to developer dashboard */}
+        {/* defects */}
         <Route
-          path="/developer-dashboard"
+          path="/single-project/:projectId/add-defect"
           element={
             <PrivateRoute
               allowedRoles={[
@@ -626,18 +641,429 @@ function App() {
                 "project_manager",
               ]}
             >
-              <DeveloperDashboard />
+              <PageTitle title="Add Defect">
+                <AddDefect />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/all-defects"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="All Defects">
+                <AllDefects />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/defect/:defectId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Defect Details">
+                <SingleDefect />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/bug-history/:defectId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Bug History">
+                <BugHistory />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/assign-defect/:defectId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Assign Defect">
+                <AssignDefect />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/developer/:developerId/view-assigned-defects"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "qa_lead",
+                "developer_lead",
+                "developer",
+              ]}
+            >
+              <PageTitle title="Developer Assigned Defects">
+                <DeveloperAssignedDefects />
+              </PageTitle>
             </PrivateRoute>
           }
         />
 
+        {/* assigned projects & tasks */}
+        <Route
+          path="/user-assigned-projects/:userId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Assigned Projects">
+                <AllAssignedProjects />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/user-assigned-tasks/:userId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "admin",
+                "superadmin",
+                "qa_lead",
+                "test_engineer",
+                "developer",
+                "developer_lead",
+                "project_manager",
+              ]}
+            >
+              <PageTitle title="Assigned Tasks">
+                <ViewAssignedTasks />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-project/:projectId/single-task/:taskId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "qa_lead",
+              ]}
+            >
+              <PageTitle title="Task History">
+                <TaskHistory />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* PM & Dev Lead Dashboards */}
+        <Route
+          path="/project-manager-dashboard"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="Project Manager Dashboard">
+                <ProjectManagerDashboard />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/developer-lead-dashboard"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "developer_lead",
+              ]}
+            >
+              <PageTitle title="Developer Lead Dashboard">
+                <DeveloperLeadDashboard />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* requirements */}
+        <Route
+          path="/create-requirement/:projectId"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "customer",
+              ]}
+            >
+              <PageTitle title="Create Requirement">
+                <CreateRequirement />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/all-requirements/:projectId"
+          element={
+            <PrivateRoute>
+              <PageTitle title="All Requirements">
+                <AllRequirements />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/all-requirements/:projectId/module/:moduleName"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Requirements by Module">
+                <AllRequirements />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/single-requirement/:id"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Single Requirement">
+                <SingleRequirement />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/update-requirement/:id"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="Update Requirement">
+                <UpdateRequirement />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* events */}
+        <Route
+          path="/create-event"
+          element={
+            <PrivateRoute allowedRoles={["superadmin"]}>
+              <PageTitle title="Create Event">
+                <CreateEvent />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/all-events"
+          element={
+            <PrivateRoute allowedRoles={["superadmin"]}>
+              <PageTitle title="All Events">
+                <AllEvents />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-event/:id"
+          element={
+            <PrivateRoute allowedRoles={["superadmin"]}>
+              <PageTitle title="Single Event">
+                <SingleEvent />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/update-event/:id"
+          element={
+            <PrivateRoute allowedRoles={["superadmin"]}>
+              <PageTitle title="Update Event">
+                <UpdateEvent />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/user-events"
+          element={
+            <PrivateRoute>
+              <PageTitle title="User Events">
+                <UserEvents />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-user-event/:id"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Single User Event">
+                <SingleUserEvent />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* attendance */}
+        <Route
+          path="/create-attendance"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Create Attendance">
+                <CreateAttendance />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/view-all-attendance"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="All Attendance">
+                <GetAllAttendance />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/get-single-attendance/:id"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="Attendance">
+                <SingleAttendance />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/edit-attendance/:id"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="Edit Attendance">
+                <EditAttendance />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* notifications */}
+        <Route
+          path="/create-notification"
+          element={
+            <PrivateRoute
+              allowedRoles={["superadmin", "admin", "project_manager"]}
+            >
+              <PageTitle title="Create Notification">
+                <CreateNotification />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/all-notifications"
+          element={
+            <PrivateRoute>
+              <PageTitle title="All Notifications">
+                <AllNotifications />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/user-notifications"
+          element={
+            <PrivateRoute>
+              <PageTitle title="My Notifications">
+                <UserNotifications />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+        <Route
+          path="/user-notifications/:notificationId"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Notification">
+                <UserNotificationDetail />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* contact/messages */}
         <Route
           path="/all-messages"
           element={
             <PrivateRoute
               allowedRoles={["admin", "superadmin", "project_manager"]}
             >
-              <AllMessages />
+              <PageTitle title="All Messages">
+                <AllMessages />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -653,7 +1079,9 @@ function App() {
                 "project_manager",
               ]}
             >
-              <ReplyMessage setUnreadMessagesCount={setUnreadMessagesCount} />
+              <PageTitle title="Reply Message">
+                <ReplyMessage setUnreadMessagesCount={setUnreadMessagesCount} />
+              </PageTitle>
             </PrivateRoute>
           }
         />
@@ -661,339 +1089,33 @@ function App() {
           path="/all-replies"
           element={
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <AllReplies />
+              <PageTitle title="All Replies">
+                <AllReplies />
+              </PageTitle>
             </PrivateRoute>
           }
         />
 
+        {/* 404s */}
         <Route
-          path="/single-project/:projectId/add-defect"
+          path="/page-not-found"
           element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AddDefect /> {/* Replace with your Add Bug component */}
-            </PrivateRoute>
+            <PageTitle title="404 Not Found">
+              <PageNotFound />
+            </PageTitle>
           }
         />
-
         <Route
-          path="/single-project/:projectId/all-defects"
+          path="/*"
           element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AllDefects /> {/* Replace with your Add Bug component */}
-            </PrivateRoute>
+            <PageTitle title="404 Not Found">
+              <PageNotFound />
+            </PageTitle>
           }
         />
-
-        <Route
-          path="/single-project/:projectId/defect/:defectId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <SingleDefect /> {/* Replace with your Add Bug component */}
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/bug-history/:defectId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <BugHistory /> {/* Replace with your BugHistory component */}
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/single-project/:projectId/assign-defect/:defectId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AssignDefect /> {/* Replace with your BugHistory component */}
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/user-assigned-projects/:userId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <AllAssignedProjects />{" "}
-              {/* Replace with your BugHistory component */}
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/single-project/:projectId/user-assigned-tasks/:userId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "admin",
-                "superadmin",
-                "qa_lead",
-                "test_engineer",
-                "developer",
-                "developer_lead",
-                "project_manager",
-              ]}
-            >
-              <ViewAssignedTasks />{" "}
-              {/* Replace with your BugHistory component */}
-            </PrivateRoute>
-          }
-        />
-
-        {/* // view task history */}
-        <Route
-          path="/single-project/:projectId/single-task/:taskId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "superadmin",
-                "admin",
-                "project_manager",
-                "qa_lead",
-              ]}
-            >
-              <TaskHistory /> {/* Replace with your BugHistory component */}
-            </PrivateRoute>
-          }
-        />
-
-        {/* developers assigned tasks.  */}
-        <Route
-          path="/single-project/:projectId/developer/:developerId/view-assigned-defects"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "superadmin",
-                "admin",
-                "project_manager",
-                "qa_lead",
-                "developer_lead",
-                "developer",
-              ]}
-            >
-              <DeveloperAssignedDefects />{" "}
-            </PrivateRoute>
-          }
-        />
-
-        {/* project manager dashboard..  */}
-        <Route
-          path="/project-manager-dashboard"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <ProjectManagerDashboard />{" "}
-            </PrivateRoute>
-          }
-        />
-
-        {/* developer lead dashboard.  */}
-        <Route
-          path="/developer-lead-dashboard"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "superadmin",
-                "admin",
-                "project_manager",
-                "developer_lead",
-              ]}
-            >
-              <DeveloperLeadDashboard />{" "}
-            </PrivateRoute>
-          }
-        />
-
-        {/* requirment pages.  */}
-        <Route
-          path="/create-requirement/:projectId"
-          element={
-            <PrivateRoute
-              allowedRoles={[
-                "superadmin",
-                "admin",
-                "project_manager",
-                "customer",
-              ]}
-            >
-              <CreateRequirement />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/all-requirements/:projectId"
-          element={
-            <PrivateRoute>
-              <AllRequirements />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/all-requirements/:projectId/module/:moduleName"
-          element={
-            <PrivateRoute>
-              <AllRequirements />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/single-requirement/:id"
-          element={
-            <PrivateRoute>
-              <SingleRequirement />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/update-requirement/:id"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <UpdateRequirement />
-            </PrivateRoute>
-          }
-        />
-
-        {/* event pages.  */}
-        <Route
-          path="/create-event"
-          element={
-            <PrivateRoute>
-              <CreateEvent />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/create-attendance"
-          element={
-            <PrivateRoute>
-              <CreateAttendance />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/view-all-attendance"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <GetAllAttendance />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/get-single-attendance/:id"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <SingleAttendance />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/edit-attendance/:id"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <EditAttendance />
-            </PrivateRoute>
-          }
-        />
-
-        {/* notification pages routes,   */}
-        <Route
-          path="/create-notification"
-          element={
-            <PrivateRoute
-              allowedRoles={["superadmin", "admin", "project_manager"]}
-            >
-              <CreateNotification />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/all-notifications"
-          element={
-            <PrivateRoute>
-              <AllNotifications />
-            </PrivateRoute>
-          }
-        />
-
-        <Route path="/page-not-found" element={<PageNotFound />} />
-        <Route path="/*" element={<PageNotFound />} />
       </Routes>
+
+      {/* keep your existing sections under routes */}
       <WorkWithUs />
       <NewsLetter />
       <Footer />

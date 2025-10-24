@@ -9,24 +9,35 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 
+// ⬇️ Import your global backend base URL (adjust the path to wherever you export it)
+import globalBackendRoute from "../../config/Config";
+
 const AllAssignedProjects = () => {
   const [projects, setProjects] = useState([]);
   const [view, setView] = useState("grid");
-  const [searchTerm, setSearchTerm] = useState(""); // Add the missing state for searchTerm
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [projectsPerPage, setProjectsPerPage] = useState(10);
 
   useEffect(() => {
     fetchAssignedProjects();
-  }, [searchTerm, currentPage, view]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]); // fetching only needs to depend on search text
 
   const fetchAssignedProjects = async () => {
-    const userId = JSON.parse(localStorage.getItem("user")).id; // Fetch userId from localStorage
+    const userRaw = localStorage.getItem("user");
+    if (!userRaw) return;
+    const userId = JSON.parse(userRaw)?.id;
+    if (!userId) return;
+
     try {
       const response = await axios.get(
-        `http://localhost:5000/user-assigned-projects/${userId}?search=${searchTerm}`
+        `${globalBackendRoute}/api/user-assigned-projects/${userId}?search=${encodeURIComponent(
+          searchTerm
+        )}`
       );
-      setProjects(response.data.assignedProjects); // Ensure you are receiving the assigned projects list
+      setProjects(response.data.assignedProjects || []);
+      setCurrentPage(1); // reset to first page after fetching results
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
@@ -45,7 +56,7 @@ const AllAssignedProjects = () => {
   };
 
   const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value); // Update the search term based on input
+    setSearchTerm(event.target.value);
   };
 
   // Pagination Logic

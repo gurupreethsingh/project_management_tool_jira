@@ -5,6 +5,7 @@ import { Switch } from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaUser, FaEnvelope, FaPhone, FaComment } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 export default function ContactUs() {
   const [formData, setFormData] = useState({
@@ -32,7 +33,7 @@ export default function ContactUs() {
 
     try {
       const response = await axios.post(
-        "http://localhost:5000/add-contact-message",
+        `${globalBackendRoute}/api/add-contact-message`,
         formData
       );
       if (response.status === 201) {
@@ -59,7 +60,6 @@ export default function ContactUs() {
   return (
     <div className="isolate bg-white px-6 py-12 sm:py-24 lg:px-8 animate__animated animate__fadeIn">
       <div className="mx-auto max-w-7xl">
-        {/* Contact Sales Header */}
         <div className="text-center mb-12">
           <h3 className="text-3xl font-bold tracking-tight text-gray-600 sm:text-4xl">
             Contact Us
@@ -67,7 +67,6 @@ export default function ContactUs() {
         </div>
 
         <div className="flex flex-col lg:flex-row lg:justify-between">
-          {/* Map and Address Section */}
           <div className="w-full lg:w-1/2 lg:mr-8">
             <div className="mb-6 animate__animated animate__fadeInLeft">
               <iframe
@@ -81,7 +80,6 @@ export default function ContactUs() {
               ></iframe>
             </div>
 
-            {/* Address Section */}
             <div className="text-left animate__animated animate__fadeInLeft">
               <h2 className="text-xl font-bold text-gray-600">Our Office</h2>
               <p className="mt-4 text-base text-gray-600">
@@ -106,7 +104,6 @@ export default function ContactUs() {
             </div>
           </div>
 
-          {/* Contact Form */}
           <div className="w-full lg:w-1/2 mt-10 lg:mt-0 animate__animated animate__fadeInRight">
             <p className="text-left border-b pb-2 mb-4">
               Fill in your details.
@@ -133,6 +130,7 @@ export default function ContactUs() {
                     />
                   </div>
                 </div>
+
                 <div className="relative">
                   <label
                     htmlFor="lastName"
@@ -174,6 +172,7 @@ export default function ContactUs() {
                     />
                   </div>
                 </div>
+
                 <div className="relative sm:col-span-2">
                   <label
                     htmlFor="phone"
@@ -194,6 +193,7 @@ export default function ContactUs() {
                     />
                   </div>
                 </div>
+
                 <div className="relative sm:col-span-2">
                   <label
                     htmlFor="message_text"
@@ -214,6 +214,7 @@ export default function ContactUs() {
                     />
                   </div>
                 </div>
+
                 <div className="flex gap-x-4 sm:col-span-2">
                   <div className="flex h-6 items-center">
                     <Switch

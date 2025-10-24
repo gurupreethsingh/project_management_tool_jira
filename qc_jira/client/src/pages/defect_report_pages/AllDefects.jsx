@@ -1,14 +1,24 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import { FaThList, FaThLarge, FaTh, FaSearch, FaEye } from "react-icons/fa";
 import { useParams, Link } from "react-router-dom";
+import globalBackendRoute from "../../config/Config";
 
 export default function AllDefects() {
-  const [defects, setDefects] = useState([]); // State to hold fetched defects
+  const { projectId } = useParams();
+
+  // auth (optional; matches your other pages)
+  const token =
+    localStorage.getItem("userToken") || localStorage.getItem("token") || "";
+  const authHeader = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token]
+  );
+
+  const [defects, setDefects] = useState([]);
   const [view, setView] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredDefects, setFilteredDefects] = useState([]);
-  const { projectId } = useParams(); // Get projectId from URL params
 
   // Priority counts: low, medium, high
   const [priorityCounts, setPriorityCounts] = useState({
@@ -35,7 +45,6 @@ export default function AllDefects() {
     closed: 0,
   });
 
-  // Define color schemes for priorities, severities, and statuses
   const colors = {
     low: "bg-teal-200 text-teal-800",
     medium: "bg-yellow-200 text-yellow-800",
@@ -63,25 +72,17 @@ export default function AllDefects() {
     const fetchDefects = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/single-project/${projectId}/all-defects`
+          `${globalBackendRoute}/api/single-project/${projectId}/all-defects`,
+          { headers: authHeader }
         );
-        const defectsData = response.data;
+        const defectsData = response.data || [];
         setDefects(defectsData);
         setFilteredDefects(defectsData);
 
         // Initialize counts
-        const priorityCounts = {
-          low: 0,
-          medium: 0,
-          high: 0,
-        };
-        const severityCounts = {
-          minor: 0,
-          major: 0,
-          critical: 0,
-          blocker: 0,
-        };
-        const statusCounts = {
+        const _priorityCounts = { low: 0, medium: 0, high: 0 };
+        const _severityCounts = { minor: 0, major: 0, critical: 0, blocker: 0 };
+        const _statusCounts = {
           openNew: 0,
           assigned: 0,
           inProgress: 0,
@@ -92,76 +93,73 @@ export default function AllDefects() {
 
         // Calculate counts
         defectsData.forEach((defect) => {
-          // Count by priority
-          const priority = defect.priority.toLowerCase();
-          if (priority in priorityCounts) {
-            priorityCounts[priority]++;
-          }
+          const priority = (defect.priority || "").toLowerCase();
+          if (priority in _priorityCounts) _priorityCounts[priority]++;
 
-          // Count by severity
-          const severity = defect.severity.toLowerCase();
-          if (severity in severityCounts) {
-            severityCounts[severity]++;
-          }
+          const severity = (defect.severity || "").toLowerCase();
+          if (severity in _severityCounts) _severityCounts[severity]++;
 
-          // Count by status
           switch (defect.status) {
             case "Open/New":
-              statusCounts.openNew++;
+              _statusCounts.openNew++;
               break;
             case "Assigned":
-              statusCounts.assigned++;
+              _statusCounts.assigned++;
               break;
             case "In-progress":
-              statusCounts.inProgress++;
+              _statusCounts.inProgress++;
               break;
             case "Fixed":
-              statusCounts.fixed++;
+              _statusCounts.fixed++;
               break;
             case "Re-opened":
-              statusCounts.reopened++;
+              _statusCounts.reopened++;
               break;
             case "Closed":
-              statusCounts.closed++;
+              _statusCounts.closed++;
               break;
             default:
               break;
           }
         });
 
-        setPriorityCounts(priorityCounts);
-        setSeverityCounts(severityCounts);
-        setStatusCounts(statusCounts);
+        setPriorityCounts(_priorityCounts);
+        setSeverityCounts(_severityCounts);
+        setStatusCounts(_statusCounts);
       } catch (error) {
         console.error("Error fetching defects:", error);
       }
     };
     fetchDefects();
-  }, [projectId]);
+  }, [projectId, authHeader]);
 
-  // Filter defects based on priority
+  // Filter by priority
   const filterDefects = (priority) => {
     if (priority === "all") {
       setFilteredDefects(defects);
     } else {
       setFilteredDefects(
-        defects.filter((defect) => defect.priority.toLowerCase() === priority)
+        defects.filter(
+          (defect) => (defect.priority || "").toLowerCase() === priority
+        )
       );
     }
   };
 
-  // Filter defects based on severity
+  // Filter by severity
   const filterBySeverity = (severity) => {
     if (severity === "all") {
       setFilteredDefects(defects);
     } else {
       setFilteredDefects(
-        defects.filter((defect) => defect.severity.toLowerCase() === severity)
+        defects.filter(
+          (defect) => (defect.severity || "").toLowerCase() === severity
+        )
       );
     }
   };
 
-  // Filter defects based on status
+  // Filter by status
   const filterByStatus = (status) => {
     if (status === "all") {
       setFilteredDefects(defects);
@@ -170,13 +168,14 @@ export default function AllDefects() {
     }
   };
 
-  // Combine priority and status filters
+  // Combine search with current dataset
   useEffect(() => {
     let filtered = defects;
 
     if (searchQuery) {
       filtered = filtered.filter((defect) =>
         [defect.test_case_name, defect.module_name, defect.status]
+          .filter(Boolean)
           .map((field) => field.toLowerCase())
           .some((field) => field.includes(searchQuery.toLowerCase()))
       );
@@ -185,18 +184,16 @@ export default function AllDefects() {
     setFilteredDefects(filtered);
   }, [searchQuery, defects]);
 
-  // Get color for status background
   const getStatusColor = (status) =>
     statusColors[status] || "bg-gray-100 text-gray-800";
 
-  // Get image URL
   const getImageUrl = (bugImage) => {
     if (bugImage) {
       const normalizedPath = bugImage
         .replace(/\\/g, "/")
         .split("uploads/")
         .pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
     return "https://via.placeholder.com/150";
   };
@@ -204,18 +201,15 @@ export default function AllDefects() {
   return (
     <div className="bg-white py-8 sm:py-12">
       <div className="mx-auto max-w-7xl px-4 lg:px-6">
-        {/* Header Section */}
+        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-3 sm:space-y-0 sm:space-x-4">
-          {/* Title and Total Count */}
           <div className="flex items-center space-x-2">
             <h2 className="font-medium tracking-tight text-gray-700">
               All Project Defects ({defects.length} total)
             </h2>
           </div>
 
-          {/* Icons, Search, and Priority Filter Buttons */}
           <div className="flex flex-wrap items-center justify-center space-x-2">
-            {/* View Toggle Icons */}
             <FaThList
               className={`text-sm cursor-pointer ${
                 view === "list" ? "text-indigo-500" : "text-gray-500"
@@ -235,7 +229,6 @@ export default function AllDefects() {
               onClick={() => setView("grid")}
             />
 
-            {/* Search Input */}
             <div className="relative">
               <FaSearch className="absolute left-2 top-2 text-gray-400" />
               <input
@@ -246,18 +239,19 @@ export default function AllDefects() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+
             <div className="relative">
-              <a
-                href={`/single-project/${projectId}`}
+              <Link
+                to={`/single-project/${projectId}`}
                 className=" btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
               >
                 Project Dashboard
-              </a>
+              </Link>
             </div>
           </div>
         </div>
 
-        {/* Priority Filter Buttons */}
+        {/* Filters */}
         <div className="flex flex-wrap justify-center items-center mt-3 space-x-2">
           <button
             onClick={() => filterDefects("low")}
@@ -278,7 +272,6 @@ export default function AllDefects() {
             High ({priorityCounts.high})
           </button>
 
-          {/* Severity Filter Buttons */}
           <button
             onClick={() => filterBySeverity("minor")}
             className={`text-xs px-2 py-1 rounded ${severityColors.minor}`}
@@ -303,8 +296,6 @@ export default function AllDefects() {
           >
             Blocker ({severityCounts.blocker})
           </button>
-
-          {/* Status Filter Buttons */}
 
           <button
             onClick={() => filterByStatus("Open/New")}
@@ -342,6 +333,7 @@ export default function AllDefects() {
           >
             Closed ({statusCounts.closed})
           </button>
+
           <button
             onClick={() => filterByStatus("all")}
             className="text-xs px-2 py-1 rounded bg-gray-200"
@@ -357,6 +349,7 @@ export default function AllDefects() {
               {filteredDefects
                 .filter((defect) =>
                   [defect.test_case_name, defect.module_name, defect.status]
+                    .filter(Boolean)
                     .map((field) => field.toLowerCase())
                     .some((field) => field.includes(searchQuery.toLowerCase()))
                 )
@@ -394,6 +387,7 @@ export default function AllDefects() {
               {filteredDefects
                 .filter((defect) =>
                   [defect.test_case_name, defect.module_name, defect.status]
+                    .filter(Boolean)
                     .map((field) => field.toLowerCase())
                     .some((field) => field.includes(searchQuery.toLowerCase()))
                 )
@@ -431,6 +425,7 @@ export default function AllDefects() {
               {filteredDefects
                 .filter((defect) =>
                   [defect.test_case_name, defect.module_name, defect.status]
+                    .filter(Boolean)
                     .map((field) => field.toLowerCase())
                     .some((field) => field.includes(searchQuery.toLowerCase()))
                 )
@@ -440,7 +435,6 @@ export default function AllDefects() {
                     className="flex items-center justify-between bg-white rounded-lg shadow relative p-4"
                   >
                     <div className="flex flex-1 space-x-4">
-                      {/* Bug Image on the Left */}
                       <div className="w-16 h-16">
                         <img
                           src={getImageUrl(defect.bug_picture)}
@@ -449,7 +443,6 @@ export default function AllDefects() {
                         />
                       </div>
 
-                      {/* Defect Details */}
                       <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
                         <span className="text-sm font-semibold text-gray-600">
                           Test Case Name
@@ -493,9 +486,7 @@ export default function AllDefects() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
                     <div className="flex space-x-4 items-center w-2/12">
-                      {/* View Defect */}
                       <Link
                         to={`/single-project/${projectId}/defect/${defect._id}`}
                         className="text-blue-400 hover:text-blue-500 text-sm"
@@ -503,7 +494,6 @@ export default function AllDefects() {
                         <FaEye className="text-lg" />
                       </Link>
 
-                      {/* Link to Bug History */}
                       <Link
                         to={`/bug-history/${defect._id}`}
                         className="text-gray-600 hover:text-gray-800 text-sm"

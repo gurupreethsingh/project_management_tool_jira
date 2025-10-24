@@ -1,72 +1,205 @@
-import React, { useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { MdOutlineAdminPanelSettings } from "react-icons/md"; // Icon
-import { FaFileAlt } from "react-icons/fa"; // Icon for Scenario text
+import { MdOutlineAdminPanelSettings } from "react-icons/md";
+import { FaFileAlt } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AddScenario = () => {
-  const [formData, setFormData] = useState({
-    scenario_text: "",
-  });
+  const navigate = useNavigate();
+  const { projectId } = useParams();
+
+  // form
+  const [scenarioText, setScenarioText] = useState("");
+  const [useExistingModule, setUseExistingModule] = useState(true);
+  const [moduleId, setModuleId] = useState("");
+  const [newModuleName, setNewModuleName] = useState("");
+
+  // data
+  const [modules, setModules] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+
+  // ui
   const [errors, setErrors] = useState({});
   const [successMessage, setSuccessMessage] = useState("");
-  const navigate = useNavigate();
-  const { projectId } = useParams(); // Fetching project ID from URL
+  const [loadingMods, setLoadingMods] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Function to handle form field changes
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const token = useMemo(() => localStorage.getItem("token") || "", []);
+  const authHeaders = useMemo(
+    () => ({
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }),
+    [token]
+  );
+
+  // ---- load modules for dropdown ----
+  useEffect(() => {
+    const loadModules = async () => {
+      if (!projectId) return;
+      try {
+        setLoadingMods(true);
+        const res = await fetch(
+          `${globalBackendRoute}/api/single-projects/${projectId}/modules`,
+          { headers: authHeaders }
+        );
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setModules(data);
+          // pick first by default if any
+          if (data.length && !moduleId) setModuleId(data[0]._id);
+        } else {
+          setModules([]);
+        }
+      } catch (e) {
+        // silent; show empty dropdown
+        setModules([]);
+      } finally {
+        setLoadingMods(false);
+      }
+    };
+    loadModules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId]);
+
+  // ---- autosuggest search with debounce ----
+  const debounceRef = useRef(null);
+  const runSearch = useCallback(
+    async (q) => {
+      if (!q?.trim()) {
+        setSuggestions([]);
+        return;
+      }
+      try {
+        setSearching(true);
+        const url = `${globalBackendRoute}/api/single-projects/${projectId}/scenarios/search?q=${encodeURIComponent(
+          q
+        )}`;
+        const res = await fetch(url, { headers: authHeaders });
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setSuggestions(data);
+        } else {
+          setSuggestions([]);
+        }
+      } catch {
+        setSuggestions([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [authHeaders, projectId]
+  );
+
+  const handleScenarioChange = (e) => {
+    const value = e.target.value;
+    setScenarioText(value);
+    // debounce
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => runSearch(value), 300);
   };
 
-  // Function to validate the form
-  const validateForm = () => {
-    let formErrors = {};
-    if (!formData.scenario_text.trim()) {
-      formErrors.scenario_text = "Scenario text cannot be empty.";
+  const handlePickSuggestion = (text) => {
+    setScenarioText(text);
+    setSuggestions([]);
+  };
+
+  // ---- basic validation ----
+  const validate = () => {
+    const e = {};
+    if (!scenarioText.trim())
+      e.scenario_text = "Scenario text cannot be empty.";
+
+    if (useExistingModule) {
+      if (!moduleId) e.module = "Please select a module.";
+    } else {
+      if (!newModuleName.trim()) e.module = "Please enter a new module name.";
     }
-    setErrors(formErrors);
-    return Object.keys(formErrors).length === 0;
+
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  // Function to handle form submission
+  // ---- submit ----
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validate()) return;
 
-    if (validateForm()) {
-      try {
-        const token = localStorage.getItem("token");
-        console.log("Token being sent:", token); // Check if token is correct
+    setSubmitting(true);
+    setErrors({});
+    setSuccessMessage("");
 
-        const response = await fetch(
-          `http://localhost:5000/single-projects/${projectId}/add-scenario`, // Backend route
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${token}`, // Ensure token is passed here
-            },
-            body: JSON.stringify(formData),
-          }
-        );
+    try {
+      // If creating a new module, create-or-get it first to retrieve its id (optional)
+      let payload = { scenario_text: scenarioText };
+      if (useExistingModule) {
+        payload.moduleId = moduleId;
+      } else {
+        // You can either pass module_name to add-scenario
+        // or pre-create here with POST /modules then pass moduleId.
+        // We'll pass module_name directly to keep the flow simple.
+        payload.module_name = newModuleName.trim();
+      }
 
-        if (response.ok) {
-          setSuccessMessage("Scenario added successfully!");
-          setFormData({
-            scenario_text: "",
-          });
-          setErrors({});
-          alert("Scenario added successfully.");
-          navigate(`/single-project/${projectId}/view-all-scenarios`); // Navigate back to project page after adding
-        } else {
-          const errorData = await response.json();
+      const res = await fetch(
+        `${globalBackendRoute}/api/single-projects/${projectId}/add-scenario`,
+        {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(payload),
+        }
+      );
+
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        setSuccessMessage("Scenario added successfully!");
+        setScenarioText("");
+        setNewModuleName("");
+        // optional: refresh modules in case a new one was created server-side
+        // navigate to list
+        alert("Scenario added successfully.");
+        navigate(`/single-project/${projectId}/view-all-scenarios`);
+      } else {
+        // handle duplicate (409) specially
+        if (res.status === 409) {
           setErrors({
-            submit: errorData.message || "Error adding scenario",
+            submit:
+              data?.error ||
+              data?.message ||
+              "A similar scenario already exists.",
+          });
+        } else {
+          setErrors({
+            submit: data?.error || data?.message || "Error adding scenario.",
           });
         }
-      } catch (error) {
-        setErrors({ submit: "An error occurred. Please try again." });
       }
+    } catch (err) {
+      setErrors({ submit: "An error occurred. Please try again." });
+    } finally {
+      setSubmitting(false);
     }
   };
+
+  // Highlight if we think there’s a likely duplicate
+  const likelyDuplicate = useMemo(() => {
+    if (!scenarioText.trim() || !suggestions.length) return false;
+    const norm = (s) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const mine = norm(scenarioText);
+    return suggestions.some((s) => norm(s.scenario_text) === mine);
+  }, [scenarioText, suggestions]);
 
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
@@ -90,37 +223,153 @@ const AddScenario = () => {
             >
               <FaFileAlt className="text-green-500 mr-2" /> Scenario Text
             </label>
-            <div className="mt-2">
+            <div className="mt-2 relative">
               <input
                 id="scenario_text"
                 name="scenario_text"
                 type="text"
                 required
-                value={formData.scenario_text}
-                onChange={handleChange}
+                value={scenarioText}
+                onChange={handleScenarioChange}
                 className="block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Describe the scenario…"
               />
               {errors.scenario_text && (
                 <p className="mt-2 text-sm text-red-600">
                   {errors.scenario_text}
                 </p>
               )}
+              {likelyDuplicate && (
+                <p className="mt-2 text-sm text-amber-600">
+                  Heads up: a very similar scenario already exists.
+                </p>
+              )}
+              {/* Suggestions */}
+              {(searching || suggestions.length > 0) && (
+                <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
+                  {searching && (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Searching…
+                    </div>
+                  )}
+                  {!searching &&
+                    suggestions.map((s) => (
+                      <button
+                        type="button"
+                        key={s._id}
+                        className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
+                        onClick={() => handlePickSuggestion(s.scenario_text)}
+                        title={`Module: ${s?.module?.name || "—"}`}
+                      >
+                        {s.scenario_text}
+                        {s.module?.name ? (
+                          <span className="ml-2 text-xs text-gray-500">
+                            ({s.module.name})
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  {!searching && suggestions.length === 0 && scenarioText && (
+                    <div className="px-3 py-2 text-sm text-gray-400">
+                      No similar scenarios found.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Display submit errors */}
-          {errors.submit && <div className="text-red-600">{errors.submit}</div>}
+          {/* Module picker */}
+          <div className="grid grid-cols-1 gap-3">
+            <div className="flex gap-4 items-center">
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  className="mr-2"
+                  checked={useExistingModule}
+                  onChange={() => setUseExistingModule(true)}
+                />
+                <span className="text-sm text-gray-800">
+                  Select existing module
+                </span>
+              </label>
+              <label className="inline-flex items-center">
+                <input
+                  type="radio"
+                  className="mr-2"
+                  checked={!useExistingModule}
+                  onChange={() => setUseExistingModule(false)}
+                />
+                <span className="text-sm text-gray-800">Create new module</span>
+              </label>
+            </div>
+
+            {useExistingModule ? (
+              <div>
+                <label className="block text-sm font-medium leading-6 text-gray-900">
+                  Module
+                </label>
+                <select
+                  disabled={loadingMods}
+                  className="mt-2 block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                  value={moduleId}
+                  onChange={(e) => setModuleId(e.target.value)}
+                >
+                  {loadingMods ? (
+                    <option>Loading modules…</option>
+                  ) : modules.length ? (
+                    modules.map((m) => (
+                      <option key={m._id} value={m._id}>
+                        {m.name}
+                      </option>
+                    ))
+                  ) : (
+                    <option value="">No modules found</option>
+                  )}
+                </select>
+                {errors.module && (
+                  <p className="mt-2 text-sm text-red-600">{errors.module}</p>
+                )}
+              </div>
+            ) : (
+              <div>
+                <label className="block text-sm font-medium leading-6 text-gray-900">
+                  New module name
+                </label>
+                <input
+                  type="text"
+                  className="mt-2 block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                  value={newModuleName}
+                  onChange={(e) => setNewModuleName(e.target.value)}
+                  placeholder="e.g., Homepage"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Similar names (e.g., “home page”, “HOME_PAGE”) are normalized
+                  server-side to avoid duplicates.
+                </p>
+                {errors.module && (
+                  <p className="mt-2 text-sm text-red-600">{errors.module}</p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Submit errors/success */}
+          {errors.submit && (
+            <div className="text-red-600 text-sm">{errors.submit}</div>
+          )}
           {successMessage && (
-            <div className="text-green-600">{successMessage}</div>
+            <div className="text-green-600 text-sm">{successMessage}</div>
           )}
 
-          {/* Submit button */}
+          {/* Actions */}
           <div>
             <button
               type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              disabled={submitting}
+              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 disabled:opacity-60"
             >
-              Add Scenario
+              {submitting ? "Adding…" : "Add Scenario"}
             </button>
           </div>
         </form>

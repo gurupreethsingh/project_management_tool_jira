@@ -9,6 +9,7 @@ import {
   FaCommentDots,
   FaUserCircle,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 export default function ReplyMessage({ setUnreadMessagesCount }) {
   const { id } = useParams();
@@ -16,12 +17,11 @@ export default function ReplyMessage({ setUnreadMessagesCount }) {
   const [reply, setReply] = useState("");
   const [replies, setReplies] = useState([]);
 
-  // Fetch the message and its replies from the backend
   useEffect(() => {
     const fetchMessage = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/reply-message/${id}`
+          `${globalBackendRoute}/api/reply-message/${id}`
         );
         setMessage(response.data);
         setReplies(response.data.replies);
@@ -29,22 +29,21 @@ export default function ReplyMessage({ setUnreadMessagesCount }) {
         console.error("Error fetching message:", error);
       }
     };
-
     fetchMessage();
   }, [id]);
 
   const handleReply = async () => {
     if (reply.trim() !== "") {
-      const adminDetails = JSON.parse(localStorage.getItem("user")); // Get admin details from local storage
+      const adminDetails = JSON.parse(localStorage.getItem("user"));
       const newReply = {
-        name: adminDetails.name, // Use admin's name from local storage
-        email: adminDetails.email, // Use admin's email from local storage
+        name: adminDetails.name,
+        email: adminDetails.email,
         message: reply,
       };
 
       try {
-        const response = await axios.post(
-          `http://localhost:5000/give-message-reply/${id}/reply`,
+        await axios.post(
+          `${globalBackendRoute}/api/give-message-reply/${id}/reply`,
           newReply
         );
         setReplies([
@@ -53,26 +52,23 @@ export default function ReplyMessage({ setUnreadMessagesCount }) {
         ]);
         setReply("");
 
-        // Reduce the unread count locally after a successful reply
         setUnreadMessagesCount((prevCount) => Math.max(prevCount - 1, 0));
 
-        // Optionally, you might want to update the count on the backend as well.
         try {
-          await axios.post(`http://localhost:5000/messages/mark-as-read`, {
+          await axios.post(`${globalBackendRoute}/api/messages/mark-as-read`, {
             messageId: id,
           });
         } catch (markAsReadError) {
           console.error("Error marking message as read:", markAsReadError);
-          // You can choose to handle this differently, perhaps by showing a notification to the user.
         }
       } catch (error) {
         console.error("Error sending reply:", error);
-        // Optionally, show an error message to the user
       }
     }
   };
 
   if (!message) return <p>Loading...</p>;
+
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
       <div className="border-b pb-6 mb-6 text-left">

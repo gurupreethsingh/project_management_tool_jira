@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // To get the project ID from URL
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import {
   FaThList,
@@ -10,277 +10,342 @@ import {
   FaTrashAlt,
   FaArrowLeft,
   FaArrowRight,
-  FaSort, // Icon for sorting
+  FaSort,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 export default function AllScenarios() {
-  const { projectId } = useParams(); // Get project projectId from URL
-  const [scenarios, setScenarios] = useState([]); // State to hold fetched scenarios
-  const [view, setView] = useState("list"); // Set list view as default
+  const { projectId } = useParams();
+  const [scenarios, setScenarios] = useState([]);
+  const [view, setView] = useState("list");
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5); // Number of items per page
+  const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortOrder, setSortOrder] = useState("asc"); // State for sort order
-  const [totalScenarios, setTotalScenarios] = useState(0); // Total count of all scenarios
-  const [filteredScenarioCount, setFilteredScenarioCount] = useState(0); // Filtered count of scenarios based on search
+  const [sortOrder, setSortOrder] = useState("asc");
+  const [totalScenarios, setTotalScenarios] = useState(0);
+  const [filteredScenarioCount, setFilteredScenarioCount] = useState(0);
+
+  // Module filter
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
 
   useEffect(() => {
     const fetchScenarios = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5000/single-project/${projectId}/view-all-scenarios` // Backend route to fetch scenarios based on the project
+          `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`
         );
-        setScenarios(response.data);
-        setTotalScenarios(response.data.length); // Set total scenarios count
-        setFilteredScenarioCount(response.data.length); // Initially, set filtered count as total count
-        setTotalPages(Math.ceil(response.data.length / itemsPerPage)); // Set total pages
+        const data = response.data || [];
+        setScenarios(data);
+        setTotalScenarios(data.length);
       } catch (error) {
         console.error("Error fetching scenarios:", error);
       }
     };
-
     fetchScenarios();
-  }, [projectId, itemsPerPage]);
+  }, [projectId]);
 
-  // Handle search logic across multiple fields including user names and project names
-  const filteredScenarios = scenarios.filter((scenario) =>
-    [
-      scenario.scenario_text,
-      scenario.scenario_number,
-      scenario.createdBy.name,
-      scenario.project.project_name,
-    ]
-      .map((field) => field.toLowerCase())
-      .some((field) => field.includes(searchQuery.toLowerCase()))
-  );
-
+  // Debounce search for snappier typing
   useEffect(() => {
-    setFilteredScenarioCount(filteredScenarios.length); // Update filtered count whenever search changes
-  }, [searchQuery, filteredScenarios]);
+    const t = setTimeout(() => setDebouncedQuery(searchQuery), 180);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
-  // Handle sorting scenarios by creation date
+  const norm = (v) => (v ?? "").toString().toLowerCase();
+
+  // Build module chips (+ counts) from current dataset
+  const modules = useMemo(() => {
+    const counts = new Map(); // id -> { _id, name, count }
+    for (const s of scenarios) {
+      const id = s?.module?._id || "__unassigned__";
+      const name = s?.module?.name || "Unassigned";
+      if (!counts.has(id)) counts.set(id, { _id: id, name, count: 0 });
+      counts.get(id).count += 1;
+    }
+    return Array.from(counts.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+    );
+  }, [scenarios]);
+
+  // Filter (search + module)
+  const filtered = useMemo(() => {
+    const q = norm(debouncedQuery);
+    return scenarios.filter((scenario) => {
+      if (selectedModuleId) {
+        const mId = scenario?.module?._id || "__unassigned__";
+        if (mId !== selectedModuleId) return false;
+      }
+      const fields = [
+        norm(scenario.scenario_text),
+        norm(scenario.scenario_number),
+        norm(scenario?.createdBy?.name),
+        norm(scenario?.project?.project_name),
+        norm(scenario?.module?.name || "Unassigned"),
+      ];
+      return q ? fields.some((f) => f.includes(q)) : true;
+    });
+  }, [scenarios, debouncedQuery, selectedModuleId]);
+
+  // Keep filtered count and total pages in sync
+  useEffect(() => {
+    setFilteredScenarioCount(filtered.length);
+    const pages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
+    setTotalPages(pages);
+    setCurrentPage((p) => Math.min(p, pages));
+  }, [filtered, itemsPerPage]);
+
   const handleSort = () => {
-    const sortedScenarios = [...scenarios].sort((a, b) => {
+    const sorted = [...scenarios].sort((a, b) => {
       const dateA = new Date(a.createdAt);
       const dateB = new Date(b.createdAt);
       return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
     });
-    setScenarios(sortedScenarios);
-    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    setScenarios(sorted);
+    setSortOrder((s) => (s === "asc" ? "desc" : "asc"));
   };
 
-  // Handle pagination logic
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentScenarios = filteredScenarios.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  // Pagination slice after filtering
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
+  const current = filtered.slice(indexOfFirst, indexOfLast);
 
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-  };
+  const handlePageChange = (newPage) => setCurrentPage(newPage);
 
-  // Handle delete scenario functionality
   const handleDelete = async (scenarioId) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this scenario? This will delete all its history as well."
     );
     if (!confirmDelete) return;
 
-    const token = localStorage.getItem("token"); // Get the JWT token from localStorage
-
+    const token = localStorage.getItem("token");
     try {
       await axios.delete(
-        `http://localhost:5000/single-project/scenario/${scenarioId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Pass the token in the Authorization header
-          },
-        }
+        `${globalBackendRoute}/api/single-project/scenario/${scenarioId}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
       alert("Scenario deleted successfully.");
-      // Refresh scenarios after deletion
-      const updatedScenarios = scenarios.filter(
-        (scenario) => scenario._id !== scenarioId
-      );
-      setScenarios(updatedScenarios);
-      setFilteredScenarioCount(updatedScenarios.length); // Update filtered count after deletion
+      const updated = scenarios.filter((s) => s._id !== scenarioId);
+      setScenarios(updated);
+      setTotalScenarios(updated.length);
     } catch (error) {
       console.error("Error deleting scenario:", error);
       alert("Error deleting scenario");
     }
   };
 
+  const onModuleClick = (id) => {
+    setSelectedModuleId((prev) => (prev === id ? null : id));
+    setCurrentPage(1);
+  };
+
+  const clearModuleSelection = () => {
+    setSelectedModuleId(null);
+    setCurrentPage(1);
+  };
+
   return (
-    <div className="bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex justify-between items-center flex-wrap">
+    <div className="bg-white py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Header / Controls */}
+        <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
-            <h2 className="text-left font-semibold tracking-tight text-indigo-600 sm:text-1xl">
-              All Scenarios for Project : {projectId}
+            <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
+              All Scenarios for Project: {projectId}
             </h2>
-            <p className="text-sm text-gray-600 mt-2">
-              Total Scenarios: {totalScenarios}{" "}
-              {/* Display total scenario count */}
+            <p className="text-xs text-gray-600 mt-1">
+              Total Scenarios: {totalScenarios}
             </p>
-            {searchQuery && (
-              <p className="text-sm text-gray-600">
-                Showing {filteredScenarioCount} result(s) for "{searchQuery}"
+            {(searchQuery || selectedModuleId) && (
+              <p className="text-xs text-gray-600">
+                Showing {filteredScenarioCount} result(s)
+                {searchQuery ? <> for “{searchQuery}”</> : null}
+                {selectedModuleId ? " in selected module" : null}
               </p>
             )}
           </div>
-          <div className="flex items-center space-x-4 flex-wrap">
+
+          <div className="flex items-center gap-3 flex-wrap">
             <FaThList
-              className={`text-xl cursor-pointer ${view === "list" ? "text-blue-400" : "text-gray-500"
-                }`}
+              className={`text-lg cursor-pointer ${view === "list" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("list")}
+              title="List view"
             />
             <FaThLarge
-              className={`text-xl cursor-pointer ${view === "card" ? "text-blue-400" : "text-gray-500"
-                }`}
+              className={`text-lg cursor-pointer ${view === "card" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("card")}
+              title="Card view"
             />
             <FaTh
-              className={`text-xl cursor-pointer ${view === "grid" ? "text-blue-400" : "text-gray-500"
-                }`}
+              className={`text-lg cursor-pointer ${view === "grid" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("grid")}
+              title="Grid view"
             />
+
             <div className="relative">
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
               <input
                 type="text"
-                className="pl-10 pr-4 py-2 border rounded-md focus:outline-none"
+                className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
                 placeholder="Search scenarios..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)} // Update search query
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+
             <button
               onClick={handleSort}
-              className="px-4 py-1 bg-indigo-600 text-white rounded-md hover:bg-indigo-900 flex items-center btn btn-sm"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm inline-flex items-center"
             >
-              <FaSort className="mr-2" />
+              <FaSort className="mr-1" />
               Sort ({sortOrder === "asc" ? "Oldest" : "Newest"})
             </button>
 
-            <a href={`/single-project/${projectId}`}
-              className="btn btn-sm bg-indigo-600 text-white rounded-md hover:bg-indigo-900"
-            >Project Dashboard
+            <a
+              href={`/single-project/${projectId}`}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+            >
+              Project Dashboard
             </a>
           </div>
         </div>
 
-        {/* List View */}
+        {/* Module chips row */}
+        <div className="mt-4">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-slate-700">Filter by Module</h3>
+            <button
+              onClick={clearModuleSelection}
+              className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
+            >
+              Clear
+            </button>
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {modules.map((m) => {
+              const active = selectedModuleId === m._id;
+              return (
+                <button
+                  key={m._id}
+                  onClick={() => onModuleClick(m._id)}
+                  className={[
+                    "whitespace-nowrap px-3 py-1 rounded-full border text-[12px]",
+                    active
+                      ? "bg-indigo-600 text-white border-indigo-600"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
+                  ].join(" ")}
+                  title={`${m.name} (${m.count})`}
+                >
+                  {m.name} <span className="opacity-70 ml-1">({m.count})</span>
+                </button>
+              );
+            })}
+            {modules.length === 0 && (
+              <span className="text-slate-500 text-sm">No modules found</span>
+            )}
+          </div>
+        </div>
+
+        {/* List View (compact, single global header) */}
         {view === "list" && (
-          <div className="mt-10 space-y-6">
-            {currentScenarios.map((scenario, index) => (
-              <div
-                key={scenario._id}
-                className="flex items-center justify-between bg-white rounded-lg shadow relative p-4"
-              >
-                <div className="flex flex-1 space-x-4">
-                  {/* Serial Number Column */}
-                  <div className="flex flex-col w-1/12 border-r pr-2 border-gray-300">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Serial Number
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {indexOfFirstItem + index + 1}
+          <div className="mt-5">
+            {/* global header */}
+            <div className="grid grid-cols-[56px,120px,1fr,160px,160px,140px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
+              <div>#</div>
+              <div>Scenario</div>
+              <div>Text</div>
+              <div>Module</div>
+              <div>Project</div>
+              <div>Created By</div>
+              <div className="text-center">View</div>
+              <div className="text-center">Del</div>
+            </div>
+
+            {/* rows */}
+            <div className="divide-y divide-slate-200">
+              {current.map((s, idx) => (
+                <div
+                  key={s._id}
+                  className="grid grid-cols-[56px,120px,1fr,160px,160px,140px,40px,40px] items-center text-[12px] px-3 py-2"
+                >
+                  <div className="text-slate-700">{indexOfFirst + idx + 1}</div>
+
+                  <div className="text-slate-900 font-medium truncate">
+                    {s.scenario_number}
+                  </div>
+
+                  <div className="text-slate-700 line-clamp-2">
+                    {s.scenario_text}
+                  </div>
+
+                  <div className="truncate">
+                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                      {s?.module?.name || "Unassigned"}
                     </span>
                   </div>
 
-                  {/* Scenario Number Column */}
-                  <div className="flex flex-col w-1/12 border-r pr-2 border-gray-300">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Scenario Number
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {scenario.scenario_number}
-                    </span>
+                  <div className="text-slate-700 truncate">
+                    {s?.project?.project_name}
                   </div>
 
-                  {/* Scenario Text Column (Taking the most space) */}
-                  <div className="flex flex-col w-6/12 border-r pr-2 border-gray-300">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Scenario Text
-                    </span>
-                    <span className="text-sm text-gray-600 break-words">
-                      {scenario.scenario_text}
-                    </span>
+                  <div className="text-indigo-700 font-semibold truncate">
+                    {s?.createdBy?.name}
                   </div>
 
-                  {/* Project Column */}
-                  <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Project
-                    </span>
-                    <span className="text-sm text-gray-600">
-                      {scenario.project.project_name}
-                    </span>
+                  {/* View column */}
+                  <div className="flex justify-center">
+                    <Link
+                      to={`/single-project/${projectId}/scenario-history/${s._id}`}
+                      className="text-indigo-600 hover:text-indigo-800"
+                      title="View"
+                    >
+                      <FaEye className="text-sm" />
+                    </Link>
                   </div>
 
-                  {/* Created By Column */}
-                  <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-                    <span className="text-sm font-semibold text-gray-600">
-                      Created By
-                    </span>
-                    <span className="text-sm text-indigo-600 font-bold">
-                      {scenario.createdBy.name}
-                    </span>
+                  {/* Delete column */}
+                  <div className="flex justify-center">
+                    <button
+                      onClick={() => handleDelete(s._id)}
+                      className="text-rose-600 hover:text-rose-800"
+                      title="Delete"
+                    >
+                      <FaTrashAlt className="text-sm" />
+                    </button>
                   </div>
                 </div>
-
-                {/* Icons for View and Delete */}
-                <div className="flex space-x-4 items-center w-1/12">
-                  <Link
-                    to={`/single-project/${projectId}/scenario-history/${scenario._id}`}
-                    className="text-blue-400 hover:text-blue-500 text-sm"
-                  >
-                    <FaEye className="text-lg" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(scenario._id)}
-                    className="text-red-400 hover:text-red-500 text-sm"
-                  >
-                    <FaTrashAlt className="text-lg" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
-
-
-
 
         {/* Grid View */}
         {view === "grid" && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-10">
-            {currentScenarios.map((scenario, index) => (
-              <div
-                key={scenario._id}
-                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-              >
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-8">
+            {current.map((s) => (
+              <div key={s._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-gray-600">
-                    Scenario Number: {scenario.scenario_number}
+                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                    <span>Scenario: {s.scenario_number}</span>
+                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                      {s?.module?.name || "Unassigned"}
+                    </span>
                   </div>
-                  <div className="text-sm text-gray-600 break-words whitespace-normal">
-                    {scenario.scenario_text}
+                  <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
+                    {s.scenario_text}
                   </div>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <Link
-                    to={`/single-project/${projectId}/scenario-history/${scenario._id}`}
-                    className="text-blue-400 hover:text-blue-500 text-sm"
+                    to={`/single-project/${projectId}/scenario-history/${s._id}`}
+                    className="text-blue-500 hover:text-blue-700 text-sm"
                   >
                     <FaEye className="text-sm" />
                   </Link>
                   <button
-                    onClick={() => handleDelete(scenario._id)}
-                    className="text-red-400 hover:text-red-500 text-sm"
+                    onClick={() => handleDelete(s._id)}
+                    className="text-rose-500 hover:text-rose-700 text-sm"
                   >
                     <FaTrashAlt className="text-sm" />
                   </button>
@@ -289,34 +354,33 @@ export default function AllScenarios() {
             ))}
           </div>
         )}
-
 
         {/* Card View */}
         {view === "card" && (
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10">
-            {currentScenarios.map((scenario, index) => (
-              <div
-                key={scenario._id}
-                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-              >
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
+            {current.map((s) => (
+              <div key={s._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
                 <div>
-                  <div className="text-sm font-semibold text-gray-600">
-                    Scenario Number: {scenario.scenario_number}
+                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                    <span>Scenario: {s.scenario_number}</span>
+                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                      {s?.module?.name || "Unassigned"}
+                    </span>
                   </div>
-                  <div className="text-sm text-gray-600 break-words whitespace-normal">
-                    {scenario.scenario_text}
+                  <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
+                    {s.scenario_text}
                   </div>
                 </div>
                 <div className="mt-2 flex justify-between">
                   <Link
-                    to={`/single-project/${projectId}/scenario-history/${scenario._id}`}
-                    className="text-blue-400 hover:text-blue-500 text-sm"
+                    to={`/single-project/${projectId}/scenario-history/${s._id}`}
+                    className="text-blue-500 hover:text-blue-700 text-sm"
                   >
                     <FaEye className="text-sm" />
                   </Link>
                   <button
-                    onClick={() => handleDelete(scenario._id)}
-                    className="text-red-400 hover:text-red-500 text-sm"
+                    onClick={() => handleDelete(s._id)}
+                    className="text-rose-500 hover:text-rose-700 text-sm"
                   >
                     <FaTrashAlt className="text-sm" />
                   </button>
@@ -326,25 +390,24 @@ export default function AllScenarios() {
           </div>
         )}
 
-
         {/* Pagination */}
-        <div className="flex justify-center items-center space-x-2 mt-10">
+        <div className="flex justify-center items-center gap-2 mt-8">
           <button
-            className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+            className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === 1}
             onClick={() => handlePageChange(currentPage - 1)}
           >
-            <FaArrowLeft className="text-xl" />
+            <FaArrowLeft className="text-lg" />
           </button>
-          <span>
+          <span className="text-sm">
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500"
+            className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === totalPages}
             onClick={() => handlePageChange(currentPage + 1)}
           >
-            <FaArrowRight className="text-xl" />
+            <FaArrowRight className="text-lg" />
           </button>
         </div>
       </div>

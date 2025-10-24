@@ -1,16 +1,19 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaThList, FaThLarge, FaTh, FaSearch } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AllAdmins = () => {
-  const [admins, setAdmins] = useState([]); // State to hold fetched admins
+  const [admins, setAdmins] = useState([]);
   const [view, setView] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchAdmins = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/all-admins"); // Use the new API endpoint for admins
+        const response = await axios.get(
+          `${globalBackendRoute}/api/all-admins`
+        );
         setAdmins(response.data);
       } catch (error) {
         console.error("Error fetching admins:", error);
@@ -22,9 +25,8 @@ const AllAdmins = () => {
 
   const getImageUrl = (avatar) => {
     if (avatar) {
-      // Replace backslashes with forward slashes and ensure proper relative path usage
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
     return "https://via.placeholder.com/150";
   };

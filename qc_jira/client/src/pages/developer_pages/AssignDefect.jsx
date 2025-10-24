@@ -1,36 +1,35 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
-import { FaProjectDiagram, FaListAlt } from "react-icons/fa";
+import { FaProjectDiagram } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AssignDefect = () => {
   const { projectId, defectId } = useParams(); // projectId and defectId from the URL
   const [developers, setDevelopers] = useState([]); // List of developers
   const [selectedDeveloper, setSelectedDeveloper] = useState(""); // Selected developer ID
   const [projectName, setProjectName] = useState(""); // Project name
-  const [moduleName, setModuleName] = useState(""); // Module name
   const [defect, setDefect] = useState({}); // Store defect details
   const navigate = useNavigate(); // Use for navigation
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch project details (including project name and module name)
+        // Fetch project details (including project name)
         const projectResponse = await axios.get(
-          `http://localhost:5000/projects/${projectId}`
+          `${globalBackendRoute}/api/projects/${projectId}`
         );
         setProjectName(projectResponse.data.project_name);
-        setModuleName(projectResponse.data.module_name);
 
         // Fetch defect details associated with this project and defect ID
         const defectResponse = await axios.get(
-          `http://localhost:5000/single-project/${projectId}/defect/${defectId}`
+          `${globalBackendRoute}/api/single-project/${projectId}/defect/${defectId}`
         );
         setDefect(defectResponse.data);
 
         // Fetch developers associated with the project
         const developerResponse = await axios.get(
-          `http://localhost:5000/api/developers/single-project/${projectId}/developers`
+          `${globalBackendRoute}/api/developers/single-project/${projectId}/developers`
         );
         setDevelopers(developerResponse.data.developers);
       } catch (error) {
@@ -50,11 +49,10 @@ const AssignDefect = () => {
     try {
       // Get the logged-in user from localStorage
       const loggedInUser = JSON.parse(localStorage.getItem("user"));
-
       const developer = developers.find((dev) => dev._id === selectedDeveloper);
 
       await axios.post(
-        `http://localhost:5000/single-project/${projectId}/assign-defect`,
+        `${globalBackendRoute}/api/single-project/${projectId}/assign-defect`,
         {
           projectName, // Project name from state
           moduleName: defect.module_name, // Module name from defect state
@@ -78,18 +76,15 @@ const AssignDefect = () => {
   return (
     <div className="container mx-auto px-4 py-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Project and Module Details */}
+        {/* Project Details + Buttons */}
         <div className="col-span-2 flex justify-between">
-          <div>
-            <div className="flex items-center mb-2">
-              <FaProjectDiagram className="text-orange-500 mr-2" size={24} />
-              <label className="text-lg font-semibold leading-6 text-gray-700">
-                Project Name: {projectName || "N/A"}
-              </label>
-            </div>
+          <div className="flex items-center mb-2">
+            <FaProjectDiagram className="text-orange-500 mr-2" size={24} />
+            <span className="text-lg font-semibold leading-6 text-gray-700">
+              Project Name: {projectName || "N/A"}
+            </span>
           </div>
 
-          {/* Add Defect & Project Dashboard Buttons */}
           <div className="flex space-x-2">
             <button
               onClick={() =>
@@ -131,6 +126,7 @@ const AssignDefect = () => {
             className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
           />
         </div>
+
         <div>
           <label className="block text-sm font-medium leading-6 text-gray-900">
             Actual Result
@@ -143,7 +139,6 @@ const AssignDefect = () => {
           />
         </div>
 
-        {/* Defect ID (Read-Only) */}
         <div>
           <label className="block text-sm font-medium leading-6 text-gray-900">
             Defect ID

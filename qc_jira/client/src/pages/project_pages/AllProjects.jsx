@@ -315,9 +315,11 @@ import {
   FaTh,
   FaProjectDiagram,
   FaTrashAlt,
-  FaEye,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
+
+// ⬇️ Import your global backend base URL (adjust the path if needed)
+import globalBackendRoute from "../../config/Config";
 
 const AllProjects = () => {
   const [projects, setProjects] = useState([]);
@@ -328,13 +330,21 @@ const AllProjects = () => {
 
   useEffect(() => {
     fetchProjects();
-  }, [searchTerm, currentPage, view]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchTerm]); // only refetch when search changes (pagination/view are client-side)
 
   const fetchProjects = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/all-projects");
-      const allProjects = response.data.projects;
+      // You can pass search to the backend to reduce payload, but we still
+      // keep your client-side filter below for compatibility.
+      const response = await axios.get(
+        `${globalBackendRoute}/api/all-projects?search=${encodeURIComponent(
+          searchTerm
+        )}`
+      );
+      const allProjects = response.data.projects || [];
 
+      // Client-side search normalization (unchanged from your code)
       const stopWords = new Set([
         "a",
         "an",
@@ -364,13 +374,15 @@ const AllProjects = () => {
         .map(stemWord);
 
       const filteredProjects = allProjects.filter((project) => {
-        const combined =
-          `${project.project_name} ${project.description}`.toLowerCase();
+        const combined = `${project.project_name ?? ""} ${
+          project.description ?? ""
+        }`.toLowerCase();
         const stemmedCombined = combined.split(/\s+/).map(stemWord).join(" ");
         return searchWords.every((word) => stemmedCombined.includes(word));
       });
 
       setProjects(filteredProjects);
+      setCurrentPage(1); // reset to first page after fetching results
     } catch (error) {
       console.error("Error fetching projects:", error);
     }
@@ -389,7 +401,7 @@ const AllProjects = () => {
   const handleDeleteProject = async (id) => {
     if (window.confirm("Are you sure you want to delete this project?")) {
       try {
-        await axios.delete(`http://localhost:5000/delete-project/${id}`);
+        await axios.delete(`${globalBackendRoute}/api/delete-project/${id}`);
         alert("Project deleted.");
         fetchProjects();
       } catch (error) {
@@ -399,6 +411,7 @@ const AllProjects = () => {
     }
   };
 
+  // Pagination Logic
   const indexOfLastProject = currentPage * projectsPerPage;
   const indexOfFirstProject = indexOfLastProject - projectsPerPage;
   const currentProjects = projects.slice(

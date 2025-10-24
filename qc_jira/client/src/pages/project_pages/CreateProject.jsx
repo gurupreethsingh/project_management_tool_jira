@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { MdOutlineWorkOutline } from "react-icons/md";
 import { FaFileAlt, FaCalendarAlt, FaUserTie, FaUsers } from "react-icons/fa";
 import axios from "axios";
+import globalBackendRoute from "../../config/Config";
 
 export default function CreateProject() {
   const [formData, setFormData] = useState({
@@ -22,26 +23,25 @@ export default function CreateProject() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Fetch developers and test engineers
     const fetchDevelopers = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5000/users/developers"
+        const res = await axios.get(
+          `${globalBackendRoute}/api/users/developers`
         );
-        setDevelopers(response.data);
+        setDevelopers(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
-        console.error("Error fetching developers:", error); // Log the error
+        console.error("Error fetching developers:", error);
       }
     };
 
     const fetchTestEngineers = async () => {
       try {
-        const response = await axios.get(
-          "http://localhost:5000/users/test-engineers"
+        const res = await axios.get(
+          `${globalBackendRoute}/api/users/test-engineers`
         );
-        setTestEngineers(response.data);
+        setTestEngineers(Array.isArray(res.data) ? res.data : []);
       } catch (error) {
-        console.error("Error fetching test engineers:", error); // Log the error
+        console.error("Error fetching test engineers:", error);
       }
     };
 
@@ -51,75 +51,77 @@ export default function CreateProject() {
 
   const validateForm = () => {
     const formErrors = {};
-    if (!formData.projectName.trim()) {
+    if (!formData.projectName.trim())
       formErrors.projectName = "Project name cannot be empty.";
-    }
-    if (!formData.startDate) {
-      formErrors.startDate = "Start date is required.";
-    }
-    if (!formData.deadline) {
-      formErrors.deadline = "Deadline is required.";
-    }
-
+    if (!formData.startDate) formErrors.startDate = "Start date is required.";
+    if (!formData.deadline) formErrors.deadline = "Deadline is required.";
     setErrors(formErrors);
     return Object.keys(formErrors).length === 0;
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
 
   const handleDropdownChange = (e) => {
     const { name, options } = e.target;
     const selectedValues = Array.from(options)
-      .filter((option) => option.selected)
-      .map((option) => option.value);
-
+      .filter((o) => o.selected)
+      .map((o) => o.value);
     setFormData({ ...formData, [name]: selectedValues });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
 
-    if (validateForm()) {
-      try {
-        const userToken = localStorage.getItem("token"); // Retrieve token from localStorage
+    try {
+      const userToken = localStorage.getItem("token");
+      const rawUser = localStorage.getItem("user");
+      const user = rawUser ? JSON.parse(rawUser) : null;
+      const creatorId = user?._id || user?.id;
 
-        const response = await axios.post(
-          "http://localhost:5000/create-project",
-          formData,
-          {
-            headers: {
-              Authorization: `Bearer ${userToken}`, // Attach the token properly
-              "Content-Type": "application/json",
-            },
-          }
-        );
+      // Send createdBy so backend passes schema validation even if req.user is absent
+      const payload = {
+        ...formData,
+        createdBy: creatorId,
+      };
 
-        if (response.status === 201) {
-          setSuccessMessage("Project created successfully!");
-          setFormData({
-            projectName: "",
-            description: "",
-            startDate: "",
-            endDate: "",
-            deadline: "",
-            developers: [],
-            testEngineers: [],
-          });
-          setErrors({});
-          alert("Project Created Successfully.");
-          navigate("/all-projects");
-        } else {
-          setErrors({ submit: "Project creation failed." });
+      const response = await axios.post(
+        `${globalBackendRoute}/api/create-project`,
+        payload,
+        {
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+            "Content-Type": "application/json",
+          },
         }
-      } catch (error) {
-        console.error(
-          "Error during project creation:",
-          error.response?.data || error
-        );
-        setErrors({ submit: "An error occurred. Please try again." });
+      );
+
+      if (response.status === 201) {
+        setSuccessMessage("Project created successfully!");
+        setFormData({
+          projectName: "",
+          description: "",
+          startDate: "",
+          endDate: "",
+          deadline: "",
+          developers: [],
+          testEngineers: [],
+        });
+        setErrors({});
+        alert("Project Created Successfully.");
+        navigate("/all-projects");
+      } else {
+        setErrors({ submit: "Project creation failed." });
       }
+    } catch (error) {
+      const serverMsg =
+        error?.response?.data?.message || error?.message || "Server error";
+      console.error(
+        "Error during project creation:",
+        error?.response?.data || error
+      );
+      setErrors({ submit: serverMsg });
     }
   };
 

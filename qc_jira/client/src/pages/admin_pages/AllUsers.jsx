@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaThList, FaThLarge, FaTh, FaSearch } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 export default function AllUsers() {
   const [users, setUsers] = useState([]); // State to hold fetched users
@@ -11,7 +12,7 @@ export default function AllUsers() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/all-users");
+        const response = await axios.get(`${globalBackendRoute}/api/all-users`);
         setUsers(response.data);
       } catch (error) {
         console.error("Error fetching users:", error);
@@ -34,7 +35,7 @@ export default function AllUsers() {
     if (avatar) {
       // Replace backslashes with forward slashes and ensure proper relative path usage
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
     return "https://via.placeholder.com/150";
   };

@@ -12,17 +12,19 @@ import {
   FaUser,
   FaCamera,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AddDefect = () => {
   const navigate = useNavigate();
-  const { projectId } = useParams(); // Extract the projectId from URL params
-  const [testCases, setTestCases] = useState([]); // Holds all test cases
+  const { projectId } = useParams();
+
+  const [testCases, setTestCases] = useState([]);
   const [bug, setBug] = useState({
-    project_id: projectId, // Set project_id from URL params
+    project_id: projectId,
     project_name: "",
     test_case_number: "",
     test_case_name: "",
-    scenario_number: "", // Add scenario_number in the bug state
+    scenario_number: "",
     requirement_number: "",
     build_number: "",
     module_name: "",
@@ -34,142 +36,177 @@ const AddDefect = () => {
     severity: "Minor",
     status: "Open/New",
     steps_to_replicate: [""],
-    author: "", // This will be auto-filled
+    author: "",
     reported_date: new Date().toISOString().slice(0, 10),
     updated_date: new Date().toISOString().slice(0, 10),
     fixed_date: "",
     bug_picture: "",
+    bug_id: "",
   });
 
-  useEffect(() => {
-    const loggedInUser = JSON.parse(localStorage.getItem("user")); // Assuming user info is stored in local storage
+  // helper to attach Authorization header when token exists
+  const authConfig = () => {
+    const token = localStorage.getItem("token");
+    return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+  };
 
-    if (loggedInUser && loggedInUser.name) {
-      setBug((prevBug) => ({
-        ...prevBug,
-        author: loggedInUser.name, // Auto-fill author with logged-in user's name
-      }));
+  useEffect(() => {
+    const loggedInUser = JSON.parse(localStorage.getItem("user"));
+    if (loggedInUser?.name) {
+      setBug((prev) => ({ ...prev, author: loggedInUser.name }));
     }
 
     const fetchProjectDetails = async () => {
       try {
-        // Fetch project details to get project name
-        const projectResponse = await axios.get(
-          `http://localhost:5000/projects/${projectId}`
+        // ✅ protected route → send token + correct path
+        const projectRes = await axios.get(
+          `${globalBackendRoute}/api/single-project/${projectId}`,
+          authConfig()
         );
-        if (projectResponse.data) {
-          setBug((prevBug) => ({
-            ...prevBug,
-            project_name: projectResponse.data.project_name,
+
+        if (projectRes.data) {
+          setBug((prev) => ({
+            ...prev,
+            project_name:
+              projectRes.data.project_name || projectRes.data.projectName || "",
           }));
         }
 
-        // Fetch test cases for the selected project
-        const testCasesResponse = await axios.get(
-          `http://localhost:5000/projects/${projectId}/test-cases`
+        // ✅ correct test-cases endpoint + auth
+        const tcRes = await axios.get(
+          `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
+          authConfig()
         );
 
-        if (testCasesResponse.data) {
-          console.log("Test Cases Response:", testCasesResponse.data); // Log to check the data structure
+        const all = Array.isArray(tcRes.data) ? tcRes.data : [];
 
-          // Filter test cases where at least one testing step has a status of 'Fail'
-          const failedTestCases = testCasesResponse.data.filter((testCase) =>
-            testCase.testing_steps.some((step) => step.status === "Fail")
-          );
+        // Mark a test as failed if any step is Fail (case-insensitive)
+        const failed = all.filter((tc) =>
+          (tc.testing_steps || []).some(
+            (step) => String(step?.status).toLowerCase() === "fail"
+          )
+        );
 
-          setTestCases(failedTestCases.length ? failedTestCases : []); // Populate the test cases dropdown with only failed test cases
-        }
-      } catch (error) {
+        setTestCases(failed);
+      } catch (err) {
+        // 401 here means your token is missing/expired/invalid
         console.error(
-          "Error fetching project and test cases:",
-          error.message || error
+          "Error fetching project/test cases:",
+          err?.message || err
         );
+        if (err?.response?.status === 401) {
+          alert("Your session has expired. Please log in again.");
+          // optionally redirect:
+          // navigate("/login");
+        }
       }
     };
 
     fetchProjectDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const handleTestCaseChange = (e) => {
-    const selectedTestCase = testCases.find(
+    const selected = testCases.find(
       (tc) => tc.test_case_number === e.target.value
     );
-    if (selectedTestCase) {
-      setBug((prevBug) => ({
-        ...prevBug,
-        test_case_number: selectedTestCase.test_case_number,
-        test_case_name: selectedTestCase.test_case_name,
-        scenario_number: selectedTestCase.scenario_number, // Set scenario number
-        build_number: selectedTestCase.build_name_or_number,
-        module_name: selectedTestCase.module_name,
-        expected_result: selectedTestCase.expected_result,
-        bug_id: `DEF-${selectedTestCase.test_case_number.replace("TC-", "")}`,
+
+    if (!selected) {
+      setBug((prev) => ({
+        ...prev,
+        test_case_number: "",
+        test_case_name: "",
+        scenario_number: "",
+        requirement_number: "",
+        build_number: "",
+        module_name: "",
+        test_case_type: "",
+        expected_result: "",
+        actual_result: "",
+        bug_id: "",
       }));
+      return;
     }
+
+    // Pull expected/actual from the first failed step if available
+    const failedStep =
+      (selected.testing_steps || []).find(
+        (s) => String(s?.status).toLowerCase() === "fail"
+      ) || {};
+
+    setBug((prev) => ({
+      ...prev,
+      test_case_number: selected.test_case_number,
+      test_case_name: selected.test_case_name,
+      scenario_number: selected.scenario_number,
+      requirement_number: selected.requirement_number || "",
+      build_number: selected.build_name_or_number || "",
+      module_name: selected.module_name || "",
+      test_case_type: selected.test_case_type || "",
+      expected_result: failedStep.expected_result || "",
+      // actual_result is user-editable; prefill with failed actual if present
+      actual_result: failedStep.actual_result || prev.actual_result || "",
+      bug_id: selected.test_case_number
+        ? `DEF-${String(selected.test_case_number).replace("TC-", "")}`
+        : prev.bug_id,
+    }));
   };
 
-  const handleInputChange = (event) => {
-    const { name, value } = event.target;
-    setBug({
-      ...bug,
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setBug((prev) => ({
+      ...prev,
       [name]: value,
       updated_date: new Date().toISOString().slice(0, 10),
-    });
+    }));
   };
 
-  const handlePictureChange = (event) => {
-    setBug({ ...bug, bug_picture: event.target.files[0] });
+  const handlePictureChange = (e) => {
+    setBug((prev) => ({ ...prev, bug_picture: e.target.files[0] }));
   };
 
-  const handleStepChange = (index, event) => {
-    const updatedSteps = bug.steps_to_replicate.map((step, stepIndex) => {
-      if (index === stepIndex) {
-        return event.target.value;
-      }
-      return step;
-    });
-    setBug({ ...bug, steps_to_replicate: updatedSteps });
+  const handleStepChange = (index, e) => {
+    const updated = bug.steps_to_replicate.map((s, i) =>
+      i === index ? e.target.value : s
+    );
+    setBug((prev) => ({ ...prev, steps_to_replicate: updated }));
   };
 
   const addStep = () => {
-    setBug({ ...bug, steps_to_replicate: [...bug.steps_to_replicate, ""] });
+    setBug((prev) => ({
+      ...prev,
+      steps_to_replicate: [...prev.steps_to_replicate, ""],
+    }));
   };
 
   const removeStep = (index) => {
-    const updatedSteps = bug.steps_to_replicate.filter(
-      (_, stepIndex) => stepIndex !== index
-    );
-    setBug({ ...bug, steps_to_replicate: updatedSteps });
+    setBug((prev) => ({
+      ...prev,
+      steps_to_replicate: prev.steps_to_replicate.filter((_, i) => i !== index),
+    }));
   };
 
-  const handleSubmit = async (event) => {
-    event.preventDefault();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     const formData = new FormData();
 
-    for (const key in bug) {
+    Object.entries(bug).forEach(([key, val]) => {
       if (key === "steps_to_replicate") {
-        // Make sure steps_to_replicate is appended as a valid JSON string
-        formData.append(key, JSON.stringify(bug[key]));
+        formData.append(key, JSON.stringify(val));
       } else {
-        formData.append(key, bug[key]);
+        formData.append(key, val);
       }
-    }
+    });
 
     try {
-      const response = await axios.post(
-        "http://localhost:5000/addbug",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-        }
-      );
+      await axios.post(`${globalBackendRoute}/api/addbug`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       alert("Bug added successfully!");
       navigate(`/single-project/${projectId}/all-defects`);
     } catch (error) {
-      if (error.response && error.response.status === 400) {
-        alert(error.response.data.message); // Handle duplicate test case error
+      if (error.response?.status === 400) {
+        alert(error.response.data.message);
       } else {
         console.error(
           "Error adding bug:",
@@ -208,7 +245,7 @@ const AddDefect = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Project Name, Scenario Number, Test Case Number, Test Case Name */}
+        {/* Top row */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div>
             <div className="flex items-center">
@@ -244,7 +281,7 @@ const AddDefect = () => {
               id="scenario_number"
               name="scenario_number"
               type="text"
-              value={bug.scenario_number || ""} // This will be auto-filled when a test case is selected
+              value={bug.scenario_number || ""}
               readOnly
               className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
             />
@@ -268,12 +305,9 @@ const AddDefect = () => {
               className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
             >
               <option value="">Select a Test Case</option>
-              {testCases.map((testCase) => (
-                <option
-                  key={testCase.test_case_number}
-                  value={testCase.test_case_number}
-                >
-                  {testCase.test_case_number}
+              {testCases.map((tc) => (
+                <option key={tc._id} value={tc.test_case_number}>
+                  {tc.test_case_number}
                 </option>
               ))}
             </select>
@@ -373,7 +407,8 @@ const AddDefect = () => {
             />
           </div>
         </div>
-        {/* Description of Defect */}
+
+        {/* Description */}
         <div>
           <label
             htmlFor="description_of_defect"
@@ -387,11 +422,11 @@ const AddDefect = () => {
             value={bug.description_of_defect}
             onChange={handleInputChange}
             className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
-            rows={2} // Adjust the number of rows for the text area
+            rows={2}
           />
         </div>
 
-        {/* Steps to Replicate */}
+        {/* Steps */}
         <div>
           <div className="flex items-center">
             <FaAlignLeft className="text-purple-500 mr-2" size={24} />
@@ -572,7 +607,7 @@ const AddDefect = () => {
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit */}
         <div>
           <button
             type="submit"

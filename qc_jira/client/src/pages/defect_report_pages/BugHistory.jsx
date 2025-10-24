@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // To get the defect ID from URL
+import React, { useEffect, useState, useMemo } from "react";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
 import {
   FaThList,
@@ -11,9 +11,11 @@ import {
   FaArrowLeft,
   FaArrowRight,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const BugHistory = () => {
-  const { defectId } = useParams(); // Get defectId from the route
+  const { defectId, projectId } = useParams(); // include projectId to build the new route
+
   const [history, setHistory] = useState([]);
   const [view, setView] = useState("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,39 +24,33 @@ const BugHistory = () => {
   const [itemsPerPage, setItemsPerPage] = useState(5);
   const [totalPages, setTotalPages] = useState(1);
 
-  // Fetch token from local storage
-  const token = localStorage.getItem("token"); // Ensure you save the token during login
+  // auth header (consistent with other pages)
+  const token =
+    localStorage.getItem("userToken") || localStorage.getItem("token") || "";
+  const authHeader = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+    [token]
+  );
 
   useEffect(() => {
     const fetchHistory = async () => {
       try {
-        // Ensure the token exists before making the request
-        if (!token) {
-          console.error("Token not found, please log in.");
-          return;
-        }
-
-        // Make the API call to fetch bug history
-        const response = await axios.get(
-          `http://localhost:5000/bug-history/${defectId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`, // Sending the token with the request
-            },
-          }
+        const res = await axios.get(
+          `${globalBackendRoute}/api/projects/${projectId}/defects/${defectId}/history`,
+          { headers: authHeader }
         );
 
-        // Update the history state and calculate pagination
-        setHistory(response.data);
-        setFilteredHistory(response.data);
-        setTotalPages(Math.ceil(response.data.length / itemsPerPage));
+        const data = res.data || [];
+        setHistory(data);
+        setFilteredHistory(data);
+        setTotalPages(Math.ceil(data.length / itemsPerPage));
       } catch (error) {
         console.error("Error fetching bug history:", error);
       }
     };
 
-    fetchHistory();
-  }, [defectId, itemsPerPage, token]);
+    if (projectId && defectId) fetchHistory();
+  }, [projectId, defectId, itemsPerPage, authHeader]);
 
   useEffect(() => {
     const searchFilteredHistory = history.filter((entry) =>
@@ -65,12 +61,14 @@ const BugHistory = () => {
         entry.status,
         entry.updated_by,
       ]
-        .map((field) => field.toLowerCase())
+        .filter(Boolean)
+        .map((field) => String(field).toLowerCase())
         .some((field) => field.includes(searchQuery.toLowerCase()))
     );
     setFilteredHistory(searchFilteredHistory);
     setTotalPages(Math.ceil(searchFilteredHistory.length / itemsPerPage));
-  }, [searchQuery, history]);
+    setCurrentPage(1);
+  }, [searchQuery, history, itemsPerPage]);
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -79,9 +77,7 @@ const BugHistory = () => {
     indexOfLastItem
   );
 
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
-  };
+  const handlePageChange = (newPage) => setCurrentPage(newPage);
 
   return (
     <div className="bg-white py-16 sm:py-20">

@@ -1,188 +1,174 @@
-import React, { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom"; // Import Link for navigation
+import React, { useEffect, useMemo, useState } from "react";
+import { useParams, Link } from "react-router-dom";
 import axios from "axios";
+import globalBackendRoute from "../../config/Config";
 
 export default function SingleScenario() {
-  const { projectId, scenarioId } = useParams(); // Fetch both projectId (id) and scenarioId from URL
-  const [scenario, setScenario] = useState(null); // Store scenario data
-  const [changes, setChanges] = useState([]); // Store scenario changes
-  const [updatedText, setUpdatedText] = useState(""); // Store updated text
+  const { projectId, scenarioId } = useParams();
+  const [scenario, setScenario] = useState(null);
+  const [changes, setChanges] = useState([]);
+  const [updatedText, setUpdatedText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  // Function to fetch scenario data and changes history
+  const token = useMemo(() => localStorage.getItem("token"), []);
+  const userId = useMemo(() => localStorage.getItem("userId"), []);
+
   const fetchScenario = async () => {
     try {
-      const token = localStorage.getItem("token"); // Fetch token from localStorage
-      const response = await axios.get(
-        `http://localhost:5000/single-project/${projectId}/scenario-history/${scenarioId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Add the Authorization header with token
-          },
-        }
+      const { data } = await axios.get(
+        `${globalBackendRoute}/api/single-project/${projectId}/scenario-history/${scenarioId}`,
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
-      console.log(response.data.changes); // Check if changes are being fetched
-      setScenario(response.data.scenario);
-      setChanges(response.data.changes);
-      setUpdatedText(response.data.scenario.scenario_text); // Set initial text to the current scenario text
-    } catch (error) {
-      console.error("Error fetching scenario details:", error);
+      setScenario(data.scenario);
+      setChanges(data.changes || []);
+      setUpdatedText(data.scenario?.scenario_text || "");
+    } catch (err) {
+      console.error("Error fetching scenario details:", err);
+      alert("Failed to load scenario.");
+    } finally {
+      setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchScenario();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, scenarioId]);
 
   const handleUpdateScenario = async () => {
-    const userId = localStorage.getItem("userId"); // Ensure the userId is fetched correctly
-    console.log("User ID found while updating: ", userId); // Check userId here
-    const token = localStorage.getItem("token"); // Fetch token from localStorage
-    console.log("Token received while updating scenario: ", token); // Log the token
-
     if (!userId) {
       alert("User ID not found. Please log in.");
       return;
     }
-
+    if (!updatedText.trim()) {
+      alert("Scenario text cannot be empty.");
+      return;
+    }
+    setSaving(true);
     try {
       await axios.put(
-        `http://localhost:5000/single-project/scenario/${scenarioId}`,
-        {
-          scenario_text: updatedText,
-          userId: userId, // Pass the logged-in user's ID here
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`, // Include token in request headers
-          },
-        }
+        `${globalBackendRoute}/api/single-project/scenario/${scenarioId}`,
+        { scenario_text: updatedText, userId },
+        { headers: token ? { Authorization: `Bearer ${token}` } : {} }
       );
-      alert("Scenario updated successfully");
-      window.location.reload(); // Refresh the page to see the updated changes
-    } catch (error) {
-      console.error("Error updating scenario:", error);
+      // optimistic update of scenario body
+      setScenario((prev) => (prev ? { ...prev, scenario_text: updatedText } : prev));
+      // refresh history (fast follow-up call, keeps UI in sync)
+      fetchScenario();
+      alert("Scenario updated successfully.");
+    } catch (err) {
+      console.error("Error updating scenario:", err);
       alert("Error updating scenario");
+    } finally {
+      setSaving(false);
     }
   };
 
-  if (!scenario) {
-    return <div>Loading...</div>;
-  }
+  const createdAtText = useMemo(
+    () => (scenario?.createdAt ? new Date(scenario.createdAt).toLocaleString() : ""),
+    [scenario?.createdAt]
+  );
+
+  if (loading) return <div className="p-6 text-sm text-slate-600">Loading…</div>;
+  if (!scenario) return <div className="p-6 text-sm text-rose-700">Scenario not found.</div>;
+
+  const moduleName = scenario?.module?.name || "Unassigned";
 
   return (
-    <div className="bg-gray-50 py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Scenario Info */}
-        <div className="bg-white p-6 rounded-md shadow-lg">
-          <div className="flex justify-between items-center">
-            <h2 className="text-3xl font-bold text-gray-600 mb-4">
-              Project : {scenario.project.project_name}
+    <div className="bg-white py-10 sm:py-12">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        {/* Top bar */}
+        <div className="flex justify-between items-center gap-3 flex-wrap mb-4">
+          <div>
+            <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
+              Project: {scenario?.project?.project_name || "—"}
             </h2>
-            <div className="flex space-x-4">
-              {/* Button to view all scenarios */}
-              <Link
-                to={`/single-project/${projectId}/view-all-scenarios`} // Ensure this route matches your View All Scenarios page
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                View All Scenarios
-              </Link>
-
-              {/* Link to add a new test case based on the scenario */}
-              <Link
-                to={`/single-project/${projectId}/scenario/${scenarioId}/add-test-case`}
-                state={{
-                  scenarioNumber: scenario.scenario_number,
-                  scenarioText: scenario.scenario_text, // Pass the scenario_text to the next page
-                }} // Pass scenario number through state
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                Add Test Case
-              </Link>
-
-              {/* Link to view test cases based on the scenario */}
-              <Link
-                to={`/single-project/${projectId}/all-test-cases`}
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                View All Test Cases
-              </Link>
-
-              {/* Link to view test cases based on the scenario */}
-              <Link
-                to={`/single-project/${projectId}`}
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                Project Dashboard
-              </Link>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <h3 className="text-xl font-semibold text-gray-600">
-              Scenario Number: {scenario.scenario_number}
-            </h3>
-            <p className="text-sm text-gray-500">
-              Written by: {scenario.createdBy.name} on{" "}
-              {new Date(scenario.createdAt).toLocaleString()}
+            <p className="text-xs text-slate-600">
+              Scenario: <span className="font-semibold text-slate-800">{scenario.scenario_number}</span>{" "}
+              · Module:{" "}
+              <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                {moduleName}
+              </span>
+            </p>
+            <p className="text-[11px] text-slate-500">
+              Created by <span className="font-medium text-indigo-700">{scenario?.createdBy?.name || "Unknown"}</span>{" "}
+              on {createdAtText}
             </p>
           </div>
 
-          {/* Current Scenario Text */}
-          <div className="bg-gray-100 p-4 rounded-md">
-            <label
-              htmlFor="scenario_text"
-              className="block text-lg font-medium text-gray-700"
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              to={`/single-project/${projectId}/view-all-scenarios`}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
             >
-              Current Scenario Text
-            </label>
-            <textarea
-              id="scenario_text"
-              name="scenario_text"
-              className="w-full mt-2 p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={updatedText}
-              onChange={(e) => setUpdatedText(e.target.value)}
-            />
+              View All Scenarios
+            </Link>
+            <Link
+              to={`/single-project/${projectId}/scenario/${scenarioId}/add-test-case`}
+              state={{ scenarioNumber: scenario.scenario_number, scenarioText: scenario.scenario_text }}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+            >
+              Add Test Case
+            </Link>
+            <Link
+              to={`/single-project/${projectId}/all-test-cases`}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+            >
+              View All Test Cases
+            </Link>
+            <Link
+              to={`/single-project/${projectId}`}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+            >
+              Project Dashboard
+            </Link>
+          </div>
+        </div>
+
+        {/* Editor Card */}
+        <div className="bg-white rounded-lg shadow border border-slate-200 p-4">
+          <label htmlFor="scenario_text" className="block text-sm font-semibold text-slate-700">
+            Scenario Text
+          </label>
+          <textarea
+            id="scenario_text"
+            className="w-full mt-2 p-3 border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+            rows={5}
+            value={updatedText}
+            onChange={(e) => setUpdatedText(e.target.value)}
+          />
+          <div className="flex justify-end mt-3">
             <button
               onClick={handleUpdateScenario}
-              className="mt-4 bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
+              disabled={saving}
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm disabled:opacity-60"
             >
-              Update Scenario
+              {saving ? "Saving…" : "Update Scenario"}
             </button>
           </div>
         </div>
 
-        {/* Scenario Changes History */}
-        <div className="mt-10 bg-white p-6 rounded-md shadow-lg">
-          <h3 className="text-2xl font-bold text-gray-700 mb-4">
-            Changes History
-          </h3>
+        {/* History */}
+        <div className="mt-8 bg-white rounded-lg shadow border border-slate-200 p-4">
+          <h3 className="text-sm font-semibold text-slate-700 mb-3">Changes History</h3>
           {changes.length > 0 ? (
             <div className="overflow-x-auto">
-              <table className="min-w-full table-auto border-collapse border border-gray-300">
+              <table className="min-w-full border-collapse">
                 <thead>
-                  <tr className="bg-gray-100">
-                    <th className="px-4 py-2 border border-gray-300 text-left">
-                      Changed By
-                    </th>
-                    <th className="px-4 py-2 border border-gray-300 text-left">
-                      Previous Text
-                    </th>
-                    <th className="px-4 py-2 border border-gray-300 text-left">
-                      Change Time
-                    </th>
+                  <tr className="text-[12px] text-slate-600 border-b border-slate-200">
+                    <th className="text-left py-2 pr-4">Changed By</th>
+                    <th className="text-left py-2 pr-4">Previous Text</th>
+                    <th className="text-left py-2">Change Time</th>
                   </tr>
                 </thead>
-                <tbody>
-                  {changes.map((change, index) => (
-                    <tr key={index}>
-                      <td className="px-4 py-2 border border-gray-300">
-                        {change.user ? change.user.name : "Unknown"}
-                      </td>
-                      <td className="px-4 py-2 border border-gray-300">
-                        {change.previous_text}
-                      </td>
-                      <td className="px-4 py-2 border border-gray-300">
-                        {new Date(change.time).toLocaleString()}
+                <tbody className="text-[12px]">
+                  {changes.map((c, i) => (
+                    <tr key={i} className="border-b border-slate-100 align-top">
+                      <td className="py-2 pr-4 text-indigo-700 font-medium">{c?.user?.name || "Unknown"}</td>
+                      <td className="py-2 pr-4 text-slate-700">{c?.previous_text}</td>
+                      <td className="py-2 text-slate-600">
+                        {c?.time ? new Date(c.time).toLocaleString() : ""}
                       </td>
                     </tr>
                   ))}
@@ -190,9 +176,7 @@ export default function SingleScenario() {
               </table>
             </div>
           ) : (
-            <p className="text-gray-600">
-              No changes have been made to this scenario yet.
-            </p>
+            <p className="text-[13px] text-slate-600">No changes have been made to this scenario yet.</p>
           )}
         </div>
       </div>

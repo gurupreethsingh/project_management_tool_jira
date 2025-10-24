@@ -1,188 +1,247 @@
-import React, { useState, useEffect } from "react";
+// src/pages/tasks/AssignTask.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
+import globalBackendRoute from "../../config/Config";
 
 const AssignTask = () => {
   const { projectId } = useParams();
-  const [projectName, setProjectName] = useState(""); // State to hold the project name
+  const navigate = useNavigate();
+
+  // ✅ Base API URL
+  const api = `${globalBackendRoute}/api`;
+
+  const token =
+    localStorage.getItem("userToken") || localStorage.getItem("token") || "";
+  const headers = useMemo(
+    () => (token ? { Authorization: `Bearer ${token}` } : {}),
+    [token]
+  );
+
+  const [projectName, setProjectName] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [startDate, setStartDate] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [priority, setPriority] = useState("medium"); // Default priority
-  const [testEngineers, setTestEngineers] = useState([]); // State to hold test engineers
-  const [developers, setDevelopers] = useState([]);
+  const [priority, setPriority] = useState("medium");
   const [assignedTo, setAssignedTo] = useState("");
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
 
-  // Fetch test engineers and project details associated with the project
+  const [testEngineers, setTestEngineers] = useState([]);
+  const [developers, setDevelopers] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [loadErr, setLoadErr] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [statusMsg, setStatusMsg] = useState("");
+
   useEffect(() => {
-    fetchTestEngineers();
-    fetchDevelopers();
-    fetchProjectDetails(); // Fetch project name
-  }, [projectId]);
+    const run = async () => {
+      try {
+        setLoading(true);
+        setLoadErr("");
 
-  const fetchTestEngineers = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/projects/${projectId}/test-engineers`
-      );
-      // Set the fetched test engineers in state
-      setTestEngineers(response.data.testEngineers);
-    } catch (error) {
-      console.error("Error fetching test engineers:", error.message);
-    }
-  };
+        // ✅ All reads now use `${api}/...`
+        const [proj, tes, devs] = await Promise.all([
+          axios.get(`${api}/single-project/${projectId}`, { headers }),
+          axios.get(`${api}/projects/${projectId}/test-engineers`, { headers }),
+          axios.get(`${api}/projects/${projectId}/developers`, { headers }),
+        ]);
 
-  const fetchDevelopers = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/projects/${projectId}/developers`
-      );
-      setDevelopers(response.data.developers);
-    } catch (error) {
-      console.error("Error fetching developers:", error.message);
-    }
-  };
+        setProjectName(
+          proj?.data?.projectName || proj?.data?.project_name || ""
+        );
+        setTestEngineers(tes?.data?.testEngineers || []);
+        setDevelopers(devs?.data?.developers || []);
+      } catch (e) {
+        console.error("AssignTask load error:", e?.response || e);
+        setLoadErr(
+          e?.response?.data?.message || "Failed to load project or users."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Fetch the project details to get the project name
-  const fetchProjectDetails = async () => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5000/single-project/${projectId}`
-      );
-      setProjectName(response.data.projectName); // Set the project name from the response
-    } catch (error) {
-      console.error("Error fetching project details:", error.message);
-    }
+    run();
+  }, [projectId, api, headers]);
+
+  const validateDates = () => {
+    if (!startDate || !deadline) return true;
+    return new Date(startDate) <= new Date(deadline);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const userId = localStorage.getItem("userId"); // Fetch the logged-in user's ID
+    setStatusMsg("");
+
+    const user = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("user"));
+      } catch {
+        return null;
+      }
+    })();
+    const createdBy = user?.id || user?._id;
+
+    if (!createdBy) {
+      setStatusMsg("Not authenticated. Please sign in again.");
+      return;
+    }
+    if (!validateDates()) {
+      setStatusMsg("Start date must be before or equal to end date.");
+      return;
+    }
 
     try {
+      setSubmitting(true);
+
+      // ✅ Use TaskRoutes: POST /api/tasks
+      //    Send `project` and `assignedUsers` as expected by TaskController
       await axios.post(
-        `http://localhost:5000/projects/${projectId}/assign-task`,
+        `${api}/tasks`,
         {
           title,
           description,
+          project: projectId,
           startDate,
           deadline,
-          assignedTo,
           priority,
-          createdBy: userId, // Pass the logged-in user's ID as `createdBy`
-        }
+          assignedUsers: assignedTo ? [assignedTo] : [],
+        },
+        { headers }
       );
-      alert("Task successfully assigned!");
+
       navigate(`/single-project/${projectId}/view-all-tasks`);
-    } catch (error) {
-      setError("Failed to assign task");
-      alert("Error assigning task. Please try again.");
+    } catch (e) {
+      console.error("AssignTask submit error:", e?.response || e);
+      setStatusMsg(
+        e?.response?.data?.message || "Failed to assign task. Please try again."
+      );
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="container mx-auto p-4">
-      <div className="d-flex justify-content-between align-items-center">
+      <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold mb-4">
-          Assign Task, Project Name: {projectName || "Loading..."}
+          Assign Task — Project: {loading ? "Loading…" : projectName || "—"}
         </h2>
-        <a
-          href={`/single-project/${projectId}`}
+        <Link
+          to={`/single-project/${projectId}`}
           className="btn btn-sm text-white bg-indigo-600 hover:bg-indigo-900"
         >
           Project Dashboard
-        </a>
+        </Link>
       </div>
 
-      {error && <p className="text-red-500">{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            className="border p-2 rounded w-full"
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Start Date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">End Date</label>
-          <input
-            type="date"
-            value={deadline}
-            onChange={(e) => setDeadline(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          />
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Priority</label>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="low">Low</option>
-            <option value="medium">Medium</option>
-            <option value="high">High</option>
-          </select>
-        </div>
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">
-            Assign Task To Test Engineer / Developer
-          </label>
-          <select
-            value={assignedTo}
-            onChange={(e) => setAssignedTo(e.target.value)}
-            className="border p-2 rounded w-full"
-            required
-          >
-            <option value="">
-              Select a Test Engineer / Developer To Assign Task
-            </option>
-            {testEngineers.map((engineer) => (
-              <option key={engineer._id} value={engineer._id}>
-                {engineer.name} - Test-Engineer
-              </option>
-            ))}
+      {loading && <div className="text-sm text-gray-600">Loading…</div>}
+      {loadErr && <div className="text-sm text-red-600 mb-3">{loadErr}</div>}
 
-            {developers.map((dev) => (
-              <option key={dev._id} value={dev._id}>
-                {dev.name} - Developer
-              </option>
-            ))}
-          </select>
-        </div>
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded"
-        >
-          Assign Task
-        </button>
-      </form>
+      {!loading && !loadErr && (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {statusMsg && <div className="text-sm text-red-600">{statusMsg}</div>}
+
+          <div>
+            <label className="block text-sm font-medium mb-1">Title</label>
+            <input
+              className="border p-2 rounded w-full"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              required
+              placeholder="Task title"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Description
+            </label>
+            <textarea
+              className="border p-2 rounded w-full"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Add details for the assignee"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Start Date
+              </label>
+              <input
+                type="date"
+                className="border p-2 rounded w-full"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">End Date</label>
+              <input
+                type="date"
+                className="border p-2 rounded w-full"
+                value={deadline}
+                onChange={(e) => setDeadline(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Priority</label>
+              <select
+                className="border p-2 rounded w-full"
+                value={priority}
+                onChange={(e) => setPriority(e.target.value)}
+                required
+              >
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Assign To (Test Engineer / Developer)
+              </label>
+              <select
+                className="border p-2 rounded w-full"
+                value={assignedTo}
+                onChange={(e) => setAssignedTo(e.target.value)}
+                required
+              >
+                <option value="">Select a user</option>
+                {testEngineers.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name} — Test Engineer
+                  </option>
+                ))}
+                {developers.map((u) => (
+                  <option key={u._id} value={u._id}>
+                    {u.name} — Developer
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={submitting}
+            className={`bg-blue-600 text-white px-4 py-2 rounded ${
+              submitting ? "opacity-70 cursor-not-allowed" : "hover:bg-blue-700"
+            }`}
+          >
+            {submitting ? "Assigning…" : "Assign Task"}
+          </button>
+        </form>
+      )}
     </div>
   );
 };

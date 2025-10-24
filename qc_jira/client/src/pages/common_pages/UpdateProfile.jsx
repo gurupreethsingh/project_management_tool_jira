@@ -2,13 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { useParams, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import {
-  FaUser,
-  FaEnvelope,
-  FaPhone,
-  FaMapMarkerAlt,
-  FaGlobe,
-} from "react-icons/fa";
+import { FaUser, FaEnvelope, FaPhone, FaMapMarkerAlt } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 export default function UpdateProfile() {
   const { id } = useParams();
@@ -24,13 +19,15 @@ export default function UpdateProfile() {
       postalCode: "",
       country: "",
     },
-    avatar: null, // To handle file upload
+    avatar: null,
   });
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/user/${id}`);
+        const response = await axios.get(
+          `${globalBackendRoute}/api/user/${id}`
+        );
         const fetchedData = response.data;
 
         const addressData = fetchedData.address || {
@@ -100,12 +97,10 @@ export default function UpdateProfile() {
 
     try {
       const response = await axios.put(
-        `http://localhost:5000/update-user/${id}`,
+        `${globalBackendRoute}/api/update-user/${id}`,
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
+          headers: { "Content-Type": "multipart/form-data" },
         }
       );
 
@@ -158,6 +153,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaEnvelope className="text-green-500 mr-2" /> Email
@@ -172,6 +168,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaPhone className="text-yellow-500 mr-2" /> Phone
@@ -186,6 +183,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaMapMarkerAlt className="text-red-500 mr-2" /> Street
@@ -200,6 +198,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaMapMarkerAlt className="text-red-500 mr-2" /> City
@@ -214,6 +213,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaMapMarkerAlt className="text-red-500 mr-2" /> State
@@ -228,6 +228,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaMapMarkerAlt className="text-red-500 mr-2" /> Postal Code
@@ -242,6 +243,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaMapMarkerAlt className="text-red-500 mr-2" /> Country
@@ -256,6 +258,7 @@ export default function UpdateProfile() {
                 />
               </dd>
             </div>
+
             <div className="px-4 py-4 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-0">
               <dt className="flex items-center text-sm font-medium leading-6 text-gray-900">
                 <FaUser className="text-blue-500 mr-2" /> Avatar
@@ -271,6 +274,7 @@ export default function UpdateProfile() {
             </div>
           </dl>
         </motion.div>
+
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

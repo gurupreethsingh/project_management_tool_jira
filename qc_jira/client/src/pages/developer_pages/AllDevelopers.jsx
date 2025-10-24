@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { FaThList, FaThLarge, FaTh, FaSearch } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const AllDevelopers = () => {
-  const [developers, setDevelopers] = useState([]); // State to hold fetched developers
+  const [developers, setDevelopers] = useState([]);
   const [view, setView] = useState("grid");
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -11,8 +12,8 @@ const AllDevelopers = () => {
     const fetchDevelopers = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:5000/all-developers"
-        ); // Use the new API endpoint for developers
+          `${globalBackendRoute}/api/all-developers`
+        );
         setDevelopers(response.data);
       } catch (error) {
         console.error("Error fetching developers:", error);
@@ -24,9 +25,8 @@ const AllDevelopers = () => {
 
   const getImageUrl = (avatar) => {
     if (avatar) {
-      // Replace backslashes with forward slashes and ensure proper relative path usage
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
-      return `http://localhost:5000/uploads/${normalizedPath}`;
+      return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
     return "https://via.placeholder.com/150";
   };
@@ -80,7 +80,7 @@ const AllDevelopers = () => {
         </div>
 
         {/* Developers Count */}
-        <div className="mb-4 text-lg  text-gray-700">
+        <div className="mb-4 text-lg text-gray-700">
           Total Developers: {filteredDevelopers.length}
         </div>
 

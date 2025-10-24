@@ -8,6 +8,7 @@ import {
   FaArrowLeft,
   FaArrowRight,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const DeveloperAssignedDefects = () => {
   const { projectId } = useParams();
@@ -36,6 +37,7 @@ const DeveloperAssignedDefects = () => {
     return () => {
       window.removeEventListener("resize", adjustCardsPerPage);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, view]);
 
   const fetchAssignedDefects = async () => {
@@ -50,7 +52,7 @@ const DeveloperAssignedDefects = () => {
 
       // Fetch defects assigned to the logged-in developer
       const response = await axios.get(
-        `http://localhost:5000/single-project/${projectId}/developer/${loggedInUser.id}/view-assigned-defects`
+        `${globalBackendRoute}/api/single-project/${projectId}/developer/${loggedInUser.id}/view-assigned-defects`
       );
 
       const defectsData = response.data;
@@ -59,19 +61,15 @@ const DeveloperAssignedDefects = () => {
       setTotalPages(Math.ceil(defectsData.length / cardsPerPage));
 
       // Calculate status counts
-      const statusCounts = {
-        open: defectsData.filter((defect) => defect.status === "Open/New")
+      const nextStatusCounts = {
+        open: defectsData.filter((d) => d.status === "Open/New").length,
+        fixed: defectsData.filter((d) => d.status === "Fixed").length,
+        pending: defectsData.filter((d) => d.status === "Pending").length,
+        reopened: defectsData.filter((d) => d.status === "Re-opened").length,
+        unableToFix: defectsData.filter((d) => d.status === "Unable-To-Fix")
           .length,
-        fixed: defectsData.filter((defect) => defect.status === "Fixed").length,
-        pending: defectsData.filter((defect) => defect.status === "Pending")
-          .length,
-        reopened: defectsData.filter((defect) => defect.status === "Re-opened")
-          .length,
-        unableToFix: defectsData.filter(
-          (defect) => defect.status === "Unable-To-Fix"
-        ).length,
       };
-      setStatusCounts(statusCounts);
+      setStatusCounts(nextStatusCounts);
     } catch (error) {
       console.error("Error fetching assigned defects:", error.message);
     }
@@ -108,7 +106,7 @@ const DeveloperAssignedDefects = () => {
         item.moduleName,
         item.assignedBy,
       ]
-        .filter(Boolean) // Ensure no null or undefined values are searched
+        .filter(Boolean)
         .some((field) =>
           field.toLowerCase().includes(searchQuery.toLowerCase())
         )
@@ -177,7 +175,7 @@ const DeveloperAssignedDefects = () => {
         <div className="flex justify-between items-center flex-wrap">
           <div>
             <h2 className="text-left font-semibold tracking-tight text-indigo-600 sm:text-1xl">
-              Developer's Assigned Defects for Project: {projectId}
+              Developer&apos;s Assigned Defects for Project: {projectId}
             </h2>
           </div>
           <div className="flex items-center space-x-4 flex-wrap">

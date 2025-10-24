@@ -143,8 +143,6 @@ export default function UpdateRequirement() {
         form.append("clear_images", "true"); // backend will clear existing gallery
       }
       newImages.forEach((f) => form.append("images", f)); // append new images
-
-      // updated_by (optional; if you have auth middleware it will use req.user)
       try {
         const user = JSON.parse(localStorage.getItem("user"));
         if (user?._id) form.append("updated_by", user._id);

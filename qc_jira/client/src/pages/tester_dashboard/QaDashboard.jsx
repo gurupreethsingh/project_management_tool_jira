@@ -1,180 +1,144 @@
-import React, { useEffect, useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import {
-  FaThList,
-  FaThLarge,
-  FaTh,
-  FaProjectDiagram,
-  FaUserShield,
-  FaUserTie,
-  FaUserCheck,
-  FaUsersCog,
-} from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
+import globalBackendRoute from "../../config/Config";
 
-const QaDashboard = () => {
-  const [view, setView] = useState("grid");
-  const [totalProjects, setTotalProjects] = useState(0);
-  const [totalAdmins, setTotalAdmins] = useState(0);
-  const [totalDevelopers, setTotalDevelopers] = useState(0);
-  const [totalTestEngineers, setTotalTestEngineers] = useState(0);
-  const [totalUsers, setTotalUsers] = useState(0); // Add totalUsers state
+const SingleTestCase = () => {
+  const { id } = useParams(); // test case ID from the URL
+  const [testCase, setTestCase] = useState(null);
 
   useEffect(() => {
-    fetchCounts();
-  }, []);
+    const fetchTestCase = async () => {
+      try {
+        const response = await axios.get(
+          `${globalBackendRoute}/api/get-test-case/${id}`
+        );
+        setTestCase(response.data);
+      } catch (error) {
+        console.error("Error fetching test case:", error);
+      }
+    };
 
-  const fetchCounts = async () => {
-    try {
-      // Fetch project count
-      const projectResponse = await axios.get(
-        "http://localhost:5000/count-projects"
-      );
-      setTotalProjects(projectResponse.data.totalProjects);
+    fetchTestCase();
+  }, [id]);
 
-      // Fetch all user counts (including roles and total users)
-      const usersResponse = await axios.get(
-        "http://localhost:5000/count-users"
-      );
-      const { totalUsers, totalAdmins, totalDevelopers, totalTestEngineers } =
-        usersResponse.data;
-
-      // Update states based on the response
-      setTotalAdmins(totalAdmins);
-      setTotalDevelopers(totalDevelopers);
-      setTotalTestEngineers(totalTestEngineers);
-      setTotalUsers(totalUsers); // Set total users
-    } catch (error) {
-      console.error("Error fetching counts:", error);
-    }
-  };
-
-  const handleViewChange = (viewType) => {
-    setView(viewType);
-  };
-
-  const renderCounts = () => {
-    const counts = [
-      {
-        title: "Total Projects",
-        count: totalProjects,
-        icon: <FaProjectDiagram className="text-blue-500" />,
-        linkText: "Project Dashboard",
-        link: "/all-projects",
-      },
-      {
-        title: "Total Admins",
-        count: totalAdmins,
-        icon: <FaUserShield className="text-green-500" />,
-        linkText: "View All Admins",
-        link: "/all-admins",
-      },
-      {
-        title: "Total Developers",
-        count: totalDevelopers,
-        icon: <FaUserTie className="text-yellow-500" />,
-        linkText: "View All Developers",
-        link: "/all-developers",
-      },
-      {
-        title: "Total Test Engineers",
-        count: totalTestEngineers,
-        icon: <FaUserCheck className="text-purple-500" />,
-        linkText: "View All Test Engineers",
-        link: "/all-test-engineers",
-      },
-      {
-        title: "Total Users", // New card for total users
-        count: totalUsers,
-        icon: <FaUsersCog className="text-red-500" />,
-        linkText: "View All Users",
-        link: "/all-users",
-      },
-    ];
-
-    return (
-      <div
-        className={`${
-          view === "grid"
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
-            : view === "card"
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"
-            : "space-y-4"
-        }`}
-      >
-        {counts.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white p-4 shadow-lg rounded-lg flex flex-col items-center relative"
-          >
-            {/* Icon */}
-            <div className="text-4xl mb-2 flex justify-center">{item.icon}</div>
-            {/* Title */}
-            <h3 className="text-xs font-semibold text-gray-600">
-              {item.title}
-            </h3>
-            {/* Count */}
-            <p className="text-2xl font-semibold text-indigo-600 mt-2">
-              {item.count}
-            </p>
-            {/* Link */}
-            <Link
-              to={item.link}
-              className="mt-2 text-xs text-indigo-600 hover:text-indigo-800"
-            >
-              {item.linkText}
-            </Link>
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderPagination = () => {
-    // Placeholder for future pagination logic (if needed)
-    return null;
-  };
+  if (!testCase) {
+    return <div className="container">Loading...</div>;
+  }
 
   return (
-    <div className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Header with View Selection */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
-          <h3 className="text-2xl font-bold text-start text-indigo-600">
-            QA Dashboard
-          </h3>
-
-          {/* View Selection */}
-          <div className="flex space-x-4 justify-center md:justify-start">
-            <FaThList
-              className={`text-xl cursor-pointer ${
-                view === "list" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => handleViewChange("list")}
-            />
-            <FaThLarge
-              className={`text-xl cursor-pointer ${
-                view === "card" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => handleViewChange("card")}
-            />
-            <FaTh
-              className={`text-xl cursor-pointer ${
-                view === "grid" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => handleViewChange("grid")}
-            />
+    <div className="m-4">
+      <div className="row">
+        <div className="col-lg-2">
+          <div className="list-group">
+            <a
+              href="/all-test-cases"
+              className="list-group-item list-group-item-action text-secondary text-decoration-underline"
+            >
+              Test Case Dashboard
+            </a>
+            <a
+              href="/all-test-cases"
+              className="list-group-item list-group-item-action text-secondary text-decoration-underline"
+            >
+              View All Test Cases
+            </a>
           </div>
         </div>
 
-        {/* Render Counts */}
-        {renderCounts()}
+        {/* Main Content */}
+        <div className="col-md-10">
+          <div className="card shadow">
+            <div className="card-body">
+              <h5 className="card-title">{testCase.test_case_name}</h5>
+              <p className="card-text">
+                <strong>Project Name:</strong> {testCase.project_name}
+              </p>
+              <p className="card-text">
+                <strong>Scenario Number:</strong> {testCase.scenario_number}
+              </p>
+              <p className="card-text">
+                <strong>Test Case Number:</strong> {testCase.test_case_number}
+              </p>
 
-        {/* Pagination */}
-        {renderPagination()}
+              <p className="card-text">
+                <strong>Requirement Number:</strong>{" "}
+                {testCase.requirement_number}
+              </p>
+              <p className="card-text">
+                <strong>Build Number:</strong> {testCase.build_name_or_number}
+              </p>
+              <p className="card-text">
+                <strong>Module:</strong> {testCase.module_name}
+              </p>
+              <p className="card-text">
+                <strong>Pre-condition:</strong> {testCase.pre_condition}
+              </p>
+              <p className="card-text">
+                <strong>Test Data:</strong> {testCase.test_data}
+              </p>
+              <p className="card-text">
+                <strong>Post-condition:</strong> {testCase.post_condition}
+              </p>
+              <p className="card-text">
+                <strong>Severity:</strong> {testCase.severity}
+              </p>
+              <p className="card-text">
+                <strong>Test Case Type:</strong> {testCase.test_case_type}
+              </p>
+              <p className="card-text">
+                <strong>Brief Description:</strong> {testCase.brief_description}
+              </p>
+              <p className="card-text">
+                <strong>Test Execution Time:</strong>{" "}
+                {testCase.test_execution_time}
+              </p>
+
+              {/* Testing steps */}
+              <div className="mt-4">
+                <h5>Testing Steps:</h5>
+                <table className="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th>Step Number</th>
+                      <th>Action Description</th>
+                      <th>Input Data</th>
+                      <th>Expected Result</th>
+                      <th>Actual Result</th>
+                      <th>Status</th>
+                      <th>Remark</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {testCase.testing_steps.map((step, index) => (
+                      <tr key={index}>
+                        <td>{step.step_number}</td>
+                        <td>{step.action_description}</td>
+                        <td>{step.input_data}</td>
+                        <td>{step.expected_result}</td>
+                        <td>{step.actual_result}</td>
+                        <td>{step.status}</td>
+                        <td>{step.remark}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer */}
+              <div className="mt-4">
+                <h5>Footer:</h5>
+                <p>Author: {testCase.footer.author}</p>
+                <p>Reviewed By: {testCase.footer.reviewed_by}</p>
+                <p>Approved By: {testCase.footer.approved_by}</p>
+                <p>Approved Date: {testCase.footer.approved_date}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
 
-export default QaDashboard;
+export default SingleTestCase;

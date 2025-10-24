@@ -1,9 +1,55 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate, useLocation, Link } from "react-router-dom";
 import { Menu } from "@headlessui/react";
-import { UserIcon } from "@heroicons/react/24/solid";
+import { UserIcon, BellIcon } from "@heroicons/react/24/solid";
+import { CalendarDaysIcon } from "@heroicons/react/24/outline";
 import axios from "axios";
 import ecoders_logo from "../assets/ecoders_logo.png";
+import globalBackendRoute from "../config/Config";
+
+// ---------- Seen-events helpers (per user, stored in localStorage) ----------
+const SEEN_KEY = (uid) => `seenEvents:${uid}`;
+
+function getSeenSet(uid) {
+  if (!uid) return new Set();
+  try {
+    const raw = localStorage.getItem(SEEN_KEY(uid));
+    if (!raw) return new Set();
+    const arr = JSON.parse(raw);
+    return new Set(Array.isArray(arr) ? arr : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveSeenSet(uid, set) {
+  if (!uid) return;
+  try {
+    localStorage.setItem(SEEN_KEY(uid), JSON.stringify(Array.from(set)));
+  } catch {}
+}
+
+function markEventSeen(uid, eventId) {
+  if (!uid || !eventId) return;
+  const s = getSeenSet(uid);
+  if (!s.has(eventId)) {
+    s.add(eventId);
+    saveSeenSet(uid, s);
+    // fire a storage-like ping for other tabs + listeners
+    try {
+      localStorage.setItem("app:lastEventSeenPing", String(Date.now()));
+    } catch {}
+    // let in-page listeners react without relying on real storage events
+    window.dispatchEvent(new Event("app:refreshBadges"));
+  }
+}
+
+// Extract /single-user-event/:id from a pathname
+function extractEventIdFromPath(pathname) {
+  // supports /single-user-event/:id and optional trailing slashes or query
+  const m = pathname.match(/\/single-user-event\/([^/?#]+)/i);
+  return m ? m[1] : null;
+}
 
 export default function Header() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -11,25 +57,180 @@ export default function Header() {
   const [user, setUser] = useState(null);
   const [userId, setUserId] = useState(null);
   const [isAdminOrSuperAdmin, setAdminOrSuperAdmin] = useState(false);
+
+  // Legacy “messages” badge (unchanged)
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
+
+  // Notifications badge (existing logic)
+  const [unreadNotifCount, setUnreadNotifCount] = useState(0);
+
+  // Events badge (now: UNSEEN upcoming events)
+  const [unseenUpcomingEventCount, setUnseenUpcomingEventCount] = useState(0);
 
   const navigate = useNavigate();
   const location = useLocation();
 
-  useEffect(() => {
-    const userToken = localStorage.getItem("token");
-    const userData = JSON.parse(localStorage.getItem("user"));
+  const API_BASE = globalBackendRoute;
+  const API = `${API_BASE}/api`;
 
-    if (!userToken || !userData) {
+  // --- Existing optional "messages" count ---
+  const fetchUnreadMessages = async () => {
+    try {
+      const res = await axios.get(`${API}/messages/unread-count`);
+      setUnreadMessagesCount(res.data?.unreadCount ?? 0);
+    } catch (error) {
+      console.error("Error fetching unread messages:", error);
+      setUnreadMessagesCount(0);
+    }
+  };
+
+  // --- Notifications (existing) ---
+  const fetchNotificationCounts = async (uid, token) => {
+    if (!uid) return 0;
+    try {
+      const url = `${API}/count-notifications/${uid}`;
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const unread = Number(res.data?.unread ?? 0);
+      return unread;
+    } catch (err) {
+      console.error("Notif count error:", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        url: err?.config?.url,
+      });
+      return 0;
+    }
+  };
+
+  const computeUnreadViaInbox = async (uid, token) => {
+    if (!uid) return 0;
+    try {
+      const url = `${API}/get-user-notifications/${uid}`;
+      const res = await axios.get(url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      const unread = rows.reduce((acc, n) => {
+        const status = n?.statusForUser || (n?.isRead ? "read" : "unread");
+        const hidden = n?.receipt?.isDeleted === true;
+        if (hidden) return acc;
+        const isUnread = !["read", "seen", "replied"].includes(
+          String(status || "").toLowerCase()
+        );
+        return acc + (isUnread ? 1 : 0);
+      }, 0);
+      return unread;
+    } catch (err) {
+      console.error("Inbox fallback error:", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        url: err?.config?.url,
+      });
+      return 0;
+    }
+  };
+
+  // --- Events: fetch upcoming visible events and compute UNSEEN count locally ---
+  const fetchUnseenUpcomingEventsCount = async (uid, role, token) => {
+    if (!uid) return 0;
+    try {
+      const nowIso = new Date().toISOString();
+      // We need the list (IDs) to compare against seen set -> ask for up to 200
+      const url = `${API}/events/visible?userId=${encodeURIComponent(
+        uid
+      )}&role=${encodeURIComponent(role || "")}&startGte=${encodeURIComponent(
+        nowIso
+      )}&isPublished=true&limit=200`;
+
+      const res = await axios.get(url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const rows = Array.isArray(res.data?.data) ? res.data.data : [];
+
+      const seen = getSeenSet(uid);
+      const unseen = rows.reduce((acc, ev) => {
+        const id = ev?._id || ev?.id;
+        if (!id) return acc;
+        return acc + (seen.has(String(id)) ? 0 : 1);
+      }, 0);
+      return unseen;
+    } catch (err) {
+      console.error("Event unseen-count error:", {
+        message: err?.message,
+        status: err?.response?.status,
+        data: err?.response?.data,
+        url: err?.config?.url,
+      });
+      return 0;
+    }
+  };
+
+  // Make a one-call refresh the rest of the UI can use
+  const refreshBadgesNow = async () => {
+    const token = localStorage.getItem("token");
+    let userData = null;
+    try {
+      userData = JSON.parse(localStorage.getItem("user"));
+    } catch {}
+    if (!token || !userData) {
+      setUnreadNotifCount(0);
+      setUnseenUpcomingEventCount(0);
+      return;
+    }
+    const uid = userData?._id || userData?.id;
+
+    try {
+      const unread = await fetchNotificationCounts(uid, token);
+      const finalCount =
+        unread === 0 ? await computeUnreadViaInbox(uid, token) : unread;
+      setUnreadNotifCount(finalCount);
+    } catch {
+      setUnreadNotifCount(0);
+    }
+
+    try {
+      const cnt = await fetchUnseenUpcomingEventsCount(
+        uid,
+        userData.role,
+        token
+      );
+      setUnseenUpcomingEventCount(cnt);
+    } catch {
+      setUnseenUpcomingEventCount(0);
+    }
+  };
+
+  // --- Boot & react to route changes ---
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    let userData = null;
+    try {
+      userData = JSON.parse(localStorage.getItem("user"));
+    } catch {
+      userData = null;
+    }
+
+    if (!token || !userData) {
       setIsLoggedIn(false);
+      setUser(null);
+      setUserName("");
+      setUserId(null);
+      setAdminOrSuperAdmin(false);
+      setUnreadNotifCount(0);
+      setUnreadMessagesCount(0);
+      setUnseenUpcomingEventCount(0);
       return;
     }
 
-    // Set user data from localStorage
+    const uid = userData?._id || userData?.id;
     setIsLoggedIn(true);
-    setUserName(userData.name);
-    setUserId(userData.id);
     setUser(userData);
+    setUserName(userData.name || userData.fullName || "");
+    setUserId(uid);
 
     if (userData.role === "admin" || userData.role === "superadmin") {
       setAdminOrSuperAdmin(true);
@@ -38,19 +239,32 @@ export default function Header() {
       setAdminOrSuperAdmin(false);
     }
 
-    // Remove automatic redirection to dashboards, allowing navigation to work smoothly
-  }, [location.pathname]);
-
-  const fetchUnreadMessages = async () => {
-    try {
-      const response = await axios.get(
-        "http://localhost:5000/messages/unread-count"
-      );
-      setUnreadMessagesCount(response.data.unreadCount);
-    } catch (error) {
-      console.error("Error fetching unread messages:", error);
+    // If we navigated to a single event page, mark that event as seen immediately.
+    const eventIdOnRoute = extractEventIdFromPath(location.pathname);
+    if (eventIdOnRoute) {
+      markEventSeen(uid, eventIdOnRoute);
     }
-  };
+
+    // Initial pulls / recompute badges
+    refreshBadgesNow();
+
+    // Listeners: manual refresh & cross-tab ping
+    const onRefresh = () => refreshBadgesNow();
+    window.addEventListener("app:refreshBadges", onRefresh);
+
+    const onStorage = (e) => {
+      if (e.key === "app:lastEventSeenPing") {
+        refreshBadgesNow();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      window.removeEventListener("app:refreshBadges", onRefresh);
+      window.removeEventListener("storage", onStorage);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -60,6 +274,9 @@ export default function Header() {
     setUserName("");
     setUserId(null);
     setAdminOrSuperAdmin(false);
+    setUnreadNotifCount(0);
+    setUnreadMessagesCount(0);
+    setUnseenUpcomingEventCount(0);
     navigate("/", { replace: true });
   };
 
@@ -71,7 +288,7 @@ export default function Header() {
       test_engineer: "/test-engineer-dashboard",
       developer: "/developer-dashboard",
       developer_lead: "/developer-lead-dashboard",
-      project_manager : "/project-manager-dashboard",
+      project_manager: "/project-manager-dashboard",
     };
     return dashboardLinks[role] || "/dashboard";
   };
@@ -82,6 +299,7 @@ export default function Header() {
         aria-label="Global"
         className="mx-auto flex max-w-full items-center justify-between w-full px-4"
       >
+        {/* Left: Logo */}
         <div className="flex lg:flex-1">
           <Link to="/" className="-m-1.5 p-1.5">
             <span className="sr-only">Your Company</span>
@@ -95,6 +313,8 @@ export default function Header() {
             />
           </Link>
         </div>
+
+        {/* Center: Nav links */}
         <div className="hidden lg:flex lg:flex-1 lg:justify-center lg:gap-x-8 w-full whitespace-nowrap">
           <Link
             to="/"
@@ -151,7 +371,51 @@ export default function Header() {
           </Link>
         </div>
 
-        <div className="flex lg:flex-1 lg:justify-end">
+        {/* Right: Event badge + Notification bell + User menu */}
+        <div className="flex items-center gap-4 lg:flex-1 lg:justify-end">
+          {/* Events badge (UNSEEN upcoming) */}
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={() => navigate("/user-events")}
+              aria-label="Events"
+              className="relative inline-flex items-center justify-center rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              title="Your events"
+            >
+              <CalendarDaysIcon className="h-6 w-6 text-gray-700" />
+              {unseenUpcomingEventCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-blue-600 text-white text-[10px] font-bold"
+                  title={`${unseenUpcomingEventCount} new`}
+                >
+                  {unseenUpcomingEventCount > 99
+                    ? "99+"
+                    : unseenUpcomingEventCount}
+                </span>
+              )}
+            </button>
+          )}
+
+          {/* Notifications badge */}
+          {isLoggedIn && (
+            <button
+              type="button"
+              onClick={() => navigate("/user-notifications")}
+              aria-label="Notifications"
+              className="relative inline-flex items-center justify-center rounded-full p-2 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <BellIcon className="h-6 w-6 text-gray-700" />
+              {unreadNotifCount > 0 && (
+                <span
+                  className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-red-600 text-white text-[10px] font-bold"
+                  title={`${unreadNotifCount} unread`}
+                >
+                  {unreadNotifCount > 99 ? "99+" : unreadNotifCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {isLoggedIn ? (
             <Menu as="div" className="relative z-50">
               <Menu.Button className="flex items-center text-sm font-semibold leading-6 text-gray-700">

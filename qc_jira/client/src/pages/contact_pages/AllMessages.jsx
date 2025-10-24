@@ -13,34 +13,32 @@ import {
   FaSortAmountDown,
   FaSortAmountUp,
 } from "react-icons/fa";
+import globalBackendRoute from "../../config/Config";
 
 const itemsPerPage = 6;
 
 export default function MessagesList() {
   const [view, setView] = useState("list");
   const [searchTerm, setSearchTerm] = useState("");
-  const [messages, setMessages] = useState([]); // Store messages fetched from the server
+  const [messages, setMessages] = useState([]);
   const [filteredMessages, setFilteredMessages] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc");
 
-  // Fetch messages from the server when the component mounts
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const response = await axios.get("http://localhost:5000/all-messages");
-        console.log("API Response:", response); // Check raw API response
+        const response = await axios.get(
+          `${globalBackendRoute}/api/all-messages`
+        );
         if (response.data) {
           setMessages(response.data);
           setFilteredMessages(response.data);
-        } else {
-          console.error("No data received from API");
         }
       } catch (error) {
         console.error("Error fetching messages:", error);
       }
     };
-
     fetchMessages();
   }, []);
 
@@ -61,7 +59,7 @@ export default function MessagesList() {
           : new Date(a.createdAt) - new Date(b.createdAt)
       );
     setFilteredMessages(filtered);
-    setCurrentPage(1); // Reset to first page after search
+    setCurrentPage(1);
   };
 
   const toggleSortOrder = () => {
@@ -81,13 +79,8 @@ export default function MessagesList() {
     currentPage * itemsPerPage
   );
 
-  const goToNextPage = () => {
-    setCurrentPage((prevPage) => Math.min(prevPage + 1, totalPages));
-  };
-
-  const goToPreviousPage = () => {
-    setCurrentPage((prevPage) => Math.max(prevPage - 1, 1));
-  };
+  const goToNextPage = () => setCurrentPage((p) => Math.min(p + 1, totalPages));
+  const goToPreviousPage = () => setCurrentPage((p) => Math.max(p - 1, 1));
 
   return (
     <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
@@ -154,12 +147,12 @@ export default function MessagesList() {
                 <FaEnvelope className="mr-2" /> {eachmessage.message_text}
               </h3>
               <p className="mt-2 text-sm text-gray-600 flex items-center">
-                <FaUser className="mr-2 text-blue-500" />{" "}
+                <FaUser className="mr-2 text-blue-500" />
                 {eachmessage.firstName} {eachmessage.lastName} - (
                 {eachmessage.email})
               </p>
               <p className="mt-2 text-sm text-gray-500 flex items-center">
-                <FaClock className="mr-2 text-green-500" />{" "}
+                <FaClock className="mr-2 text-green-500" />
                 {eachmessage.createdAt}
               </p>
             </div>
