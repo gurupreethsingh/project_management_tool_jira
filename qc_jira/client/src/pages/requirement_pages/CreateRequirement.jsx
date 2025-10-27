@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from "react";
+// CreateRequirement.jsx
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
 import globalBackendRoute from "../../config/Config";
@@ -7,7 +8,10 @@ const CreateRequirement = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
 
-  const [moduleName, setModuleName] = useState("");
+  const [useExistingModule, setUseExistingModule] = useState(true);
+  const [moduleName, setModuleName] = useState("");            // for new module
+  const [selectedModule, setSelectedModule] = useState("");     // for existing module
+  const [availableModules, setAvailableModules] = useState([]); // [{name, normalized}]
   const [description, setDescription] = useState("");
   const [steps, setSteps] = useState([{ image: null, instruction: "", for: "Both" }]);
   const [submitting, setSubmitting] = useState(false);
@@ -16,11 +20,11 @@ const CreateRequirement = () => {
 
   const normalizeModuleName = (str) => (str || "").trim().toLowerCase();
 
+  // load project name
   useEffect(() => {
     const fetchProjectDetails = async () => {
       try {
         const token = localStorage.getItem("token");
-        // Prefer the canonical /api/projects/:id endpoint (present in your controller)
         const res = await axios.get(
           `${globalBackendRoute}/api/projects/${projectId}`,
           { headers: { Authorization: `Bearer ${token}` } }
@@ -32,6 +36,24 @@ const CreateRequirement = () => {
       }
     };
     if (projectId) fetchProjectDetails();
+  }, [projectId]);
+
+  // load existing requirement modules for this project
+  useEffect(() => {
+    const loadModules = async () => {
+      try {
+        const res = await axios.get(
+          `${globalBackendRoute}/api/projects/${projectId}/requirement-modules`
+        );
+        const mods = Array.isArray(res.data) ? res.data : [];
+        setAvailableModules(mods);
+        if (mods.length && !selectedModule) setSelectedModule(mods[0].name);
+      } catch (e) {
+        setAvailableModules([]);
+      }
+    };
+    if (projectId) loadModules();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   const handleAddStep = () => {
@@ -48,17 +70,16 @@ const CreateRequirement = () => {
     setSteps(updated);
   };
 
-  const handleModuleBlur = () => {
-    const normalized = normalizeModuleName(moduleName);
-    if (normalized !== moduleName) setModuleName(normalized);
-  };
+  const effectiveModuleName = useMemo(() => {
+    return useExistingModule ? selectedModule : moduleName;
+  }, [useExistingModule, selectedModule, moduleName]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    const normalizedModule = normalizeModuleName(moduleName);
-    if (!normalizedModule) {
-      setMessage("Module name cannot be empty or just spaces.");
+    const mod = normalizeModuleName(effectiveModuleName);
+    if (!mod) {
+      setMessage("Module name cannot be empty.");
       return;
     }
     if (!description.trim()) {
@@ -78,37 +99,23 @@ const CreateRequirement = () => {
       setMessage("");
       const token = localStorage.getItem("token");
 
-      // Duplicate check (server route exists in your RequirementRoutes)
-      const dupRes = await axios.get(
-        `${globalBackendRoute}/api/projects/${projectId}/requirements`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      const existing = Array.isArray(dupRes?.data) ? dupRes.data : [];
-      const isDuplicate = existing.some(
-        (r) => normalizeModuleName(r?.module_name) === normalizedModule
-      );
-      if (isDuplicate) {
-        setMessage("❌ A requirement with the same module name already exists for this project.");
-        setSubmitting(false);
-        return;
-      }
-
-      // Build FormData: send images as 'images' + a single 'steps' JSON field
+      // Build FormData (images + JSON for steps)
       const formData = new FormData();
       formData.append("project_id", projectId);
-      formData.append("module_name", normalizedModule);
+      formData.append("module_name", effectiveModuleName.trim()); // server normalizes anyway
       formData.append("description", description);
 
-      // Prepare steps for JSON (only text + for; images go separately)
-      const stepsPayload = steps.map((s, idx) => ({
-        step_number: idx + 1,
-        instruction: (s.instruction || "").trim(),
-        for: s.for || "Both",
-      })).filter(s => s.instruction.length > 0);
+      // Map "Developer" → "Dev" for schema enum compatibility
+      const stepsPayload = steps
+        .map((s, idx) => ({
+          step_number: idx + 1,
+          instruction: (s.instruction || "").trim(),
+          for: s.for === "Developer" ? "Dev" : s.for || "Both",
+        }))
+        .filter((s) => s.instruction.length > 0);
 
       formData.append("steps", JSON.stringify(stepsPayload));
 
-      // Append images in order under the field name 'images'
       steps.forEach((s) => {
         if (s.image) formData.append("images", s.image);
       });
@@ -116,12 +123,13 @@ const CreateRequirement = () => {
       await axios.post(`${globalBackendRoute}/api/requirements`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
-          // DO NOT set Content-Type manually; let Axios set the multipart boundary
+          // let axios set multipart boundary
         },
       });
 
       setMessage("✅ Requirement created successfully!");
       setModuleName("");
+      setSelectedModule(availableModules[0]?.name || "");
       setDescription("");
       setSteps([{ image: null, instruction: "", for: "Both" }]);
     } catch (err) {
@@ -152,23 +160,71 @@ const CreateRequirement = () => {
         {/* Form */}
         <form onSubmit={handleSubmit} encType="multipart/form-data" className="bg-white border rounded-lg">
           <div className="p-4 space-y-6">
-            {/* Module Name */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">
-                Module Name <span className="text-red-600">*</span>
-              </label>
-              <input
-                type="text"
-                value={moduleName}
-                onChange={(e) => setModuleName(e.target.value)}
-                onBlur={handleModuleBlur}
-                required
-                placeholder="Enter module name"
-                className="w-full px-3 py-2 border rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Tip: Leading/trailing spaces are removed and text is saved in lowercase.
-              </p>
+
+            {/* Module picker */}
+            <div className="grid gap-3">
+              <div className="flex gap-4 items-center">
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    className="mr-2"
+                    checked={useExistingModule}
+                    onChange={() => setUseExistingModule(true)}
+                  />
+                  <span className="text-sm text-gray-800">Select existing module</span>
+                </label>
+                <label className="inline-flex items-center">
+                  <input
+                    type="radio"
+                    className="mr-2"
+                    checked={!useExistingModule}
+                    onChange={() => setUseExistingModule(false)}
+                  />
+                  <span className="text-sm text-gray-800">Create new module</span>
+                </label>
+              </div>
+
+              {useExistingModule ? (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Module <span className="text-red-600">*</span>
+                  </label>
+                  <select
+                    value={selectedModule}
+                    onChange={(e) => setSelectedModule(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    {availableModules.length ? (
+                      availableModules.map((m) => (
+                        <option key={m.normalized} value={m.name}>
+                          {m.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option value="">No modules yet</option>
+                    )}
+                  </select>
+                  <p className="mt-1 text-xs text-gray-500">
+                    Pick an existing module to add more requirements under it.
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    New Module Name <span className="text-red-600">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={moduleName}
+                    onChange={(e) => setModuleName(e.target.value)}
+                    placeholder="Enter module name"
+                    className="w-full px-3 py-2 border rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    Similar names are normalized server-side to avoid accidental variants.
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Description */}
@@ -188,7 +244,9 @@ const CreateRequirement = () => {
 
             {/* Steps */}
             <div>
-              <h4 className="text-lg font-semibold text-gray-800 mb-3">Steps (Image + Instruction)</h4>
+              <h4 className="text-lg font-semibold text-gray-800 mb-3">
+                Steps (Image + Instruction)
+              </h4>
               <div className="space-y-6">
                 {steps.map((step, index) => (
                   <div key={index} className="border border-gray-200 bg-gray-50 rounded-md p-4">

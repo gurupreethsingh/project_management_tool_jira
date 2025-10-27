@@ -26,6 +26,8 @@ router.post("/login", login);
 router.get("/user/:id", getUserById); // keep legacy path
 router.get("/get-user/:id", getUserById); // keep both variants for compatibility
 router.get("/all-users", getAllUsers);
+router.get("/users", getAllUsers);       // ← NEW alias
+router.get("/users/all", getAllUsers);   // ← NEW alias
 
 router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
 

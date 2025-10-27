@@ -1,3 +1,4 @@
+// controllers/RequirementController.js
 const mongoose = require("mongoose");
 const Requirement = require("../models/RequirementModel");
 const Project = require("../models/ProjectModel");
@@ -54,19 +55,7 @@ exports.createRequirement = async (req, res) => {
     const finalRequirementTitle = requirement_title || `Requirement for ${module_name}`;
     const module_name_normalized = normalize(module_name);
 
-    // **Duplicate guard (server-side)**
-    const dup = await Requirement.findOne({
-      project_id,
-      module_name_normalized,
-    }).lean();
-
-    if (dup) {
-      return res.status(409).json({
-        error: "Duplicate requirement",
-        details:
-          "A requirement with the same module name already exists for this project.",
-      });
-    }
+    // NOTE: No duplicate guard here — multiple requirements can exist under the same module.
 
     // images via multer
     const uploadedImages = Array.isArray(req.files) ? req.files.map((f) => f.path) : [];
@@ -74,7 +63,6 @@ exports.createRequirement = async (req, res) => {
     // steps normalize (supports steps JSON or instructions[] fallback)
     let finalSteps = [];
 
-    // Preferred: steps as JSON (from frontend)
     if (steps) {
       let parsed = steps;
       if (typeof steps === "string") {
@@ -90,7 +78,7 @@ exports.createRequirement = async (req, res) => {
             step_number: Number(s.step_number) || idx + 1,
             instruction: String(s.instruction || "").trim(),
             for: s.for || "Both",
-            image_url: undefined, // will attach below if we have uploads
+            image_url: undefined,
           }))
           .filter((s) => s.instruction.length > 0);
       }
@@ -112,11 +100,10 @@ exports.createRequirement = async (req, res) => {
         .filter((s) => s.instruction.length > 0);
     }
 
-    // Attach uploaded images to steps by order (first non-empty step gets first image, etc.)
+    // Attach uploaded images to steps by order
     if (uploadedImages.length && finalSteps.length) {
       let imgIdx = 0;
       for (let i = 0; i < finalSteps.length && imgIdx < uploadedImages.length; i++) {
-        // Only attach if this step doesn’t already have an image_url
         if (!finalSteps[i].image_url) {
           finalSteps[i].image_url = uploadedImages[imgIdx++];
         }
@@ -134,9 +121,7 @@ exports.createRequirement = async (req, res) => {
       module_name_normalized,
       requirement_title: finalRequirementTitle,
       description,
-      // Keep a gallery of all uploaded images as before:
       images: uploadedImages,
-      // And also save per-step details:
       steps: finalSteps,
       created_by: finalCreatedBy,
     });
@@ -146,13 +131,6 @@ exports.createRequirement = async (req, res) => {
       .status(201)
       .json({ message: "Requirement created", data: newRequirement });
   } catch (error) {
-    if (error?.code === 11000 && error?.keyPattern?.module_name_normalized) {
-      return res.status(409).json({
-        error: "Duplicate requirement",
-        details:
-          "A requirement with the same module name already exists for this project.",
-      });
-    }
     console.error("createRequirement error:", error);
     return res
       .status(500)
@@ -160,11 +138,9 @@ exports.createRequirement = async (req, res) => {
   }
 };
 
-
 // -------- READ: All
 exports.getAllRequirements = async (req, res) => {
   try {
-    // optional filter by project_id via query: /requirements?project_id=...
     const { project_id } = req.query;
     const filter = project_id && mongoose.Types.ObjectId.isValid(project_id)
       ? { project_id }
@@ -192,12 +168,10 @@ exports.getRequirementById = async (req, res) => {
 };
 
 // -------- UPDATE
-// controllers/RequirementController.js (replace the existing updateRequirement)
 exports.updateRequirement = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // fetch existing for diff & file cleanup if needed
     const existing = await Requirement.findById(id);
     if (!existing) {
       return res.status(404).json({ error: "Requirement not found" });
@@ -260,7 +234,6 @@ exports.updateRequirement = async (req, res) => {
     const newImages = Array.isArray(req.files) ? req.files.map((f) => f.path) : [];
 
     if (clearImages) {
-      // delete old files from disk
       const old = existing.images || [];
       await Promise.all(
         old.map(async (p) => {
@@ -270,41 +243,35 @@ exports.updateRequirement = async (req, res) => {
           } catch (_) {}
         })
       );
-      updateFields.images = []; // reset
+      updateFields.images = [];
       changedFields.add("images");
     }
 
     if (newImages.length) {
-      // append to images array
       if (!updateFields.images) updateFields.$push = { images: { $each: newImages } };
       else updateFields.images = (updateFields.images || []).concat(newImages);
       changedFields.add("images");
     }
 
-    // attach new images to steps in order if steps replaced & newImages exist
     if (stepsReplaced && newImages.length) {
-      // map in order to steps that don't have image_url
       updateFields.steps = (updateFields.steps || []).map((s, i) => ({
         ...s,
         image_url: newImages[i] || s.image_url,
       }));
     }
 
-    // figure out who updated
     const updated_by = body.updated_by || (req.user && req.user.id) || undefined;
     let updated_by_name = "";
     try {
       if (req.user && req.user.name) updated_by_name = req.user.name;
     } catch (_) {}
 
-    // apply update
     const updated = await Requirement.findByIdAndUpdate(
       id,
       updateFields,
       { new: true, runValidators: true }
     );
 
-    // audit log (push)
     if (updated) {
       const logEntry = {
         updated_by: updated_by,
@@ -321,12 +288,6 @@ exports.updateRequirement = async (req, res) => {
 
     return res.status(200).json({ message: "Requirement updated", data: updated });
   } catch (error) {
-    if (error?.code === 11000 && error?.keyPattern?.module_name_normalized) {
-      return res.status(409).json({
-        error: "Duplicate requirement",
-        details: "A requirement with the same module name already exists for this project.",
-      });
-    }
     console.error("updateRequirement error:", error);
     return res
       .status(500)
@@ -334,21 +295,17 @@ exports.updateRequirement = async (req, res) => {
   }
 };
 
-
 // -------- DELETE
-// Helper: delete a file if it exists; ignore ENOENT
 async function safeUnlink(absPath) {
   try {
     await unlinkAsync(absPath);
   } catch (err) {
     if (err.code !== "ENOENT") {
-      // log other errors but don't fail the request
       console.warn("safeUnlink warning:", absPath, err.message);
     }
   }
 }
 
-// -------- DELETE (with file cleanup)
 exports.deleteRequirement = async (req, res) => {
   try {
     const { id } = req.params;
@@ -358,7 +315,6 @@ exports.deleteRequirement = async (req, res) => {
       return res.status(404).json({ error: "Requirement not found" });
     }
 
-    // Gather all file paths referenced by this requirement
     const allPaths = [];
 
     if (Array.isArray(reqDoc.images)) {
@@ -370,16 +326,12 @@ exports.deleteRequirement = async (req, res) => {
       }
     }
 
-    // Convert relative paths (e.g., "uploads/requirements/....") to absolute
-    // Assuming your server serves files from project root:
     const absPaths = allPaths
       .map((p) => String(p).replace(/\\/g, "/"))
       .map((p) => (path.isAbsolute(p) ? p : path.join(process.cwd(), p)));
 
-    // Delete files from disk
     await Promise.all(absPaths.map((p) => safeUnlink(p)));
 
-    // Finally delete the requirement
     await Requirement.findByIdAndDelete(id);
 
     return res.status(200).json({ message: "Requirement and files deleted successfully" });
@@ -458,7 +410,6 @@ exports.searchRequirements = async (req, res) => {
   }
 };
 
-
 // GET /api/projects/:id
 exports.getProjectById = async (req, res) => {
   try {
@@ -470,7 +421,6 @@ exports.getProjectById = async (req, res) => {
     const proj = await Project.findById(id).lean();
     if (!proj) return res.status(404).json({ error: "Project not found" });
 
-    // return both keys so the frontend can read either
     return res.status(200).json({
       ...proj,
       projectName: proj.project_name ?? proj.projectName ?? "",
@@ -478,5 +428,32 @@ exports.getProjectById = async (req, res) => {
   } catch (err) {
     console.error("getProjectById error:", err);
     return res.status(500).json({ error: "Failed to fetch project", details: err.message });
+  }
+};
+
+// -------- MODULES (distinct, by project)
+exports.getRequirementModulesByProject = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ error: "Invalid projectId" });
+    }
+
+    const rows = await Requirement.aggregate([
+      { $match: { project_id: new mongoose.Types.ObjectId(projectId) } },
+      {
+        $group: {
+          _id: "$module_name_normalized",
+          name: { $first: "$module_name" },
+        },
+      },
+      { $sort: { name: 1 } },
+    ]);
+
+    const mods = rows.map((r) => ({ name: r.name, normalized: r._id }));
+    return res.status(200).json(mods);
+  } catch (error) {
+    console.error("getRequirementModulesByProject error:", error);
+    return res.status(500).json({ error: "Failed to fetch modules", details: error.message });
   }
 };

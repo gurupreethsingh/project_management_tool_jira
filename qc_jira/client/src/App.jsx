@@ -97,8 +97,10 @@ import UserNotifications from "./pages/notification_pages/UserNotifications";
 import UserNotificationDetail from "./pages/notification_pages/UserNotificationDetail";
 // requirement pages.
 import AllRequirements from "./pages/requirement_pages/AllRequirements";
+import SingleModuleRequirements from "./pages/requirement_pages/SingleModuleRequirements";
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
+
 
 /** Match the “PageTitle” pattern from your sample */
 const PageTitle = ({ title, children }) => {
@@ -872,6 +874,20 @@ function App() {
             </PrivateRoute>
           }
         />
+
+
+          <Route
+    path="/module-requirements/:projectId/:moduleName"
+    element={<PrivateRoute>
+              <PageTitle title="Single Requirement">
+                    <SingleModuleRequirements />
+                  </PageTitle>
+            </PrivateRoute>
+    }
+  />
+
+
+
         <Route
           path="/single-requirement/:id"
           element={

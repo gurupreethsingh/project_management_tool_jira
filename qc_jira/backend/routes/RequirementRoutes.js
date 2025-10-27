@@ -8,13 +8,11 @@ const getMulterUpload = require("../middleware/upload");
 const uploadRequirementImages = getMulterUpload("requirements", 50);
 
 // ---------- CREATE
-// RESTful
 router.post(
   "/requirements",
   uploadRequirementImages,
   requirementController.createRequirement
 );
-// Optional legacy alias (keep ONLY one)
 router.post(
   "/create-requirement",
   uploadRequirementImages,
@@ -23,12 +21,10 @@ router.post(
 
 // ---------- READ ALL (optionally filter with ?project_id=)
 router.get("/requirements", requirementController.getAllRequirements);
-// Optional alias
 router.get("/get-all-requirements", requirementController.getAllRequirements);
 
 // ---------- READ ONE
 router.get("/requirements/:id", requirementController.getRequirementById);
-// Optional alias
 router.get("/single-requirement/:id", requirementController.getRequirementById);
 
 // ---------- UPDATE
@@ -37,7 +33,6 @@ router.put(
   uploadRequirementImages,
   requirementController.updateRequirement
 );
-// Optional alias
 router.put(
   "/update-requirement/:id",
   uploadRequirementImages,
@@ -46,7 +41,6 @@ router.put(
 
 // ---------- DELETE
 router.delete("/requirements/:id", requirementController.deleteRequirement);
-// Optional alias
 router.delete("/delete-requirements/:id", requirementController.deleteRequirement);
 
 // ---------- COUNT
@@ -66,5 +60,11 @@ router.get(
 
 // ---------- SEARCH
 router.get("/requirements/search", requirementController.searchRequirements);
+
+// ---------- MODULE NAMES (distinct, for this project)
+router.get(
+  "/projects/:projectId/requirement-modules",
+  requirementController.getRequirementModulesByProject
+);
 
 module.exports = router;

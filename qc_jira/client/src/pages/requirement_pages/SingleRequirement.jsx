@@ -16,7 +16,7 @@ const UPDATE_REQUIREMENT_ROUTE = (id) => `/update-requirement/${id}`;
 const PROJECT_REQUIREMENTS_ROUTE = (projectId) =>
   `/all-requirements/${projectId}`;
 const MODULE_REQUIREMENTS_ROUTE = (projectId, moduleName) =>
-  `/all-requirements/${projectId}/module/${encodeURIComponent(moduleName)}`;
+   `/module-requirements/${projectId}/${encodeURIComponent(moduleName)}`;
 
 const normalizeImageUrl = (urlOrPath) => {
   if (!urlOrPath)
