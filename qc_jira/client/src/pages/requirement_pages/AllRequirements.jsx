@@ -22,7 +22,9 @@ const GET_ALL_REQS = `${globalBackendRoute}/api/requirements`;
 const GET_REQS_BY_PROJECT = (pid) =>
   `${globalBackendRoute}/api/projects/${pid}/requirements`;
 const GET_REQS_BY_MODULE = (pid, m) =>
-  `${globalBackendRoute}/api/projects/${pid}/modules/${encodeURIComponent(m)}/requirements`;
+  `${globalBackendRoute}/api/projects/${pid}/modules/${encodeURIComponent(
+    m
+  )}/requirements`;
 
 // Client-side navigation routes
 const SINGLE_REQUIREMENT_ROUTE = (id) => `/single-requirement/${id}`;
@@ -50,11 +52,14 @@ export default function AllRequirements() {
     const fetchRequirements = async () => {
       try {
         let url = GET_ALL_REQS;
-        if (projectId && moduleName) url = GET_REQS_BY_MODULE(projectId, moduleName);
+        if (projectId && moduleName)
+          url = GET_REQS_BY_MODULE(projectId, moduleName);
         else if (projectId) url = GET_REQS_BY_PROJECT(projectId);
 
         const token = localStorage.getItem("token");
-        const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
+        const config = token
+          ? { headers: { Authorization: `Bearer ${token}` } }
+          : {};
         const res = await axios.get(url, config);
         setRequirements(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
@@ -72,9 +77,13 @@ export default function AllRequirements() {
   }, [moduleName]);
 
   const getCoverImage = (req) => {
-    const first = Array.isArray(req.images) && req.images.length ? req.images[0] : null;
+    const first =
+      Array.isArray(req.images) && req.images.length ? req.images[0] : null;
     if (!first) return "https://via.placeholder.com/600x400?text=Requirement";
-    const normalizedPath = String(first).replace(/\\/g, "/").split("uploads/").pop();
+    const normalizedPath = String(first)
+      .replace(/\\/g, "/")
+      .split("uploads/")
+      .pop();
     return `${globalBackendRoute}/uploads/${normalizedPath}`;
   };
 
@@ -165,7 +174,8 @@ export default function AllRequirements() {
       const matchesSearch = q.length === 0 || fields.some((f) => f.includes(q));
       const matchesModule =
         moduleFilter === "All" ||
-        String(r.module_name ?? "").toLowerCase() === moduleFilter.toLowerCase();
+        String(r.module_name ?? "").toLowerCase() ===
+          moduleFilter.toLowerCase();
       const reqNo = String(r.requirement_number ?? "");
       const matchesReqNumber =
         reqNumberFilter.trim().length === 0 ||
@@ -174,7 +184,9 @@ export default function AllRequirements() {
       const matchesStatus =
         statusFilter === "All" || statusValue === statusFilter.toLowerCase();
 
-      return matchesSearch && matchesModule && matchesReqNumber && matchesStatus;
+      return (
+        matchesSearch && matchesModule && matchesReqNumber && matchesStatus
+      );
     });
 
     arr.sort((a, b) => {
@@ -184,9 +196,13 @@ export default function AllRequirements() {
         case "Oldest":
           return new Date(a.createdAt) - new Date(b.createdAt);
         case "Module A→Z":
-          return String(a.module_name ?? "").localeCompare(String(b.module_name ?? ""));
+          return String(a.module_name ?? "").localeCompare(
+            String(b.module_name ?? "")
+          );
         case "Module Z→A":
-          return String(b.module_name ?? "").localeCompare(String(a.module_name ?? ""));
+          return String(b.module_name ?? "").localeCompare(
+            String(a.module_name ?? "")
+          );
         case "Req# ↑":
           return String(a.requirement_number ?? "").localeCompare(
             String(b.requirement_number ?? ""),
@@ -234,14 +250,21 @@ export default function AllRequirements() {
   const handleDelete = async (e, id, title) => {
     e.stopPropagation();
     const ok = window.confirm(
-      `Delete this requirement${title ? `: "${title}"` : ""}? This cannot be undone.`
+      `Delete this requirement${
+        title ? `: "${title}"` : ""
+      }? This cannot be undone.`
     );
     if (!ok) return;
 
     try {
       const token = localStorage.getItem("token");
-      const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
-      await axios.delete(`${globalBackendRoute}/api/requirements/${id}`, config);
+      const config = token
+        ? { headers: { Authorization: `Bearer ${token}` } }
+        : {};
+      await axios.delete(
+        `${globalBackendRoute}/api/requirements/${id}`,
+        config
+      );
       setRequirements((prev) => prev.filter((r) => r._id !== id));
       alert("Requirement deleted successfully.");
     } catch (err) {
@@ -271,7 +294,9 @@ export default function AllRequirements() {
 
   const ModuleTile = ({ mod, index }) => {
     const { name, representative, count } = mod;
-    const cover = representative ? getCoverImage(representative) : "https://via.placeholder.com/600x400?text=Module";
+    const cover = representative
+      ? getCoverImage(representative)
+      : "https://via.placeholder.com/600x400?text=Module";
     return (
       <button
         onClick={() => navigate(MODULE_REQUIREMENTS_ROUTE(projectId, name))}
@@ -286,7 +311,9 @@ export default function AllRequirements() {
               </span>
               <div className="flex items-center gap-2">
                 <FaSitemap className="text-indigo-600" />
-                <span className="font-semibold text-gray-900 capitalize">{name}</span>
+                <span className="font-semibold text-gray-900 capitalize">
+                  {name}
+                </span>
               </div>
             </div>
             <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -593,6 +620,14 @@ export default function AllRequirements() {
                 <FaTh />
               </button>
             </div>
+            <div>
+              <a
+                href={`/single-project/${projectId}`}
+                className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              >
+                Project Dashboard
+              </a>
+            </div>
           </div>
         </div>
 
@@ -637,7 +672,9 @@ export default function AllRequirements() {
               )}
 
               {filteredAndSorted.length === 0 && (
-                <div className="text-center text-gray-500">No requirements found.</div>
+                <div className="text-center text-gray-500">
+                  No requirements found.
+                </div>
               )}
             </>
           )}

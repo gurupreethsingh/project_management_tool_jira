@@ -9,11 +9,13 @@ const CreateRequirement = () => {
   const navigate = useNavigate();
 
   const [useExistingModule, setUseExistingModule] = useState(true);
-  const [moduleName, setModuleName] = useState("");            // for new module
-  const [selectedModule, setSelectedModule] = useState("");     // for existing module
+  const [moduleName, setModuleName] = useState(""); // for new module
+  const [selectedModule, setSelectedModule] = useState(""); // for existing module
   const [availableModules, setAvailableModules] = useState([]); // [{name, normalized}]
   const [description, setDescription] = useState("");
-  const [steps, setSteps] = useState([{ image: null, instruction: "", for: "Both" }]);
+  const [steps, setSteps] = useState([
+    { image: null, instruction: "", for: "Both" },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
   const [projectName, setProjectName] = useState("");
@@ -57,7 +59,10 @@ const CreateRequirement = () => {
   }, [projectId]);
 
   const handleAddStep = () => {
-    setSteps((prev) => [...prev, { image: null, instruction: "", for: "Both" }]);
+    setSteps((prev) => [
+      ...prev,
+      { image: null, instruction: "", for: "Both" },
+    ]);
   };
 
   const handleRemoveStep = (index) => {
@@ -150,17 +155,33 @@ const CreateRequirement = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0">
-          <h3 className="text-2xl font-bold text-indigo-600">Create Requirement</h3>
+          <h3 className="text-2xl font-bold text-indigo-600">
+            Create Requirement
+          </h3>
           <p className="text-sm text-gray-600">
             <strong>Project ID:</strong> {projectId}{" "}
-            {projectName && <> - <strong>Project Name:</strong> {projectName}</>}
+            {projectName && (
+              <>
+                {" "}
+                - <strong>Project Name:</strong> {projectName}
+              </>
+            )}
           </p>
+          <a
+            href={`/single-project/${projectId}`}
+            className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+          >
+            Project Dashboard
+          </a>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} encType="multipart/form-data" className="bg-white border rounded-lg">
+        <form
+          onSubmit={handleSubmit}
+          encType="multipart/form-data"
+          className="bg-white border rounded-lg"
+        >
           <div className="p-4 space-y-6">
-
             {/* Module picker */}
             <div className="grid gap-3">
               <div className="flex gap-4 items-center">
@@ -171,7 +192,9 @@ const CreateRequirement = () => {
                     checked={useExistingModule}
                     onChange={() => setUseExistingModule(true)}
                   />
-                  <span className="text-sm text-gray-800">Select existing module</span>
+                  <span className="text-sm text-gray-800">
+                    Select existing module
+                  </span>
                 </label>
                 <label className="inline-flex items-center">
                   <input
@@ -180,7 +203,9 @@ const CreateRequirement = () => {
                     checked={!useExistingModule}
                     onChange={() => setUseExistingModule(false)}
                   />
-                  <span className="text-sm text-gray-800">Create new module</span>
+                  <span className="text-sm text-gray-800">
+                    Create new module
+                  </span>
                 </label>
               </div>
 
@@ -221,7 +246,8 @@ const CreateRequirement = () => {
                     className="w-full px-3 py-2 border rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
                   />
                   <p className="mt-1 text-xs text-gray-500">
-                    Similar names are normalized server-side to avoid accidental variants.
+                    Similar names are normalized server-side to avoid accidental
+                    variants.
                   </p>
                 </div>
               )}
@@ -249,9 +275,14 @@ const CreateRequirement = () => {
               </h4>
               <div className="space-y-6">
                 {steps.map((step, index) => (
-                  <div key={index} className="border border-gray-200 bg-gray-50 rounded-md p-4">
+                  <div
+                    key={index}
+                    className="border border-gray-200 bg-gray-50 rounded-md p-4"
+                  >
                     <div className="flex items-center justify-between mb-2">
-                      <label className="block text-sm font-medium text-gray-800">Step {index + 1}</label>
+                      <label className="block text-sm font-medium text-gray-800">
+                        Step {index + 1}
+                      </label>
                       {steps.length > 1 && (
                         <button
                           type="button"
@@ -264,11 +295,15 @@ const CreateRequirement = () => {
                       )}
                     </div>
 
-                    <label className="block text-sm font-medium text-gray-600 mb-1">Image (optional)</label>
+                    <label className="block text-sm font-medium text-gray-600 mb-1">
+                      Image (optional)
+                    </label>
                     <input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => handleStepChange(index, "image", e.target.files[0])}
+                      onChange={(e) =>
+                        handleStepChange(index, "image", e.target.files[0])
+                      }
                       className="w-full text-sm text-gray-700 mb-3"
                     />
 
@@ -278,7 +313,9 @@ const CreateRequirement = () => {
                     <textarea
                       rows="4"
                       value={step.instruction}
-                      onChange={(e) => handleStepChange(index, "instruction", e.target.value)}
+                      onChange={(e) =>
+                        handleStepChange(index, "instruction", e.target.value)
+                      }
                       required
                       placeholder="Describe development or testing steps..."
                       className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
@@ -289,7 +326,9 @@ const CreateRequirement = () => {
                     </label>
                     <select
                       value={step.for || "Both"}
-                      onChange={(e) => handleStepChange(index, "for", e.target.value)}
+                      onChange={(e) =>
+                        handleStepChange(index, "for", e.target.value)
+                      }
                       className="w-full px-3 py-2 border rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500"
                     >
                       <option>Both</option>
@@ -317,7 +356,9 @@ const CreateRequirement = () => {
               type="submit"
               disabled={submitting}
               className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-medium text-white ${
-                submitting ? "bg-indigo-400 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+                submitting
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
               }`}
             >
               {submitting ? "Submitting..." : "Submit Requirement"}

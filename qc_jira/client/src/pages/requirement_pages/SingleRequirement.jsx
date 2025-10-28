@@ -16,7 +16,7 @@ const UPDATE_REQUIREMENT_ROUTE = (id) => `/update-requirement/${id}`;
 const PROJECT_REQUIREMENTS_ROUTE = (projectId) =>
   `/all-requirements/${projectId}`;
 const MODULE_REQUIREMENTS_ROUTE = (projectId, moduleName) =>
-   `/module-requirements/${projectId}/${encodeURIComponent(moduleName)}`;
+  `/module-requirements/${projectId}/${encodeURIComponent(moduleName)}`;
 
 const normalizeImageUrl = (urlOrPath) => {
   if (!urlOrPath)
@@ -32,6 +32,7 @@ const normalizeImageUrl = (urlOrPath) => {
 export default function SingleRequirement() {
   // ---- ROUTER ----
   const { id } = useParams();
+  const { projectId } = useParams();
   const navigate = useNavigate();
 
   // ---- STATE (always declared; order never changes) ----
@@ -186,14 +187,9 @@ export default function SingleRequirement() {
           {/* Top bar */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate(-1)}
-                className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
-              >
-                <FaArrowLeft />
-                Back
-              </button>
-
+              <h2 className="text-xl sm:text-3xl font-bold text-gray-900">
+                Single Requirement
+              </h2>
               {project_id && (
                 <Link
                   to={PROJECT_REQUIREMENTS_ROUTE(project_id)}
@@ -221,6 +217,15 @@ export default function SingleRequirement() {
               >
                 <FaEdit />
                 Update
+              </Link>
+            )}
+
+            {project_id && (
+              <Link
+                to={`/single-project/${project_id}`}
+                className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              >
+                Project Dashboard
               </Link>
             )}
           </div>

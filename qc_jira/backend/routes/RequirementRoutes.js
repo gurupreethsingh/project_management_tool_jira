@@ -41,7 +41,10 @@ router.put(
 
 // ---------- DELETE
 router.delete("/requirements/:id", requirementController.deleteRequirement);
-router.delete("/delete-requirements/:id", requirementController.deleteRequirement);
+router.delete(
+  "/delete-requirements/:id",
+  requirementController.deleteRequirement
+);
 
 // ---------- COUNT
 router.get("/requirements/count", requirementController.countRequirements);

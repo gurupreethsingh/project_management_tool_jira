@@ -7,7 +7,47 @@ const path = require("path");
 const { promisify } = require("util");
 const unlinkAsync = promisify(fs.unlink);
 
-const normalize = (s) => String(s || "").trim().toLowerCase();
+const normalize = (s) =>
+  String(s || "")
+    .trim()
+    .toLowerCase();
+
+// -------- helpers
+async function nextModuleSeq(project_id, module_name_normalized) {
+  const last = await Requirement.findOne({ project_id, module_name_normalized })
+    .sort({ module_seq: -1 })
+    .select({ module_seq: 1 })
+    .lean();
+  return (last?.module_seq || 0) + 1;
+}
+
+function gatherUploadedImagePaths(req) {
+  // Support various multer setups:
+  // - upload.fields([{name:"images"}]) -> req.files.images = [..]
+  // - upload.array("images")           -> req.files = [..]
+  // - upload.single("image")           -> req.file
+  const acc = [];
+
+  if (req.files && Array.isArray(req.files)) {
+    for (const f of req.files) if (f?.path) acc.push(f.path);
+  } else if (req.files && req.files.images && Array.isArray(req.files.images)) {
+    for (const f of req.files.images) if (f?.path) acc.push(f.path);
+  } else if (req.file && req.file.path) {
+    acc.push(req.file.path);
+  }
+
+  return acc;
+}
+
+async function safeUnlink(absPath) {
+  try {
+    await unlinkAsync(absPath);
+  } catch (err) {
+    if (err?.code !== "ENOENT") {
+      console.warn("safeUnlink warning:", absPath, err?.message);
+    }
+  }
+}
 
 // -------- CREATE
 exports.createRequirement = async (req, res) => {
@@ -20,7 +60,7 @@ exports.createRequirement = async (req, res) => {
       module_name,
       requirement_title,
       description,
-      steps, // can be JSON string
+      steps, // can be JSON string or array
       created_by,
     } = req.body;
 
@@ -34,7 +74,9 @@ exports.createRequirement = async (req, res) => {
     // derive project name if not provided
     let finalProjectName = project_name;
     if (!finalProjectName) {
-      const proj = await Project.findById(project_id).select("project_name").lean();
+      const proj = await Project.findById(project_id)
+        .select("project_name")
+        .lean();
       if (!proj) return res.status(404).json({ error: "Project not found" });
       finalProjectName = proj.project_name;
     }
@@ -52,24 +94,22 @@ exports.createRequirement = async (req, res) => {
     }
 
     const finalBuildNameOrNumber = build_name_or_number || "v1.0";
-    const finalRequirementTitle = requirement_title || `Requirement for ${module_name}`;
+    const finalRequirementTitle =
+      requirement_title || `Requirement for ${module_name}`;
     const module_name_normalized = normalize(module_name);
 
-    // NOTE: No duplicate guard here — multiple requirements can exist under the same module.
+    // images (multer)
+    const uploadedImages = gatherUploadedImagePaths(req);
 
-    // images via multer
-    const uploadedImages = Array.isArray(req.files) ? req.files.map((f) => f.path) : [];
-
-    // steps normalize (supports steps JSON or instructions[] fallback)
+    // steps normalize (supports JSON or fallback to instructions[])
     let finalSteps = [];
-
     if (steps) {
       let parsed = steps;
-      if (typeof steps === "string") {
+      if (typeof parsed === "string") {
         try {
-          parsed = JSON.parse(steps);
+          parsed = JSON.parse(parsed);
         } catch (_) {
-          // ignore parse error, will try fallback below
+          parsed = [];
         }
       }
       if (Array.isArray(parsed)) {
@@ -78,18 +118,17 @@ exports.createRequirement = async (req, res) => {
             step_number: Number(s.step_number) || idx + 1,
             instruction: String(s.instruction || "").trim(),
             for: s.for || "Both",
-            image_url: undefined,
+            image_url: s.image_url, // keep if caller set it
           }))
           .filter((s) => s.instruction.length > 0);
       }
     }
-
-    // Fallback: accept instructions[] if someone posts with bracket fields
     const rawInstructions =
       req.body["instructions[]"] ?? req.body.instructions ?? null;
-
     if (!finalSteps.length && rawInstructions) {
-      const arr = Array.isArray(rawInstructions) ? rawInstructions : [rawInstructions];
+      const arr = Array.isArray(rawInstructions)
+        ? rawInstructions
+        : [rawInstructions];
       finalSteps = arr
         .map((txt, i) => ({
           step_number: i + 1,
@@ -100,10 +139,14 @@ exports.createRequirement = async (req, res) => {
         .filter((s) => s.instruction.length > 0);
     }
 
-    // Attach uploaded images to steps by order
+    // attach uploaded images to steps by order
     if (uploadedImages.length && finalSteps.length) {
       let imgIdx = 0;
-      for (let i = 0; i < finalSteps.length && imgIdx < uploadedImages.length; i++) {
+      for (
+        let i = 0;
+        i < finalSteps.length && imgIdx < uploadedImages.length;
+        i++
+      ) {
         if (!finalSteps[i].image_url) {
           finalSteps[i].image_url = uploadedImages[imgIdx++];
         }
@@ -112,26 +155,58 @@ exports.createRequirement = async (req, res) => {
 
     const finalCreatedBy = created_by || (req.user && req.user.id) || undefined;
 
-    const newRequirement = new Requirement({
-      project_id,
-      project_name: finalProjectName,
-      requirement_number: finalRequirementNumber,
-      build_name_or_number: finalBuildNameOrNumber,
-      module_name,
-      module_name_normalized,
-      requirement_title: finalRequirementTitle,
-      description,
-      images: uploadedImages,
-      steps: finalSteps,
-      created_by: finalCreatedBy,
-    });
+    // Compute next per-module sequence and insert with a race-safe retry
+    const computeSeq = () => nextModuleSeq(project_id, module_name_normalized);
 
-    await newRequirement.save();
-    return res
-      .status(201)
-      .json({ message: "Requirement created", data: newRequirement });
+    let module_seq = await computeSeq();
+    let doc;
+    try {
+      doc = await Requirement.create({
+        project_id,
+        project_name: finalProjectName,
+        requirement_number: finalRequirementNumber,
+        build_name_or_number: finalBuildNameOrNumber,
+        module_name,
+        module_name_normalized,
+        module_seq,
+        requirement_title: finalRequirementTitle,
+        description,
+        images: uploadedImages,
+        steps: finalSteps,
+        created_by: finalCreatedBy,
+      });
+    } catch (err) {
+      // Rare race: duplicate (project,module,module_seq) — recompute once
+      if (err?.code === 11000 && err?.keyPattern?.module_seq) {
+        module_seq = await computeSeq();
+        doc = await Requirement.create({
+          project_id,
+          project_name: finalProjectName,
+          requirement_number: finalRequirementNumber,
+          build_name_or_number: finalBuildNameOrNumber,
+          module_name,
+          module_name_normalized,
+          module_seq,
+          requirement_title: finalRequirementTitle,
+          description,
+          images: uploadedImages,
+          steps: finalSteps,
+          created_by: finalCreatedBy,
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    return res.status(201).json({ message: "Requirement created", data: doc });
   } catch (error) {
     console.error("createRequirement error:", error);
+    if (error?.code === 11000) {
+      return res.status(409).json({
+        error: "Duplicate requirement number for this module. Please retry.",
+        details: error?.errmsg || String(error),
+      });
+    }
     return res
       .status(500)
       .json({ error: "Failed to create requirement", details: error.message });
@@ -142,10 +217,16 @@ exports.createRequirement = async (req, res) => {
 exports.getAllRequirements = async (req, res) => {
   try {
     const { project_id } = req.query;
-    const filter = project_id && mongoose.Types.ObjectId.isValid(project_id)
-      ? { project_id }
-      : {};
-    const requirements = await Requirement.find(filter).sort({ createdAt: -1 });
+    const filter =
+      project_id && mongoose.Types.ObjectId.isValid(project_id)
+        ? { project_id }
+        : {};
+    const requirements = await Requirement.find(filter).sort({
+      project_id: 1,
+      module_name_normalized: 1,
+      module_seq: 1,
+      createdAt: -1,
+    });
     res.status(200).json(requirements);
   } catch (error) {
     res
@@ -158,7 +239,8 @@ exports.getAllRequirements = async (req, res) => {
 exports.getRequirementById = async (req, res) => {
   try {
     const requirement = await Requirement.findById(req.params.id);
-    if (!requirement) return res.status(404).json({ error: "Requirement not found" });
+    if (!requirement)
+      return res.status(404).json({ error: "Requirement not found" });
     res.status(200).json(requirement);
   } catch (error) {
     res
@@ -182,7 +264,10 @@ exports.updateRequirement = async (req, res) => {
     const changedFields = new Set();
 
     // basic fields
-    if (body.requirement_title != null && body.requirement_title !== existing.requirement_title) {
+    if (
+      body.requirement_title != null &&
+      body.requirement_title !== existing.requirement_title
+    ) {
       updateFields.requirement_title = body.requirement_title;
       changedFields.add("requirement_title");
     }
@@ -190,7 +275,10 @@ exports.updateRequirement = async (req, res) => {
       updateFields.description = body.description;
       changedFields.add("description");
     }
-    if (body.build_name_or_number != null && body.build_name_or_number !== existing.build_name_or_number) {
+    if (
+      body.build_name_or_number != null &&
+      body.build_name_or_number !== existing.build_name_or_number
+    ) {
       updateFields.build_name_or_number = body.build_name_or_number;
       changedFields.add("build_name_or_number");
     }
@@ -199,6 +287,7 @@ exports.updateRequirement = async (req, res) => {
       updateFields.module_name = mod;
       updateFields.module_name_normalized = mod.toLowerCase();
       changedFields.add("module_name");
+      // Note: we do NOT change module_seq on rename (sequence stays with doc)
     }
 
     // steps
@@ -210,7 +299,7 @@ exports.updateRequirement = async (req, res) => {
         if (typeof parsed === "string") {
           try {
             parsed = JSON.parse(parsed);
-          } catch (e) {
+          } catch (_) {
             parsed = [];
           }
         }
@@ -220,6 +309,7 @@ exports.updateRequirement = async (req, res) => {
               step_number: Number(s.step_number) || idx + 1,
               instruction: String(s.instruction || "").trim(),
               for: s.for || "Both",
+              image_url: s.image_url,
             }))
             .filter((s) => s.instruction.length > 0);
         }
@@ -230,15 +320,18 @@ exports.updateRequirement = async (req, res) => {
     }
 
     // images
-    const clearImages = body.clear_images === "true" || body.clear_images === true;
-    const newImages = Array.isArray(req.files) ? req.files.map((f) => f.path) : [];
+    const clearImages =
+      body.clear_images === "true" || body.clear_images === true;
+    const newImages = gatherUploadedImagePaths(req);
 
     if (clearImages) {
       const old = existing.images || [];
       await Promise.all(
         old.map(async (p) => {
           try {
-            const abs = path.isAbsolute(p) ? p : path.join(process.cwd(), String(p).replace(/\\/g, "/"));
+            const abs = path.isAbsolute(p)
+              ? p
+              : path.join(process.cwd(), String(p).replace(/\\/g, "/"));
             await unlinkAsync(abs);
           } catch (_) {}
         })
@@ -248,8 +341,12 @@ exports.updateRequirement = async (req, res) => {
     }
 
     if (newImages.length) {
-      if (!updateFields.images) updateFields.$push = { images: { $each: newImages } };
-      else updateFields.images = (updateFields.images || []).concat(newImages);
+      // If images already set in updateFields, merge. Else $push to existing doc.
+      if (!updateFields.images) {
+        updateFields.$push = { images: { $each: newImages } };
+      } else {
+        updateFields.images = (updateFields.images || []).concat(newImages);
+      }
       changedFields.add("images");
     }
 
@@ -260,21 +357,21 @@ exports.updateRequirement = async (req, res) => {
       }));
     }
 
-    const updated_by = body.updated_by || (req.user && req.user.id) || undefined;
+    const updated_by =
+      body.updated_by || (req.user && req.user.id) || undefined;
     let updated_by_name = "";
     try {
       if (req.user && req.user.name) updated_by_name = req.user.name;
     } catch (_) {}
 
-    const updated = await Requirement.findByIdAndUpdate(
-      id,
-      updateFields,
-      { new: true, runValidators: true }
-    );
+    const updated = await Requirement.findByIdAndUpdate(id, updateFields, {
+      new: true,
+      runValidators: true,
+    });
 
     if (updated) {
       const logEntry = {
-        updated_by: updated_by,
+        updated_by,
         updated_by_name,
         changed_fields: Array.from(changedFields),
         at: new Date(),
@@ -286,7 +383,9 @@ exports.updateRequirement = async (req, res) => {
       );
     }
 
-    return res.status(200).json({ message: "Requirement updated", data: updated });
+    return res
+      .status(200)
+      .json({ message: "Requirement updated", data: updated });
   } catch (error) {
     console.error("updateRequirement error:", error);
     return res
@@ -296,16 +395,6 @@ exports.updateRequirement = async (req, res) => {
 };
 
 // -------- DELETE
-async function safeUnlink(absPath) {
-  try {
-    await unlinkAsync(absPath);
-  } catch (err) {
-    if (err.code !== "ENOENT") {
-      console.warn("safeUnlink warning:", absPath, err.message);
-    }
-  }
-}
-
 exports.deleteRequirement = async (req, res) => {
   try {
     const { id } = req.params;
@@ -316,7 +405,6 @@ exports.deleteRequirement = async (req, res) => {
     }
 
     const allPaths = [];
-
     if (Array.isArray(reqDoc.images)) {
       for (const p of reqDoc.images) if (p) allPaths.push(p);
     }
@@ -331,10 +419,11 @@ exports.deleteRequirement = async (req, res) => {
       .map((p) => (path.isAbsolute(p) ? p : path.join(process.cwd(), p)));
 
     await Promise.all(absPaths.map((p) => safeUnlink(p)));
-
     await Requirement.findByIdAndDelete(id);
 
-    return res.status(200).json({ message: "Requirement and files deleted successfully" });
+    return res
+      .status(200)
+      .json({ message: "Requirement and files deleted successfully" });
   } catch (error) {
     console.error("deleteRequirement error:", error);
     return res
@@ -362,9 +451,9 @@ exports.getRequirementsByProject = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(projectId)) {
       return res.status(400).json({ error: "Invalid projectId" });
     }
-    const requirements = await Requirement.find({ project_id: projectId }).sort({
-      createdAt: -1,
-    });
+    const requirements = await Requirement.find({ project_id: projectId }).sort(
+      { module_name_normalized: 1, module_seq: 1, createdAt: -1 }
+    );
     res.status(200).json(requirements);
   } catch (error) {
     res.status(500).json({
@@ -384,7 +473,7 @@ exports.getRequirementsByModule = async (req, res) => {
     const requirements = await Requirement.find({
       project_id: projectId,
       module_name_normalized: normalize(moduleName),
-    }).sort({ createdAt: -1 });
+    }).sort({ module_seq: 1, createdAt: -1 });
     res.status(200).json(requirements);
   } catch (error) {
     res.status(500).json({
@@ -404,9 +493,7 @@ exports.searchRequirements = async (req, res) => {
     }).sort({ createdAt: -1 });
     res.status(200).json(results);
   } catch (error) {
-    res
-      .status(500)
-      .json({ error: "Search failed", details: error.message });
+    res.status(500).json({ error: "Search failed", details: error.message });
   }
 };
 
@@ -427,7 +514,9 @@ exports.getProjectById = async (req, res) => {
     });
   } catch (err) {
     console.error("getProjectById error:", err);
-    return res.status(500).json({ error: "Failed to fetch project", details: err.message });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch project", details: err.message });
   }
 };
 
@@ -445,15 +534,24 @@ exports.getRequirementModulesByProject = async (req, res) => {
         $group: {
           _id: "$module_name_normalized",
           name: { $first: "$module_name" },
+          total: { $sum: 1 },
+          latestAt: { $max: "$createdAt" },
         },
       },
       { $sort: { name: 1 } },
     ]);
 
-    const mods = rows.map((r) => ({ name: r.name, normalized: r._id }));
+    const mods = rows.map((r) => ({
+      name: r.name,
+      normalized: r._id,
+      total: r.total,
+      latestAt: r.latestAt,
+    }));
     return res.status(200).json(mods);
   } catch (error) {
     console.error("getRequirementModulesByProject error:", error);
-    return res.status(500).json({ error: "Failed to fetch modules", details: error.message });
+    return res
+      .status(500)
+      .json({ error: "Failed to fetch modules", details: error.message });
   }
 };
