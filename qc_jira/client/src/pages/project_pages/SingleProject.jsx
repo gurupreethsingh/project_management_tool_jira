@@ -379,8 +379,7 @@
 
 // export default SingleProject;
 
-
-// till here original code. 
+// till here original code.
 
 import React, { useEffect, useState } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
@@ -487,7 +486,8 @@ const SingleProject = () => {
   };
 
   if (loading) return <div className="text-center p-4">Loading...</div>;
-  if (error) return <div className="text-center p-4 text-rose-700">{error}</div>;
+  if (error)
+    return <div className="text-center p-4 text-rose-700">{error}</div>;
   if (!project) return null;
 
   // ----- role helpers -----
@@ -504,10 +504,14 @@ const SingleProject = () => {
   const user = JSON.parse(localStorage.getItem("user"));
   const userId = user?.id;
 
-  const taskLink =
-    ["superadmin", "admin", "qa_lead", "project_manager"].includes(normRole)
-      ? `/single-project/${projectId}/view-all-tasks`
-      : `/single-project/${projectId}/user-assigned-tasks/${userId}`;
+  const taskLink = [
+    "superadmin",
+    "admin",
+    "qa_lead",
+    "project_manager",
+  ].includes(normRole)
+    ? `/single-project/${projectId}/view-all-tasks`
+    : `/single-project/${projectId}/user-assigned-tasks/${userId}`;
 
   const totalScenarios = project.totalScenarios || 0;
 
@@ -519,7 +523,9 @@ const SingleProject = () => {
   const RoleList = ({ title, colorClasses, icon, list }) => {
     const items = Array.isArray(list) ? list : [];
     return (
-      <div className={`p-4 rounded-lg border ${colorClasses.bg} ${colorClasses.border}`}>
+      <div
+        className={`p-4 rounded-lg border ${colorClasses.bg} ${colorClasses.border}`}
+      >
         <h3 className={`text-md font-semibold mb-2 ${colorClasses.title}`}>
           {icon}
           {title}
@@ -611,17 +617,19 @@ const SingleProject = () => {
   const devs = project.developers || project?.Developers || [];
   const tests = project.testEngineers || project?.test_engineers || [];
   const superAdmins = project.superAdmins || project.super_admins || [];
-  const projectManagers = project.projectManagers || project.project_managers || [];
+  const projectManagers =
+    project.projectManagers || project.project_managers || [];
   const admins = project.admins || [];
   const hrs = project.hrs || project.hr || [];
   const testLeads = project.testLeads || project.test_leads || [];
   const qaLeads = project.qaLeads || project.qa_leads || [];
-  const developerLeads = project.developerLeads || project.developer_leads || [];
-  const bas = project.bas || project.business_analysts || project.businessAnalysts || [];
+  const developerLeads =
+    project.developerLeads || project.developer_leads || [];
+  const bas =
+    project.bas || project.business_analysts || project.businessAnalysts || [];
 
   return (
     <div className="container mx-auto p-4 bg-white">
-
       {/* Project Info (UNCHANGED) */}
       <div className="bg-white shadow rounded-lg p-4 mb-4 border border-slate-200">
         <h1 className="text-2xl font-semibold text-slate-800 flex items-center">
@@ -632,38 +640,37 @@ const SingleProject = () => {
           </span>
         </h1>
         <div className="flex justify-between flex-wrap items-center">
- <p className="font-medium text-slate-700 flex items-center mt-2">
-          <FaFileAlt className="mr-2 text-indigo-400" />
-          Description: <span className="ml-1">{project.description}</span>
-        </p>
-        <p className="font-medium text-slate-700 flex items-center mt-1">
-          <FaCalendarAlt className="mr-2 text-emerald-500" />
-          <span className="font-bold">Start Date:</span>
-          <span className="text-emerald-700 ml-2">
-            {project.startDate
-              ? new Date(project.startDate).toLocaleDateString()
-              : "—"}
-          </span>
-        </p>
-        <p className="font-medium text-slate-700 flex items-center mt-1">
-          <FaClock className="mr-2 text-rose-400" />
-          Deadline:
-          <span className="text-rose-700 ml-2">
-            {project.deadline
-              ? new Date(project.deadline).toLocaleDateString()
-              : "—"}
-          </span>
-        </p>
-        <p className="font-medium text-slate-700 flex items-center mt-1">
-          <FaLaptopCode className="mr-2 text-indigo-400" />
-          Domain:
-          <span className="text-indigo-700 ml-2">{project.domain || "—"}</span>
-        </p>
+          <p className="font-medium text-slate-700 flex items-center mt-2">
+            <FaFileAlt className="mr-2 text-indigo-400" />
+            Description: <span className="ml-1">{project.description}</span>
+          </p>
+          <p className="font-medium text-slate-700 flex items-center mt-1">
+            <FaCalendarAlt className="mr-2 text-emerald-500" />
+            <span className="font-bold">Start Date:</span>
+            <span className="text-emerald-700 ml-2">
+              {project.startDate
+                ? new Date(project.startDate).toLocaleDateString()
+                : "—"}
+            </span>
+          </p>
+          <p className="font-medium text-slate-700 flex items-center mt-1">
+            <FaClock className="mr-2 text-rose-400" />
+            Deadline:
+            <span className="text-rose-700 ml-2">
+              {project.deadline
+                ? new Date(project.deadline).toLocaleDateString()
+                : "—"}
+            </span>
+          </p>
+          <p className="font-medium text-slate-700 flex items-center mt-1">
+            <FaLaptopCode className="mr-2 text-indigo-400" />
+            Domain:
+            <span className="text-indigo-700 ml-2">
+              {project.domain || "—"}
+            </span>
+          </p>
         </div>
-       
       </div>
-
-
 
       {/* Action Buttons (UNCHANGED) */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4 mb-4">
@@ -695,6 +702,10 @@ const SingleProject = () => {
           normRole === "admin" ||
           normRole === "project_manager" ||
           normRole === "qa_lead" ||
+          normRole === "test_lead" ||
+          normRole === "test_engineer" ||
+          normRole === "developer_lead" ||
+          normRole === "developer" ||
           normRole === "test_engineer") && (
           <>
             <Link
@@ -726,9 +737,14 @@ const SingleProject = () => {
 
         {(normRole === "superadmin" ||
           normRole === "admin" ||
-          normRole === "qa_lead") && (
+          normRole === "project_manager" ||
+          normRole === "qa_lead" ||
+          normRole === "test_lead" ||
+          normRole === "test_engineer" ||
+          normRole === "developer_lead" ||
+          normRole === "developer") && (
           <Link
-            to={`/single-project/${projectId}/view-defects`}
+            to={`/single-project/${projectId}/all-defects`}
             className={`${baseBtn} bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100`}
           >
             <FaBug className="mr-1" />
@@ -799,8 +815,6 @@ const SingleProject = () => {
           View Requirements
         </Link>
       </div>
-
-
 
       {/* Users Involved (EXTENDED) */}
       <div className="bg-white shadow rounded-lg p-4 mb-4 border border-slate-200">
@@ -880,7 +894,9 @@ const SingleProject = () => {
         <div className="bg-amber-50 p-4 rounded-lg flex items-center border border-amber-100">
           <FaFileAlt className="text-3xl text-amber-500 mr-4" />
           <div>
-            <h3 className="text-sm font-semibold text-amber-900">Total Scenarios</h3>
+            <h3 className="text-sm font-semibold text-amber-900">
+              Total Scenarios
+            </h3>
             <p className="text-lg text-amber-900">{totalScenarios}</p>
           </div>
         </div>
@@ -888,7 +904,9 @@ const SingleProject = () => {
         <div className="bg-emerald-50 p-4 rounded-lg flex items-center border border-emerald-100">
           <FaCodeBranch className="text-3xl text-emerald-500 mr-4" />
           <div>
-            <h3 className="text-sm font-semibold text-emerald-900">Total Test Cases</h3>
+            <h3 className="text-sm font-semibold text-emerald-900">
+              Total Test Cases
+            </h3>
             <p className="text-xl text-emerald-900">{totalTestCases}</p>
           </div>
         </div>
@@ -896,7 +914,9 @@ const SingleProject = () => {
         <div className="bg-rose-50 p-4 rounded-lg flex items-center border border-rose-100">
           <FaBug className="text-3xl text-rose-500 mr-4" />
           <div>
-            <h3 className="text-lg font-semibold text-rose-900">Total Defects</h3>
+            <h3 className="text-lg font-semibold text-rose-900">
+              Total Defects
+            </h3>
             <p className="text-xl text-rose-900">{totalDefects}</p>
           </div>
         </div>
