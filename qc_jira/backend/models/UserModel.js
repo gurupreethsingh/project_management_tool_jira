@@ -31,6 +31,7 @@ const userSchema = new mongoose.Schema({
       "event_coordinator", // Event Coordinator
       "exam_controller", // Exam Controller
       "hr_manager", // HR Manager
+      "hr",
       "intern", // Intern
       "legal_advisor", // New role: Legal Advisor
       "librarian", // University Librarian

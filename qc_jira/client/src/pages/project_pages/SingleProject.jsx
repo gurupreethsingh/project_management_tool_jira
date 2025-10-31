@@ -764,7 +764,9 @@ const SingleProject = () => {
           normRole === "admin" ||
           normRole === "project_manager" ||
           normRole === "developer_lead" ||
-          normRole === "qa_lead") && (
+          normRole === "qa_lead" ||
+          normRole === "test_engineer" ||
+          normRole === "test_lead") && (
           <Link
             to={`/single-project/${projectId}/test-case-execution`}
             className={`${baseBtn} bg-slate-100 text-slate-800 border-slate-200 hover:bg-slate-200`}
@@ -778,7 +780,8 @@ const SingleProject = () => {
           normRole === "admin" ||
           normRole === "project_manager" ||
           normRole === "developer_lead" ||
-          normRole === "qa_lead") && (
+          normRole === "qa_lead" ||
+          normRole === "test_lead") && (
           <Link
             to={`/projects/${projectId}/assign-task`}
             className={`${baseBtn} bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-200`}
