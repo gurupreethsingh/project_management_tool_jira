@@ -97,11 +97,6 @@ target/
 classes/
 build/
 
-# Test output
-test-output/
-failed_screenshots/
-surefire-reports/
-extent-reports/
 
 # IDE
 *.project
@@ -124,13 +119,5 @@ target/
 # Maven wrapper files (optional)
 .mvn/wrapper/maven-wrapper.jar
 
-# Reports
-surefire-reports/
-failsafe-reports/
-cucumber-reports/
-allure-results/
-allure-report/
 
 # Temporary screenshots
-screenshots/
-failed_screenshots/
