@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"courseCode":{"$numberInt":"1"}},"name":"courseCode_1","background":true,"unique":true}],"uuid":"28296ddde437459698cfd65506710ade","collectionName":"courses","type":"collection"}
+=======
 {"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"courseCode":{"$numberInt":"1"}},"name":"courseCode_1","background":true,"unique":true}],"uuid":"72c95121b63249979966944236cd6a60","collectionName":"courses","type":"collection"}
+>>>>>>> 9c4396370a549c6dce6b3616f5315cafa1c6d50d

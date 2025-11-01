@@ -1,1 +1,5 @@
+<<<<<<< HEAD
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"61e150cf7bb74f56a4dbc57dd806b2e4","collectionName":"carts","type":"collection"}
+=======
 {"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"9f8ae3ec5c264688b3976eaecdaa3d9b","collectionName":"carts","type":"collection"}
+>>>>>>> 9c4396370a549c6dce6b3616f5315cafa1c6d50d
