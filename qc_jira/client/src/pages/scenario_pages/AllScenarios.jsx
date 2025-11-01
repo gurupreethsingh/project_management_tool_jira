@@ -14,6 +14,9 @@ import {
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
+const UNASSIGNED_ID = "__unassigned__";
+const UNASSIGNED_NAME = "Unassigned";
+
 export default function AllScenarios() {
   const { projectId } = useParams();
   const [scenarios, setScenarios] = useState([]);
@@ -21,13 +24,13 @@ export default function AllScenarios() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [sortOrder, setSortOrder] = useState("asc");
   const [totalScenarios, setTotalScenarios] = useState(0);
   const [filteredScenarioCount, setFilteredScenarioCount] = useState(0);
 
-  // Module filter
+  // Module filter (now works with multi-modules)
   const [selectedModuleId, setSelectedModuleId] = useState(null);
 
   useEffect(() => {
@@ -36,7 +39,7 @@ export default function AllScenarios() {
         const response = await axios.get(
           `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`
         );
-        const data = response.data || [];
+        const data = Array.isArray(response.data) ? response.data : [];
         setScenarios(data);
         setTotalScenarios(data.length);
       } catch (error) {
@@ -46,7 +49,7 @@ export default function AllScenarios() {
     fetchScenarios();
   }, [projectId]);
 
-  // Debounce search for snappier typing
+  // Debounce search
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery), 180);
     return () => clearTimeout(t);
@@ -54,34 +57,84 @@ export default function AllScenarios() {
 
   const norm = (v) => (v ?? "").toString().toLowerCase();
 
-  // Build module chips (+ counts) from current dataset
+  // Helper: get module objects array from a scenario (prefers s.modules, falls back to legacy s.module)
+  const getScenarioModules = (s) => {
+    if (Array.isArray(s?.modules) && s.modules.length) {
+      // populated form: modules are objects {_id,name}; API already does populate
+      return s.modules
+        .filter(Boolean)
+        .map((m) =>
+          typeof m === "object"
+            ? { _id: m._id, name: m.name }
+            : { _id: m, name: "" }
+        )
+        .filter((m) => m && m._id);
+    }
+    if (s?.module?._id || s?.module?.name) {
+      return [{ _id: s.module._id, name: s.module.name }];
+    }
+    return []; // truly unassigned
+  };
+
+  // Build module chips (+ counts) from current dataset using modules[]
   const modules = useMemo(() => {
     const counts = new Map(); // id -> { _id, name, count }
     for (const s of scenarios) {
-      const id = s?.module?._id || "__unassigned__";
-      const name = s?.module?.name || "Unassigned";
-      if (!counts.has(id)) counts.set(id, { _id: id, name, count: 0 });
-      counts.get(id).count += 1;
+      const mods = getScenarioModules(s);
+      if (mods.length === 0) {
+        if (!counts.has(UNASSIGNED_ID)) {
+          counts.set(UNASSIGNED_ID, {
+            _id: UNASSIGNED_ID,
+            name: UNASSIGNED_NAME,
+            count: 0,
+          });
+        }
+        counts.get(UNASSIGNED_ID).count += 1;
+        continue;
+      }
+      // Count each scenario membership across all of its modules
+      const seen = new Set();
+      for (const m of mods) {
+        const id = String(m._id);
+        if (seen.has(id)) continue;
+        seen.add(id);
+        if (!counts.has(id))
+          counts.set(id, { _id: id, name: m.name || "", count: 0 });
+        counts.get(id).count += 1;
+      }
     }
     return Array.from(counts.values()).sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
     );
   }, [scenarios]);
 
-  // Filter (search + module)
+  // Filter (search + module via modules[] or Unassigned)
   const filtered = useMemo(() => {
     const q = norm(debouncedQuery);
     return scenarios.filter((scenario) => {
+      // Module filter
       if (selectedModuleId) {
-        const mId = scenario?.module?._id || "__unassigned__";
-        if (mId !== selectedModuleId) return false;
+        const mods = getScenarioModules(scenario);
+        if (selectedModuleId === UNASSIGNED_ID) {
+          if (mods.length !== 0) return false;
+        } else {
+          const ids = mods.map((m) => String(m._id));
+          if (!ids.includes(String(selectedModuleId))) return false;
+        }
       }
+
+      // Search fields
       const fields = [
         norm(scenario.scenario_text),
         norm(scenario.scenario_number),
         norm(scenario?.createdBy?.name),
         norm(scenario?.project?.project_name),
-        norm(scenario?.module?.name || "Unassigned"),
+        // include all module names for searching
+        norm(
+          getScenarioModules(scenario)
+            .map((m) => m.name)
+            .join(", ")
+        ),
       ];
       return q ? fields.some((f) => f.includes(q)) : true;
     });
@@ -104,6 +157,15 @@ export default function AllScenarios() {
     setScenarios(sorted);
     setSortOrder((s) => (s === "asc" ? "desc" : "asc"));
   };
+
+  // ▼▼ NEW: page-size change handler (add-only) ▼▼
+  const handlePageSizeChange = (e) => {
+    const v = e.target.value;
+    const next = v === "ALL" ? 1000000000 : Number(v);
+    setItemsPerPage(next);
+    setCurrentPage(1);
+  };
+  // ▲▲ NEW: page-size change handler ▲▲
 
   // Pagination slice after filtering
   const indexOfLast = currentPage * itemsPerPage;
@@ -144,9 +206,40 @@ export default function AllScenarios() {
     setCurrentPage(1);
   };
 
+  // Small renderer: multiple module chips with overflow
+  const ModuleChips = ({ scenario, max = 3 }) => {
+    const mods = getScenarioModules(scenario);
+    if (!mods.length) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+          {UNASSIGNED_NAME}
+        </span>
+      );
+    }
+    const show = mods.slice(0, max);
+    const extra = mods.length - show.length;
+    return (
+      <span className="flex flex-wrap gap-1">
+        {show.map((m) => (
+          <span
+            key={m._id}
+            className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700"
+          >
+            {m.name || m._id}
+          </span>
+        ))}
+        {extra > 0 && (
+          <span className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600">
+            +{extra}
+          </span>
+        )}
+      </span>
+    );
+  };
+
   return (
     <div className="bg-white py-10 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-2 sm:px-3 lg:px-4">
         {/* Header / Controls */}
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
@@ -167,17 +260,23 @@ export default function AllScenarios() {
 
           <div className="flex items-center gap-3 flex-wrap">
             <FaThList
-              className={`text-lg cursor-pointer ${view === "list" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "list" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("list")}
               title="List view"
             />
             <FaThLarge
-              className={`text-lg cursor-pointer ${view === "card" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "card" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("card")}
               title="Card view"
             />
             <FaTh
-              className={`text-lg cursor-pointer ${view === "grid" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "grid" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("grid")}
               title="Grid view"
             />
@@ -193,27 +292,41 @@ export default function AllScenarios() {
               />
             </div>
 
-            <button
-              onClick={handleSort}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm inline-flex items-center"
-            >
-              <FaSort className="mr-1" />
-              Sort ({sortOrder === "asc" ? "Oldest" : "Newest"})
-            </button>
+            {/* ▼▼ NEW: Page-size dropdown ▼▼ */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-600">Rows:</label>
+              <select
+                value={
+                  itemsPerPage >= 1000000000 ? "ALL" : String(itemsPerPage)
+                }
+                onChange={handlePageSizeChange}
+                className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
+                title="Rows per page"
+              >
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="40">40</option>
+                <option value="60">60</option>
+                <option value="ALL">All</option>
+              </select>
+            </div>
+            {/* ▲▲ NEW: Page-size dropdown ▲▲ */}
 
-            <a
-              href={`/single-project/${projectId}`}
+            <Link
+              to={`/single-project/${projectId}`}
               className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
             >
               Project Dashboard
-            </a>
+            </Link>
           </div>
         </div>
 
         {/* Module chips row */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-slate-700">Filter by Module</h3>
+            <h3 className="text-xs font-semibold text-slate-700">
+              Filter by Module
+            </h3>
             <button
               onClick={clearModuleSelection}
               className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
@@ -247,15 +360,15 @@ export default function AllScenarios() {
           </div>
         </div>
 
-        {/* List View (compact, single global header) */}
+        {/* List View */}
         {view === "list" && (
           <div className="mt-5">
             {/* global header */}
-            <div className="grid grid-cols-[56px,120px,1fr,160px,160px,140px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
+            <div className="grid grid-cols-[56px,120px,1fr,260px,160px,140px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
               <div>#</div>
               <div>Scenario</div>
               <div>Text</div>
-              <div>Module</div>
+              <div>Modules</div>
               <div>Project</div>
               <div>Created By</div>
               <div className="text-center">View</div>
@@ -267,7 +380,7 @@ export default function AllScenarios() {
               {current.map((s, idx) => (
                 <div
                   key={s._id}
-                  className="grid grid-cols-[56px,120px,1fr,160px,160px,140px,40px,40px] items-center text-[12px] px-3 py-2"
+                  className="grid grid-cols-[56px,120px,1fr,260px,160px,140px,40px,40px] items-center text-[12px] px-3 py-2"
                 >
                   <div className="text-slate-700">{indexOfFirst + idx + 1}</div>
 
@@ -280,9 +393,7 @@ export default function AllScenarios() {
                   </div>
 
                   <div className="truncate">
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {s?.module?.name || "Unassigned"}
-                    </span>
+                    <ModuleChips scenario={s} />
                   </div>
 
                   <div className="text-slate-700 truncate">
@@ -293,7 +404,7 @@ export default function AllScenarios() {
                     {s?.createdBy?.name}
                   </div>
 
-                  {/* View column */}
+                  {/* View */}
                   <div className="flex justify-center">
                     <Link
                       to={`/single-project/${projectId}/scenario-history/${s._id}`}
@@ -304,7 +415,7 @@ export default function AllScenarios() {
                     </Link>
                   </div>
 
-                  {/* Delete column */}
+                  {/* Delete */}
                   <div className="flex justify-center">
                     <button
                       onClick={() => handleDelete(s._id)}
@@ -324,13 +435,16 @@ export default function AllScenarios() {
         {view === "grid" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-8">
             {current.map((s) => (
-              <div key={s._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
+              <div
+                key={s._id}
+                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+              >
                 <div>
                   <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
                     <span>Scenario: {s.scenario_number}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {s?.module?.name || "Unassigned"}
-                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <ModuleChips scenario={s} />
                   </div>
                   <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
                     {s.scenario_text}
@@ -359,13 +473,16 @@ export default function AllScenarios() {
         {view === "card" && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
             {current.map((s) => (
-              <div key={s._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
+              <div
+                key={s._id}
+                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+              >
                 <div>
                   <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
                     <span>Scenario: {s.scenario_number}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {s?.module?.name || "Unassigned"}
-                    </span>
+                  </div>
+                  <div className="mt-1">
+                    <ModuleChips scenario={s} />
                   </div>
                   <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
                     {s.scenario_text}

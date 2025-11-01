@@ -274,3 +274,65 @@ exports.countUsersSummary = async (_req, res) => {
     res.status(500).json({ error: "Server error" });
   }
 };
+
+// Add at the bottom of controllers/UserController.js (and export it)
+exports.listApproverEligibleUsers = async (_req, res) => {
+  try {
+    // accept both canonical and common typos/aliases
+    const roles = [
+      "superadmin",
+      "admin",
+      "test_lead",
+      "developer_lead", // canonical
+      "develpment_lead", // alias/typo seen in requests
+      "business_analyst", // canonical
+      "Business_analyst", // alias case
+      "qa_lead",
+    ];
+
+    const users = await User.find({ role: { $in: roles } }).select(
+      "_id name email role"
+    );
+    res.status(200).json(users);
+  } catch (error) {
+    console.error("Error fetching approver-eligible users:", error);
+    res.status(500).json({ message: "Error fetching approvers" });
+  }
+};
+
+// Who can approve: superadmin, admin, test_lead, developer_lead, business_analyst, qa_lead
+const APPROVER_ROLES = [
+  "superadmin",
+  "admin",
+  "test_lead",
+  "developer_lead",
+  "business_analyst",
+  "qa_lead",
+];
+
+/** All users for "Reviewed By" dropdown (id, name, role) */
+exports.listAllForReview = async (_req, res) => {
+  try {
+    const users = await User.find({}, "_id name role").sort({ name: 1 }).lean();
+    res.json(users);
+  } catch (e) {
+    console.error("listAllForReview error:", e);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+/** Only approvers for "Approved By" dropdown (id, name, role) */
+exports.listApprovers = async (_req, res) => {
+  try {
+    const users = await User.find(
+      { role: { $in: APPROVER_ROLES } },
+      "_id name role"
+    )
+      .sort({ name: 1 })
+      .lean();
+    res.json(users);
+  } catch (e) {
+    console.error("listApprovers error:", e);
+    res.status(500).json({ message: "Server error" });
+  }
+};

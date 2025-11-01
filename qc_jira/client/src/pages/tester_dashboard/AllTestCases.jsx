@@ -1,386 +1,3 @@
-// import React, { useEffect, useState } from "react";
-// import { useParams, Link } from "react-router-dom";
-// import axios from "axios";
-// import {
-//   FaThList,
-//   FaThLarge,
-//   FaTh,
-//   FaSearch,
-//   FaEye,
-//   FaTrashAlt,
-//   FaArrowLeft,
-//   FaArrowRight,
-// } from "react-icons/fa";
-// import globalBackendRoute from "../../config/Config";
-
-// const AllTestCases = () => {
-//   const { projectId } = useParams();
-//   const [testCases, setTestCases] = useState([]);
-//   const [view, setView] = useState("list");
-//   const [searchQuery, setSearchQuery] = useState("");
-//   const [totalTestCases, setTotalTestCases] = useState(0);
-//   const [passedTestCasesCount, setPassedTestCasesCount] = useState(0);
-//   const [failedTestCasesCount, setFailedTestCasesCount] = useState(0);
-//   const [filteredTestCases, setFilteredTestCases] = useState([]);
-//   const [currentPage, setCurrentPage] = useState(1);
-//   const [itemsPerPage, setItemsPerPage] = useState(5);
-//   const [totalPages, setTotalPages] = useState(1);
-
-//   // Derived helpers
-//   const getTestStatus = (testCase) => {
-//     const steps = Array.isArray(testCase?.testing_steps)
-//       ? testCase.testing_steps
-//       : [];
-//     const hasFailed = steps.some(
-//       (s) => String(s?.status).toLowerCase() === "fail"
-//     );
-//     return hasFailed ? "Fail" : "Pass";
-//   };
-
-//   const recomputeCounts = (rows) => {
-//     const passed = rows.filter((tc) => getTestStatus(tc) === "Pass").length;
-//     const failed = rows.length - passed;
-//     setTotalTestCases(rows.length);
-//     setPassedTestCasesCount(passed);
-//     setFailedTestCasesCount(failed);
-//   };
-
-//   // Fetch all test cases for the project
-//   useEffect(() => {
-//     const fetchTestCases = async () => {
-//       try {
-//         const token = localStorage.getItem("token");
-//         const res = await axios.get(
-//           `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
-//           { headers: { Authorization: `Bearer ${token}` } }
-//         );
-//         const rows = Array.isArray(res.data) ? res.data : [];
-//         setTestCases(rows);
-//         setFilteredTestCases(rows);
-//         recomputeCounts(rows);
-//         setTotalPages(Math.max(1, Math.ceil(rows.length / itemsPerPage)));
-//         setCurrentPage(1);
-//       } catch (error) {
-//         console.error("Error fetching test cases:", error);
-//       }
-//     };
-//     fetchTestCases();
-//   }, [projectId, itemsPerPage]);
-
-//   // Filter by search
-//   useEffect(() => {
-//     const q = String(searchQuery || "").toLowerCase();
-//     const rows = testCases.filter((tc) => {
-//       const name = String(tc?.test_case_name || "").toLowerCase();
-//       const req = String(tc?.requirement_number || "").toLowerCase();
-//       const mod = String(tc?.module_name || "").toLowerCase();
-//       return [name, req, mod].some((f) => f.includes(q));
-//     });
-//     setFilteredTestCases(rows);
-//     recomputeCounts(rows);
-//     const pages = Math.max(1, Math.ceil(rows.length / itemsPerPage));
-//     setTotalPages(pages);
-//     if (currentPage > pages) setCurrentPage(1);
-//   }, [searchQuery, testCases, itemsPerPage]);
-
-//   const indexOfLastItem = currentPage * itemsPerPage;
-//   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-//   const currentTestCases = filteredTestCases.slice(
-//     indexOfFirstItem,
-//     indexOfLastItem
-//   );
-
-//   const handlePageChange = (newPage) => {
-//     if (newPage < 1 || newPage > totalPages) return;
-//     setCurrentPage(newPage);
-//   };
-
-//   const handleDelete = async (id) => {
-//     const userConfirmed = window.confirm(
-//       "Are you sure you want to delete this test case? This action is irreversible."
-//     );
-//     if (!userConfirmed) return;
-
-//     try {
-//       const token = localStorage.getItem("token");
-//       await axios.delete(`${globalBackendRoute}/api/delete-test-case/${id}`, {
-//         headers: { Authorization: `Bearer ${token}` },
-//       });
-
-//       // Remove locally and recompute
-//       const updated = testCases.filter((tc) => tc._id !== id);
-//       setTestCases(updated);
-//       const filtered = updated.filter((tc) => {
-//         const q = String(searchQuery || "").toLowerCase();
-//         const name = String(tc?.test_case_name || "").toLowerCase();
-//         const req = String(tc?.requirement_number || "").toLowerCase();
-//         const mod = String(tc?.module_name || "").toLowerCase();
-//         return [name, req, mod].some((f) => f.includes(q));
-//       });
-//       setFilteredTestCases(filtered);
-//       recomputeCounts(filtered);
-//       const pages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
-//       setTotalPages(pages);
-//       if (currentPage > pages) setCurrentPage(pages);
-
-//       alert("Test case deleted successfully.");
-//     } catch (error) {
-//       console.error("Error deleting test case:", error);
-//       alert(
-//         error?.response?.data?.message ||
-//           "Error deleting test case. Please try again."
-//       );
-//     }
-//   };
-
-//   return (
-//     <div className="bg-white py-16 sm:py-20">
-//       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-//         <div className="flex justify-between items-center flex-wrap">
-//           <div>
-//             <h2 className="text-left font-semibold tracking-tight text-indigo-600 sm:text-1xl">
-//               All Test Cases for Project: {projectId}
-//             </h2>
-//             <p className="text-sm text-gray-600 mt-2">
-//               Total Test Cases: {totalTestCases} | Passed:{" "}
-//               {passedTestCasesCount} | Failed: {failedTestCasesCount}
-//             </p>
-//             {searchQuery && (
-//               <p className="text-sm text-gray-600">
-//                 Showing {filteredTestCases.length} result(s) for "{searchQuery}"
-//               </p>
-//             )}
-//           </div>
-//           <div className="flex items-center space-x-4 flex-wrap">
-//             <FaThList
-//               className={`text-xl cursor-pointer ${
-//                 view === "list" ? "text-blue-400" : "text-gray-500"
-//               }`}
-//               onClick={() => setView("list")}
-//             />
-//             <FaThLarge
-//               className={`text-xl cursor-pointer ${
-//                 view === "card" ? "text-blue-400" : "text-gray-500"
-//               }`}
-//               onClick={() => setView("card")}
-//             />
-//             <FaTh
-//               className={`text-xl cursor-pointer ${
-//                 view === "grid" ? "text-blue-400" : "text-gray-500"
-//               }`}
-//               onClick={() => setView("grid")}
-//             />
-//             <div className="relative">
-//               <FaSearch className="absolute left-3 top-3 text-gray-400" />
-//               <input
-//                 type="text"
-//                 className="pl-10 pr-4 py-2 border rounded-md focus:outline-none"
-//                 placeholder="Search test cases..."
-//                 value={searchQuery}
-//                 onChange={(e) => setSearchQuery(e.target.value)}
-//               />
-//             </div>
-//             <div>
-//               <a
-//                 href="/test-case-dashboard"
-//                 className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-//               >
-//                 Test Case Dashboard
-//               </a>
-//             </div>
-//             <div>
-//               <a
-//                 href={`/single-project/${projectId}`}
-//                 className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-//               >
-//                 Project Dashboard
-//               </a>
-//             </div>
-//           </div>
-//         </div>
-
-//         {/* List View */}
-//         {view === "list" && (
-//           <div className="mt-10 space-y-6">
-//             {currentTestCases.map((testCase) => (
-//               <div
-//                 key={testCase._id}
-//                 className="flex items-center justify-between bg-white rounded-lg shadow relative p-4"
-//               >
-//                 <div className="flex flex-1 space-x-4">
-//                   <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-//                     <span className="text-sm font-semibold text-gray-600">
-//                       Test Case Name
-//                     </span>
-//                     <span className="text-sm text-gray-900">
-//                       {testCase?.test_case_name || "-"}
-//                     </span>
-//                   </div>
-
-//                   <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-//                     <span className="text-sm font-semibold text-gray-600">
-//                       Test Case Number
-//                     </span>
-//                     <span className="text-sm text-gray-900">
-//                       {testCase?.test_case_number || "-"}
-//                     </span>
-//                   </div>
-
-//                   <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-//                     <span className="text-sm font-semibold text-gray-600">
-//                       Module
-//                     </span>
-//                     <span className="text-sm text-gray-900">
-//                       {testCase?.module_name || "-"}
-//                     </span>
-//                   </div>
-
-//                   <div className="flex flex-col w-2/12 border-r pr-2 border-gray-300">
-//                     <span className="text-sm font-semibold text-gray-600">
-//                       Test Status
-//                     </span>
-//                     <span
-//                       className={`text-sm font-bold ${
-//                         getTestStatus(testCase) === "Pass"
-//                           ? "text-green-500"
-//                           : "text-red-500"
-//                       }`}
-//                     >
-//                       {getTestStatus(testCase)}
-//                     </span>
-//                   </div>
-//                 </div>
-
-//                 <div className="flex space-x-4 items-center w-1/12">
-//                   <Link
-//                     to={`/test-case-detail/${testCase._id}`}
-//                     className="text-blue-400 hover:text-blue-500 text-sm"
-//                   >
-//                     <FaEye className="text-lg" />
-//                   </Link>
-//                   <button
-//                     onClick={() => handleDelete(testCase._id)}
-//                     className="text-red-400 hover:text-red-500 text-sm"
-//                   >
-//                     <FaTrashAlt className="text-lg" />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-
-//         {/* Grid View */}
-//         {view === "grid" && (
-//           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-10">
-//             {currentTestCases.map((testCase) => (
-//               <div
-//                 key={testCase._id}
-//                 className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-//               >
-//                 <div>
-//                   <div className="text-sm font-semibold text-gray-600">
-//                     <span className="font-semibold">TC-Name:</span>{" "}
-//                     {testCase?.test_case_name || "-"}
-//                   </div>
-//                   <div className="text-sm text-gray-600">
-//                     <span className="font-semibold">TC-Number:</span>{" "}
-//                     {testCase?.test_case_number || "-"}
-//                   </div>
-//                   <div className="text-sm text-gray-600">
-//                     <span className="font-semibold">Module:</span>{" "}
-//                     {testCase?.module_name || "-"}
-//                   </div>
-//                 </div>
-//                 <div className="mt-2 flex justify-between">
-//                   <Link
-//                     to={`/test-case-detail/${testCase._id}`}
-//                     className="text-blue-400 hover:text-blue-500 text-sm"
-//                   >
-//                     <FaEye className="text-sm" />
-//                   </Link>
-//                   <button
-//                     onClick={() => handleDelete(testCase._id)}
-//                     className="text-red-400 hover:text-red-500 text-sm"
-//                   >
-//                     <FaTrashAlt className="text-sm" />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-
-//         {/* Card View */}
-//         {view === "card" && (
-//           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
-//             {currentTestCases.map((testCase) => (
-//               <div
-//                 key={testCase._id}
-//                 className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-//               >
-//                 <div>
-//                   <div className="text-sm font-semibold text-gray-600">
-//                     Test Case Name: {testCase?.test_case_name || "-"}
-//                   </div>
-//                   <div className="text-sm text-gray-600">
-//                     <span className="font-semibold">TC-Number:</span>{" "}
-//                     {testCase?.test_case_number || "-"}
-//                   </div>
-//                   <div className="text-sm text-gray-600">
-//                     <span className="font-semibold">Module: </span>{" "}
-//                     {testCase?.module_name || "-"}
-//                   </div>
-//                 </div>
-//                 <div className="mt-2 flex justify-between">
-//                   <Link
-//                     to={`/test-case-detail/${testCase._id}`}
-//                     className="text-blue-400 hover:text-blue-500 text-sm"
-//                   >
-//                     <FaEye className="text-sm" />
-//                   </Link>
-//                   <button
-//                     onClick={() => handleDelete(testCase._id)}
-//                     className="text-red-400 hover:text-red-500 text-sm"
-//                   >
-//                     <FaTrashAlt className="text-sm" />
-//                   </button>
-//                 </div>
-//               </div>
-//             ))}
-//           </div>
-//         )}
-
-//         {/* Pagination */}
-//         <div className="flex justify-center items-center space-x-2 mt-10">
-//           <button
-//             className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
-//             disabled={currentPage === 1}
-//             onClick={() => handlePageChange(currentPage - 1)}
-//           >
-//             <FaArrowLeft className="text-xl" />
-//           </button>
-//           <span>
-//             Page {currentPage} of {totalPages}
-//           </span>
-//           <button
-//             className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
-//             disabled={currentPage === totalPages}
-//             onClick={() => handlePageChange(currentPage + 1)}
-//           >
-//             <FaArrowRight className="text-xl" />
-//           </button>
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default AllTestCases;
-
-
-// old layout. 
-
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import axios from "axios";
@@ -397,6 +14,8 @@ import {
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
+const STATUS_PENDING_ID = "__status_missing__";
+
 export default function AllTestCases() {
   const { projectId } = useParams();
 
@@ -406,26 +25,44 @@ export default function AllTestCases() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(5);
+  // itemsPerPage: number; 0 means "All"
+  const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [sortOrder, setSortOrder] = useState("asc");
 
   const [totalTestCases, setTotalTestCases] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
 
-  // pass/fail counters (recomputed from filtered list)
+  // pass/fail/missing counters (recomputed from filtered list)
   const [passedCount, setPassedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
+  const [missingCount, setMissingCount] = useState(0);
 
   // Module filter (supports either embedded module {name} or flat module_name)
+  // Also used to hold the "Status Pending" pseudo-chip selection.
   const [selectedModuleId, setSelectedModuleId] = useState(null);
 
   // ---- helpers ----
   const norm = (v) => (v ?? "").toString().toLowerCase();
 
-  const getTestStatus = (tc) => {
+  const isMissingStatus = (tc) => {
     const steps = Array.isArray(tc?.testing_steps) ? tc.testing_steps : [];
-    const hasFailed = steps.some((s) => String(s?.status).toLowerCase() === "fail");
+    if (steps.length === 0) return true;
+    // Missing when every step either has no status or not equal to pass/fail
+    return steps.every((s) => {
+      const st = String(s?.status || "")
+        .trim()
+        .toLowerCase();
+      return st !== "pass" && st !== "fail";
+    });
+  };
+
+  const getTestStatus = (tc) => {
+    if (isMissingStatus(tc)) return "Missing";
+    const steps = Array.isArray(tc?.testing_steps) ? tc.testing_steps : [];
+    const hasFailed = steps.some(
+      (s) => String(s?.status).toLowerCase() === "fail"
+    );
     return hasFailed ? "Fail" : "Pass";
   };
 
@@ -454,12 +91,14 @@ export default function AllTestCases() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // ---- module chips from dataset ----
-  // Build a synthetic "module id" so the chips work even if you only have module_name (string).
-  // If you do have tc.module._id, we will prefer that.
+  // ---- module chips from dataset + special "Status Pending" chip ----
   const modules = useMemo(() => {
     const counts = new Map(); // key -> { _id, name, count }
+    let missingTotal = 0;
+
     for (const tc of testCases) {
+      if (isMissingStatus(tc)) missingTotal += 1;
+
       const modObj = tc?.module;
       const modId =
         (modObj && (modObj._id || modObj.id)) ||
@@ -469,21 +108,35 @@ export default function AllTestCases() {
         tc?.module_name ||
         "Unassigned";
 
-      if (!counts.has(modId)) counts.set(modId, { _id: modId, name: modName, count: 0 });
+      if (!counts.has(modId))
+        counts.set(modId, { _id: modId, name: modName, count: 0 });
       counts.get(modId).count += 1;
     }
-    return Array.from(counts.values()).sort((a, b) =>
+
+    const list = Array.from(counts.values()).sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
     );
+
+    // append special status-pending chip
+    list.unshift({
+      _id: STATUS_PENDING_ID,
+      name: "Status Pending",
+      count: missingTotal,
+    });
+
+    return list;
   }, [testCases]);
 
-  // ---- filtered (search + module) ----
+  // ---- filtered (search + module OR status-pending special) ----
   const filtered = useMemo(() => {
     const q = norm(debouncedQuery);
 
     const rows = testCases.filter((tc) => {
-      // module match
-      if (selectedModuleId) {
+      // special "Status Pending" filter
+      if (selectedModuleId === STATUS_PENDING_ID) {
+        if (!isMissingStatus(tc)) return false;
+      } else if (selectedModuleId) {
+        // module match
         const modObj = tc?.module;
         const modIdCandidate =
           (modObj && (modObj._id || modObj.id)) ||
@@ -503,15 +156,19 @@ export default function AllTestCases() {
       return q ? fields.some((f) => f.includes(q)) : true;
     });
 
-    // recompute pass/fail on filtered set
+    // recompute pass/fail/missing on filtered set
     let pass = 0;
     let fail = 0;
+    let miss = 0;
     for (const r of rows) {
-      if (getTestStatus(r) === "Pass") pass += 1;
-      else fail += 1;
+      const st = getTestStatus(r);
+      if (st === "Pass") pass += 1;
+      else if (st === "Fail") fail += 1;
+      else miss += 1;
     }
     setPassedCount(pass);
     setFailedCount(fail);
+    setMissingCount(miss);
 
     return rows;
   }, [testCases, debouncedQuery, selectedModuleId]);
@@ -519,6 +176,14 @@ export default function AllTestCases() {
   // ---- pagination + counts sync ----
   useEffect(() => {
     setFilteredCount(filtered.length);
+
+    if (itemsPerPage === 0) {
+      // All
+      setTotalPages(1);
+      setCurrentPage(1);
+      return;
+    }
+
     const pages = Math.max(1, Math.ceil(filtered.length / itemsPerPage));
     setTotalPages(pages);
     setCurrentPage((p) => Math.min(p, pages));
@@ -536,9 +201,13 @@ export default function AllTestCases() {
   };
 
   // ---- pagination slice ----
-  const indexOfLast = currentPage * itemsPerPage;
-  const indexOfFirst = indexOfLast - itemsPerPage;
-  const current = filtered.slice(indexOfFirst, indexOfLast);
+  const computeCurrentSlice = () => {
+    if (itemsPerPage === 0) return filtered; // All
+    const indexOfLast = currentPage * itemsPerPage;
+    const indexOfFirst = indexOfLast - itemsPerPage;
+    return filtered.slice(indexOfFirst, indexOfLast);
+  };
+  const current = computeCurrentSlice();
 
   const handlePageChange = (newPage) => setCurrentPage(newPage);
 
@@ -580,8 +249,8 @@ export default function AllTestCases() {
   // ---- UI ----
   return (
     <div className="bg-white py-10 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {/* Header / Controls (identical layout to AllScenarios) */}
+      <div className="mx-auto container px-2 sm:px-3 lg:px-4">
+        {/* Header / Controls */}
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
             <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
@@ -594,21 +263,51 @@ export default function AllTestCases() {
               <p className="text-xs text-gray-600">
                 Showing {filteredCount} result(s)
                 {searchQuery ? <> for “{searchQuery}”</> : null}
-                {selectedModuleId ? " in selected module" : null}
+                {selectedModuleId
+                  ? selectedModuleId === STATUS_PENDING_ID
+                    ? " with status pending"
+                    : " in selected module"
+                  : null}
               </p>
             )}
-            {/* pass/fail badges (kept subtle) */}
+            {/* pass/fail/missing badges */}
             <p className="text-[11px] text-slate-600 mt-1">
               <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 mr-1 font-medium text-emerald-700">
                 Pass: {passedCount}
               </span>
-              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 font-medium text-rose-700">
+              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 mr-1 font-medium text-rose-700">
                 Fail: {failedCount}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                Missing: {missingCount}
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Page size dropdown */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-600">Rows:</label>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => {
+                  const v =
+                    e.target.value === "0" ? 0 : parseInt(e.target.value, 10);
+                  setItemsPerPage(v);
+                  setCurrentPage(1);
+                }}
+                className="text-sm border rounded-md px-2 py-1"
+                title="Select number of rows per page"
+              >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={30}>30</option>
+                <option value={40}>40</option>
+                <option value={60}>60</option>
+                <option value={0}>All</option>
+              </select>
+            </div>
+
             <FaThList
               className={`text-lg cursor-pointer ${
                 view === "list" ? "text-blue-500" : "text-gray-500"
@@ -659,11 +358,11 @@ export default function AllTestCases() {
           </div>
         </div>
 
-        {/* Module chips row (identical pattern) */}
+        {/* Module + Status chips row */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-slate-700">
-              Filter by Module
+              Filter by Module / Status
             </h3>
             <button
               onClick={clearModuleSelection}
@@ -698,11 +397,11 @@ export default function AllTestCases() {
           </div>
         </div>
 
-        {/* List View (compact, single global header) */}
+        {/* List View */}
         {view === "list" && (
           <div className="mt-5">
             {/* global header */}
-            <div className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-2 00">
+            <div className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
               <div>#</div>
               <div>TC Number</div>
               <div>Name</div>
@@ -715,62 +414,73 @@ export default function AllTestCases() {
 
             {/* rows */}
             <div className="divide-y divide-slate-200">
-              {current.map((tc, idx) => (
-                <div
-                  key={tc._id}
-                  className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] px-3 py-2"
-                >
-                  <div className="text-slate-700">{indexOfFirst + idx + 1}</div>
-
-                  <div className="text-slate-900 font-medium truncate">
-                    {tc?.test_case_number || "-"}
-                  </div>
-
-                  <div className="text-slate-700 line-clamp-2">
-                    {tc?.test_case_name || "-"}
-                  </div>
-
-                  <div className="truncate">
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {tc?.module?.name || tc?.module_name || "Unassigned"}
-                    </span>
-                  </div>
-
-                  <div className="text-slate-700 truncate">
-                    {tc?.requirement_number || "-"}
-                  </div>
-
+              {current.map((tc, idx) => {
+                const status = getTestStatus(tc);
+                const statusClass =
+                  status === "Pass"
+                    ? "text-emerald-600"
+                    : status === "Fail"
+                    ? "text-rose-600"
+                    : "text-amber-600";
+                return (
                   <div
-                    className={`font-semibold ${
-                      getTestStatus(tc) === "Pass" ? "text-emerald-600" : "text-rose-600"
-                    }`}
+                    key={tc._id}
+                    className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] px-3 py-2"
                   >
-                    {getTestStatus(tc)}
-                  </div>
+                    <div className="text-slate-700">
+                      {(itemsPerPage === 0
+                        ? 0
+                        : (currentPage - 1) * itemsPerPage) +
+                        idx +
+                        1}
+                    </div>
 
-                  {/* View column */}
-                  <div className="flex justify-center">
-                    <Link
-                      to={`/test-case-detail/${tc._id}`}
-                      className="text-indigo-600 hover:text-indigo-800"
-                      title="View"
-                    >
-                      <FaEye className="text-sm" />
-                    </Link>
-                  </div>
+                    <div className="text-slate-900 font-medium truncate">
+                      {tc?.test_case_number || "-"}
+                    </div>
 
-                  {/* Delete column */}
-                  <div className="flex justify-center">
-                    <button
-                      onClick={() => handleDelete(tc._id)}
-                      className="text-rose-600 hover:text-rose-800"
-                      title="Delete"
-                    >
-                      <FaTrashAlt className="text-sm" />
-                    </button>
+                    <div className="text-slate-700 line-clamp-2">
+                      {tc?.test_case_name || "-"}
+                    </div>
+
+                    <div className="truncate">
+                      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                      </span>
+                    </div>
+
+                    <div className="text-slate-700 truncate">
+                      {tc?.requirement_number || "-"}
+                    </div>
+
+                    <div className={`font-semibold ${statusClass}`}>
+                      {status}
+                    </div>
+
+                    {/* View column */}
+                    <div className="flex justify-center">
+                      <Link
+                        to={`/test-case-detail/${tc._id}`}
+                        className="text-indigo-600 hover:text-indigo-800"
+                        title="View"
+                      >
+                        <FaEye className="text-sm" />
+                      </Link>
+                    </div>
+
+                    {/* Delete column */}
+                    <div className="flex justify-center">
+                      <button
+                        onClick={() => handleDelete(tc._id)}
+                        className="text-rose-600 hover:text-rose-800"
+                        title="Delete"
+                      >
+                        <FaTrashAlt className="text-sm" />
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -778,114 +488,134 @@ export default function AllTestCases() {
         {/* Grid View */}
         {view === "grid" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-8">
-            {current.map((tc) => (
-              <div
-                key={tc._id}
-                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
-                    <span>TC: {tc?.test_case_number || "-"}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {tc?.module?.name || tc?.module_name || "Unassigned"}
-                    </span>
+            {current.map((tc) => {
+              const status = getTestStatus(tc);
+              const statusClass =
+                status === "Pass"
+                  ? "text-emerald-600"
+                  : status === "Fail"
+                  ? "text-rose-600"
+                  : "text-amber-600";
+              return (
+                <div
+                  key={tc._id}
+                  className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                      <span>TC: {tc?.test_case_number || "-"}</span>
+                      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
+                      {tc?.test_case_name || "-"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Requirement: {tc?.requirement_number || "-"}
+                    </div>
+                    <div
+                      className={`mt-1 text-[12px] font-semibold ${statusClass}`}
+                    >
+                      {status}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
-                    {tc?.test_case_name || "-"}
-                  </div>
-                  <div className="mt-1 text-[11px] text-slate-600">
-                    Requirement: {tc?.requirement_number || "-"}
-                  </div>
-                  <div
-                    className={`mt-1 text-[12px] font-semibold ${
-                      getTestStatus(tc) === "Pass" ? "text-emerald-600" : "text-rose-600"
-                    }`}
-                  >
-                    {getTestStatus(tc)}
+                  <div className="mt-2 flex justify-between">
+                    <Link
+                      to={`/test-case-detail/${tc._id}`}
+                      className="text-blue-500 hover:text-blue-700 text-sm"
+                    >
+                      <FaEye className="text-sm" />
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(tc._id)}
+                      className="text-rose-500 hover:text-rose-700 text-sm"
+                    >
+                      <FaTrashAlt className="text-sm" />
+                    </button>
                   </div>
                 </div>
-                <div className="mt-2 flex justify-between">
-                  <Link
-                    to={`/test-case-detail/${tc._id}`}
-                    className="text-blue-500 hover:text-blue-700 text-sm"
-                  >
-                    <FaEye className="text-sm" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(tc._id)}
-                    className="text-rose-500 hover:text-rose-700 text-sm"
-                  >
-                    <FaTrashAlt className="text-sm" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
         {/* Card View */}
         {view === "card" && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
-            {current.map((tc) => (
-              <div
-                key={tc._id}
-                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-              >
-                <div>
-                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
-                    <span>TC: {tc?.test_case_number || "-"}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {tc?.module?.name || tc?.module_name || "Unassigned"}
-                    </span>
+            {current.map((tc) => {
+              const status = getTestStatus(tc);
+              const statusClass =
+                status === "Pass"
+                  ? "text-emerald-600"
+                  : status === "Fail"
+                  ? "text-rose-600"
+                  : "text-amber-600";
+              return (
+                <div
+                  key={tc._id}
+                  className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                      <span>TC: {tc?.test_case_number || "-"}</span>
+                      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
+                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                      </span>
+                    </div>
+                    <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
+                      {tc?.test_case_name || "-"}
+                    </div>
+                    <div className="mt-1 text-[11px] text-slate-600">
+                      Requirement: {tc?.requirement_number || "-"}
+                    </div>
+                    <div
+                      className={`mt-1 text-[12px] font-semibold ${statusClass}`}
+                    >
+                      {status}
+                    </div>
                   </div>
-                  <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
-                    {tc?.test_case_name || "-"}
-                  </div>
-                  <div className="mt-1 text-[11px] text-slate-600">
-                    Requirement: {tc?.requirement_number || "-"}
-                  </div>
-                  <div
-                    className={`mt-1 text-[12px] font-semibold ${
-                      getTestStatus(tc) === "Pass" ? "text-emerald-600" : "text-rose-600"
-                    }`}
-                  >
-                    {getTestStatus(tc)}
+                  <div className="mt-2 flex justify-between">
+                    <Link
+                      to={`/test-case-detail/${tc._id}`}
+                      className="text-blue-500 hover:text-blue-700 text-sm"
+                    >
+                      <FaEye className="text-sm" />
+                    </Link>
+                    <button
+                      onClick={() => handleDelete(tc._id)}
+                      className="text-rose-500 hover:text-rose-700 text-sm"
+                    >
+                      <FaTrashAlt className="text-sm" />
+                    </button>
                   </div>
                 </div>
-                <div className="mt-2 flex justify-between">
-                  <Link
-                    to={`/test-case-detail/${tc._id}`}
-                    className="text-blue-500 hover:text-blue-700 text-sm"
-                  >
-                    <FaEye className="text-sm" />
-                  </Link>
-                  <button
-                    onClick={() => handleDelete(tc._id)}
-                    className="text-rose-500 hover:text-rose-700 text-sm"
-                  >
-                    <FaTrashAlt className="text-sm" />
-                  </button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Pagination (identical controls) */}
+        {/* Pagination */}
         <div className="flex justify-center items-center gap-2 mt-8">
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
-            disabled={currentPage === 1}
+            disabled={itemsPerPage === 0 || currentPage === 1}
             onClick={() => handlePageChange(currentPage - 1)}
           >
             <FaArrowLeft className="text-lg" />
           </button>
           <span className="text-sm">
-            Page {currentPage} of {totalPages}
+            {itemsPerPage === 0 ? (
+              <>Showing all {filteredCount} test cases</>
+            ) : (
+              <>
+                Page {currentPage} of {totalPages}
+              </>
+            )}
           </span>
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
-            disabled={currentPage === totalPages}
+            disabled={itemsPerPage === 0 || currentPage === totalPages}
             onClick={() => handlePageChange(currentPage + 1)}
           >
             <FaArrowRight className="text-lg" />

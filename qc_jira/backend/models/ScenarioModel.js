@@ -1,38 +1,38 @@
 // models/ScenarioModel.js
 const mongoose = require("mongoose");
+const { Schema } = mongoose;
 
-const scenarioSchema = new mongoose.Schema(
+const ScenarioSchema = new Schema(
   {
-    scenario_text: { type: String, required: true },
+    scenario_text: { type: String, required: true, trim: true },
+    scenario_key: { type: String, required: true, trim: true, index: true },
+    scenario_number: { type: String, required: true, trim: true, index: true },
 
-    // normalized key (prevents dupes per project)
-    scenario_key: { type: String, required: true },
+    project: { type: Schema.Types.ObjectId, ref: "Project", required: true },
 
-    // keep as String to support formats like "PRJ-1234"
-    scenario_number: { type: String, required: true },
-
-    project: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Project",
-      required: true,
-    },
-
+    // ✅ Legacy single-module field (REAL ref so .populate("module") works)
     module: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: Schema.Types.ObjectId,
       ref: "Module",
-      required: true,
+      default: null,
+      index: true,
     },
 
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
+    // ✅ New multi-modules field
+    modules: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Module",
+        index: true,
+      },
+    ],
 
-    testCases: [{ type: mongoose.Schema.Types.ObjectId, ref: "TestCase" }],
+    createdBy: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
+    testCases: [{ type: Schema.Types.ObjectId, ref: "TestCase", default: [] }],
 
     updatedBy: {
-      user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      user: { type: Schema.Types.ObjectId, ref: "User" },
       updateTime: { type: Date },
     },
   },
@@ -40,32 +40,52 @@ const scenarioSchema = new mongoose.Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-    // Case-insensitive comparisons on string indexes (e.g., scenario_key)
     collation: { locale: "en", strength: 2 },
   }
 );
 
-// Ensure testCases is always an array
-scenarioSchema.path("testCases").default([]);
-
-// --- Normalization guards ---
-scenarioSchema.pre("validate", function (next) {
-  if (typeof this.scenario_key === "string") this.scenario_key = this.scenario_key.trim();
-  if (typeof this.scenario_text === "string") this.scenario_text = this.scenario_text.trim();
-
-  if (this.scenario_number != null) {
+/* -------------------------- Normalization guards -------------------------- */
+ScenarioSchema.pre("validate", function (next) {
+  if (typeof this.scenario_key === "string")
+    this.scenario_key = this.scenario_key.trim();
+  if (typeof this.scenario_text === "string")
+    this.scenario_text = this.scenario_text.trim();
+  if (this.scenario_number != null)
     this.scenario_number = String(this.scenario_number).trim();
-  }
-  if (!this.scenario_number) {
-    return next(new Error("scenario_number is required"));
+
+  // Always keep modules as an array
+  if (!Array.isArray(this.modules)) this.modules = [];
+
+  next();
+});
+
+/* --------------------------- Back-compat auto-sync -------------------------- *
+ * Keep legacy `module` and new `modules[0]` reasonably aligned.
+ * - If only `module` is set, ensure it is present in `modules` (and first if empty).
+ * - If only `modules` has items, set `module = modules[0]`.
+ * NOTE: Controllers already do this; this is just a safety net.
+ * --------------------------------------------------------------------------- */
+ScenarioSchema.pre("save", function (next) {
+  const m = this.module;
+  const arr = this.modules || [];
+
+  if (m && !arr.length) {
+    this.modules = [m];
+  } else if (!m && arr.length) {
+    this.module = arr[0];
+  } else if (m && arr.length) {
+    // ensure `module` is included in `modules`
+    const asStr = arr.map(String);
+    if (!asStr.includes(String(m))) {
+      this.modules = [m, ...arr];
+    }
   }
   next();
 });
 
-// --- Indexes ---
-// 1) Unique per PROJECT + scenario_number
-//    Partial filter uses only $exists + $type (no $ne) for wide MongoDB compatibility.
-scenarioSchema.index(
+/* --------------------------------- Indexes -------------------------------- */
+// Unique per project + scenario_number (string)
+ScenarioSchema.index(
   { project: 1, scenario_number: 1 },
   {
     unique: true,
@@ -73,30 +93,35 @@ scenarioSchema.index(
     partialFilterExpression: {
       $and: [
         { scenario_number: { $exists: true } },
-        { scenario_number: { $type: "string" } }
-      ]
+        { scenario_number: { $type: "string" } },
+      ],
     },
   }
 );
 
-// 2) scenario_key unique per project (case-insensitive due to schema collation)
-scenarioSchema.index(
+// Unique per project + normalized scenario_key
+ScenarioSchema.index(
   { project: 1, scenario_key: 1 },
   { unique: true, name: "project_1_scenario_key_1" }
 );
 
 // Helpful lookups
-scenarioSchema.index({ project: 1, module: 1 }, { name: "project_1_module_1" });
-scenarioSchema.index({ module: 1 }, { name: "module_1" });
-scenarioSchema.index(
+ScenarioSchema.index(
+  { project: 1, modules: 1 },
+  { name: "project_1_modules_1" }
+);
+ScenarioSchema.index({ modules: 1 }, { name: "modules_1" });
+ScenarioSchema.index(
   { scenario_number: 1 },
-  { name: "scenario_number_1_nonunique", collation: { locale: "en", strength: 2 } }
+  {
+    name: "scenario_number_1_nonunique",
+    collation: { locale: "en", strength: 2 },
+  }
 );
 
-// Null-safe virtual
-scenarioSchema.virtual("isMissingTestCases").get(function () {
-  const arr = Array.isArray(this.testCases) ? this.testCases : [];
-  return arr.length === 0;
-});
+/* ----------------------------- DO NOT ADD THIS ----------------------------- *
+ * Do NOT add a virtual named 'module' here. We need a REAL ref so that
+ * .populate("module", "name") in the controller works without errors.
+ * --------------------------------------------------------------------------- */
 
-module.exports = mongoose.model("Scenario", scenarioSchema);
+module.exports = mongoose.model("Scenario", ScenarioSchema);

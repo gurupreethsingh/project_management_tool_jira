@@ -16,6 +16,9 @@ const {
   countDevelopersFromProjects,
   countByRole,
   countUsersSummary,
+  listApproverEligibleUsers,
+  listAllForReview,
+  listApprovers,
 } = require("../controllers/UserController");
 
 const router = express.Router();
@@ -26,8 +29,9 @@ router.post("/login", login);
 router.get("/user/:id", getUserById); // keep legacy path
 router.get("/get-user/:id", getUserById); // keep both variants for compatibility
 router.get("/all-users", getAllUsers);
-router.get("/users", getAllUsers);       // ← NEW alias
-router.get("/users/all", getAllUsers);   // ← NEW alias
+router.get("/users", getAllUsers); // ← NEW alias
+router.get("/users/all", getAllUsers); // ← NEW alias
+router.get("/users/approvers", listApproverEligibleUsers); // <<< NEW
 
 router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
 
@@ -36,6 +40,9 @@ router.delete("/delete-user/:id", authenticateToken, requireAdmin, deleteUser);
 // ===== USER LISTS =====
 router.get("/users/developers", listDevelopers);
 router.get("/users/test-engineers", listTestEngineers);
+// ===== DROPDOWNS for TestCase footer =====
+router.get("/users/reviewers", listAllForReview); // all users
+router.get("/users/approvers", listApprovers); // approver roles only
 
 // ===== COUNTS =====
 router.get("/count-developers", countDevelopersFromProjects);

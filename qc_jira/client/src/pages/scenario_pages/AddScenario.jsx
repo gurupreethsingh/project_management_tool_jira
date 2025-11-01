@@ -10,15 +10,21 @@ import { MdOutlineAdminPanelSettings } from "react-icons/md";
 import { FaFileAlt } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
-const AddScenario = () => {
+export default function AddScenario() {
   const navigate = useNavigate();
   const { projectId } = useParams();
 
   // form
   const [scenarioText, setScenarioText] = useState("");
-  const [useExistingModule, setUseExistingModule] = useState(true);
-  const [moduleId, setModuleId] = useState("");
-  const [newModuleName, setNewModuleName] = useState("");
+
+  // picker mode
+  const [mode, setMode] = useState("existing"); // "existing" | "new"
+
+  // existing modules selection (multi)
+  const [selectedModuleIds, setSelectedModuleIds] = useState([]);
+
+  // new module names (comma separated)
+  const [newModuleNamesCSV, setNewModuleNamesCSV] = useState("");
 
   // data
   const [modules, setModules] = useState([]);
@@ -40,7 +46,7 @@ const AddScenario = () => {
     [token]
   );
 
-  // ---- load modules for dropdown ----
+  // ---- load modules for multi-select ----
   useEffect(() => {
     const loadModules = async () => {
       if (!projectId) return;
@@ -53,13 +59,10 @@ const AddScenario = () => {
         const data = await res.json();
         if (Array.isArray(data)) {
           setModules(data);
-          // pick first by default if any
-          if (data.length && !moduleId) setModuleId(data[0]._id);
         } else {
           setModules([]);
         }
-      } catch (e) {
-        // silent; show empty dropdown
+      } catch {
         setModules([]);
       } finally {
         setLoadingMods(false);
@@ -101,7 +104,6 @@ const AddScenario = () => {
   const handleScenarioChange = (e) => {
     const value = e.target.value;
     setScenarioText(value);
-    // debounce
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => runSearch(value), 300);
   };
@@ -111,21 +113,56 @@ const AddScenario = () => {
     setSuggestions([]);
   };
 
-  // ---- basic validation ----
+  // existing modules selection handlers
+  const toggleModuleId = (id) => {
+    setSelectedModuleIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllModules = () => {
+    setSelectedModuleIds(modules.map((m) => m._id));
+  };
+
+  const clearAllModules = () => setSelectedModuleIds([]);
+
+  // ---- validation ----
   const validate = () => {
     const e = {};
     if (!scenarioText.trim())
       e.scenario_text = "Scenario text cannot be empty.";
 
-    if (useExistingModule) {
-      if (!moduleId) e.module = "Please select a module.";
+    if (mode === "existing") {
+      if (!selectedModuleIds.length) e.modules = "Select at least one module.";
     } else {
-      if (!newModuleName.trim()) e.module = "Please enter a new module name.";
+      const list = parseCSV(newModuleNamesCSV);
+      if (!list.length)
+        e.modules =
+          "Enter at least one module name (comma separated) or switch to existing.";
     }
 
     setErrors(e);
     return Object.keys(e).length === 0;
   };
+
+  // ---- helpers ----
+  const parseCSV = (csv) =>
+    (csv || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+  // duplicate indicator
+  const likelyDuplicate = useMemo(() => {
+    if (!scenarioText.trim() || !suggestions.length) return false;
+    const norm = (s) =>
+      s
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim();
+    const mine = norm(scenarioText);
+    return suggestions.some((s) => norm(s.scenario_text) === mine);
+  }, [scenarioText, suggestions]);
 
   // ---- submit ----
   const handleSubmit = async (e) => {
@@ -137,15 +174,13 @@ const AddScenario = () => {
     setSuccessMessage("");
 
     try {
-      // If creating a new module, create-or-get it first to retrieve its id (optional)
-      let payload = { scenario_text: scenarioText };
-      if (useExistingModule) {
-        payload.moduleId = moduleId;
+      // Build payload for multi-module create
+      const payload = { scenario_text: scenarioText };
+
+      if (mode === "existing") {
+        payload.moduleIds = selectedModuleIds; // array of ids
       } else {
-        // You can either pass module_name to add-scenario
-        // or pre-create here with POST /modules then pass moduleId.
-        // We'll pass module_name directly to keep the flow simple.
-        payload.module_name = newModuleName.trim();
+        payload.module_names = parseCSV(newModuleNamesCSV); // array of names
       }
 
       const res = await fetch(
@@ -162,13 +197,11 @@ const AddScenario = () => {
       if (res.ok) {
         setSuccessMessage("Scenario added successfully!");
         setScenarioText("");
-        setNewModuleName("");
-        // optional: refresh modules in case a new one was created server-side
-        // navigate to list
+        setNewModuleNamesCSV("");
+        setSelectedModuleIds([]);
         alert("Scenario added successfully.");
         navigate(`/single-project/${projectId}/view-all-scenarios`);
       } else {
-        // handle duplicate (409) specially
         if (res.status === 409) {
           setErrors({
             submit:
@@ -182,28 +215,16 @@ const AddScenario = () => {
           });
         }
       }
-    } catch (err) {
+    } catch {
       setErrors({ submit: "An error occurred. Please try again." });
     } finally {
       setSubmitting(false);
     }
   };
 
-  // Highlight if we think there’s a likely duplicate
-  const likelyDuplicate = useMemo(() => {
-    if (!scenarioText.trim() || !suggestions.length) return false;
-    const norm = (s) =>
-      s
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, " ")
-        .trim();
-    const mine = norm(scenarioText);
-    return suggestions.some((s) => norm(s.scenario_text) === mine);
-  }, [scenarioText, suggestions]);
-
   return (
     <div className="flex min-h-full flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+      <div className="sm:mx-auto sm:w-full sm:max-w-2xl text-center">
         <MdOutlineAdminPanelSettings
           className="text-indigo-600 mx-auto mb-2"
           size={48}
@@ -213,7 +234,7 @@ const AddScenario = () => {
         </h2>
       </div>
 
-      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-md">
+      <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-2xl">
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Scenario Text */}
           <div>
@@ -244,6 +265,7 @@ const AddScenario = () => {
                   Heads up: a very similar scenario already exists.
                 </p>
               )}
+
               {/* Suggestions */}
               {(searching || suggestions.length > 0) && (
                 <div className="absolute z-10 mt-2 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-auto">
@@ -259,12 +281,18 @@ const AddScenario = () => {
                         key={s._id}
                         className="block w-full text-left px-3 py-2 hover:bg-gray-100 text-sm"
                         onClick={() => handlePickSuggestion(s.scenario_text)}
-                        title={`Module: ${s?.module?.name || "—"}`}
+                        title={
+                          Array.isArray(s.modules) && s.modules.length
+                            ? `Modules: ${s.modules
+                                .map((m) => m.name)
+                                .join(", ")}`
+                            : "Modules: —"
+                        }
                       >
                         {s.scenario_text}
-                        {s.module?.name ? (
+                        {Array.isArray(s.modules) && s.modules.length ? (
                           <span className="ml-2 text-xs text-gray-500">
-                            ({s.module.name})
+                            ({s.modules.map((m) => m.name).join(", ")})
                           </span>
                         ) : null}
                       </button>
@@ -279,80 +307,112 @@ const AddScenario = () => {
             </div>
           </div>
 
-          {/* Module picker */}
-          <div className="grid grid-cols-1 gap-3">
-            <div className="flex gap-4 items-center">
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="mr-2"
-                  checked={useExistingModule}
-                  onChange={() => setUseExistingModule(true)}
-                />
-                <span className="text-sm text-gray-800">
-                  Select existing module
-                </span>
-              </label>
-              <label className="inline-flex items-center">
-                <input
-                  type="radio"
-                  className="mr-2"
-                  checked={!useExistingModule}
-                  onChange={() => setUseExistingModule(false)}
-                />
-                <span className="text-sm text-gray-800">Create new module</span>
-              </label>
-            </div>
-
-            {useExistingModule ? (
-              <div>
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  Module
-                </label>
-                <select
-                  disabled={loadingMods}
-                  className="mt-2 block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-                  value={moduleId}
-                  onChange={(e) => setModuleId(e.target.value)}
-                >
-                  {loadingMods ? (
-                    <option>Loading modules…</option>
-                  ) : modules.length ? (
-                    modules.map((m) => (
-                      <option key={m._id} value={m._id}>
-                        {m.name}
-                      </option>
-                    ))
-                  ) : (
-                    <option value="">No modules found</option>
-                  )}
-                </select>
-                {errors.module && (
-                  <p className="mt-2 text-sm text-red-600">{errors.module}</p>
-                )}
-              </div>
-            ) : (
-              <div>
-                <label className="block text-sm font-medium leading-6 text-gray-900">
-                  New module name
-                </label>
-                <input
-                  type="text"
-                  className="mt-2 block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
-                  value={newModuleName}
-                  onChange={(e) => setNewModuleName(e.target.value)}
-                  placeholder="e.g., Homepage"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  Similar names (e.g., “home page”, “HOME_PAGE”) are normalized
-                  server-side to avoid duplicates.
-                </p>
-                {errors.module && (
-                  <p className="mt-2 text-sm text-red-600">{errors.module}</p>
-                )}
-              </div>
-            )}
+          {/* Mode Switch */}
+          <div className="flex gap-4 items-center">
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                className="mr-2"
+                checked={mode === "existing"}
+                onChange={() => setMode("existing")}
+              />
+              <span className="text-sm text-gray-800">
+                Select existing module(s)
+              </span>
+            </label>
+            <label className="inline-flex items-center">
+              <input
+                type="radio"
+                className="mr-2"
+                checked={mode === "new"}
+                onChange={() => setMode("new")}
+              />
+              <span className="text-sm text-gray-800">
+                Create new module(s)
+              </span>
+            </label>
           </div>
+
+          {/* Existing: multi-select checkboxes */}
+          {mode === "existing" ? (
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="block text-sm font-medium leading-6 text-gray-900">
+                  Choose one or more modules
+                </label>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
+                    onClick={selectAllModules}
+                    disabled={!modules.length}
+                  >
+                    Select all
+                  </button>
+                  <button
+                    type="button"
+                    className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
+                    onClick={clearAllModules}
+                    disabled={!modules.length}
+                  >
+                    Clear
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-2 border rounded-md p-2 max-h-56 overflow-auto">
+                {loadingMods ? (
+                  <div className="text-sm text-gray-500">Loading modules…</div>
+                ) : modules.length ? (
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {modules.map((m) => (
+                      <li key={m._id} className="flex items-center">
+                        <input
+                          id={`mod-${m._id}`}
+                          type="checkbox"
+                          className="mr-2"
+                          checked={selectedModuleIds.includes(m._id)}
+                          onChange={() => toggleModuleId(m._id)}
+                        />
+                        <label
+                          htmlFor={`mod-${m._id}`}
+                          className="text-sm text-gray-800"
+                        >
+                          {m.name}
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <div className="text-sm text-gray-500">No modules found.</div>
+                )}
+              </div>
+              {errors.modules && (
+                <p className="mt-2 text-sm text-red-600">{errors.modules}</p>
+              )}
+            </div>
+          ) : (
+            // New: CSV input
+            <div>
+              <label className="block text-sm font-medium leading-6 text-gray-900">
+                New module names (comma separated)
+              </label>
+              <input
+                type="text"
+                className="mt-2 block w-full rounded-md border-0 py-2 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm"
+                value={newModuleNamesCSV}
+                onChange={(e) => setNewModuleNamesCSV(e.target.value)}
+                placeholder="e.g., Homepage, Auth, Billing"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Names are normalized server-side to avoid duplicates. You can
+                enter one or many names separated by commas.
+              </p>
+              {errors.modules && (
+                <p className="mt-2 text-sm text-red-600">{errors.modules}</p>
+              )}
+            </div>
+          )}
 
           {/* Submit errors/success */}
           {errors.submit && (
@@ -376,6 +436,4 @@ const AddScenario = () => {
       </div>
     </div>
   );
-};
-
-export default AddScenario;
+}

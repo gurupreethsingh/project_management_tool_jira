@@ -1,603 +1,3 @@
-// // controllers/ScenarioController.js
-// const mongoose = require("mongoose");
-// const Scenario = require("../models/ScenarioModel");
-// const Change = require("../models/ChangeModel");
-// const Project = require("../models/ProjectModel");
-// const User = require("../models/UserModel");
-// const Module = require("../models/ModuleModel");
-
-// // ---- helpers ----
-// const generateScenarioNumber = (projectName) => {
-//   const initials = projectName
-//     .split(" ")
-//     .map((w) => w[0]?.toUpperCase() ?? "")
-//     .join("");
-//   const randomNum = Math.floor(1000 + Math.random() * 9000);
-//   return `${initials}-${randomNum}`;
-// };
-
-// // Normalize strings into a stable key (used for modules and scenario texts)
-// const normalizeKey = (text = "") =>
-//   text
-//     .toLowerCase()
-//     .trim()
-//     .replace(/[^a-z0-9]+/g, " ") // non-alphanumerics to space
-//     .replace(/\s+/g, " ") // collapse spaces
-//     .replace(/\s+/g, "") // remove all spaces
-//     .substring(0, 200);
-
-// const normalizeModuleKey = normalizeKey;
-
-// // Find or create module by display name for a specific project
-// const findOrCreateModule = async (projectId, name, createdBy) => {
-//   const key = normalizeModuleKey(name);
-//   try {
-//     const existing = await Module.findOne({ project: projectId, key });
-//     if (existing) return existing;
-
-//     const created = await Module.create({
-//       name: name.trim(), // NOTE: using "name" to match ModuleModel
-//       key,
-//       project: projectId,
-//       createdBy,
-//     });
-//     return created;
-//   } catch (err) {
-//     // Handle race condition (unique index)
-//     if (err?.code === 11000) {
-//       const again = await Module.findOne({ project: projectId, key });
-//       if (again) return again;
-//     }
-//     throw err;
-//   }
-// };
-
-// // Ensure an "Unassigned" module exists (used for detach ops and legacy docs)
-// const getOrCreateUnassignedModule = async (projectId, createdBy) => {
-//   return await findOrCreateModule(projectId, "Unassigned", createdBy);
-// };
-
-// /* =========================================================
-//    CREATE (POST)  — keeps your logic and adds duplicate guard
-//    ========================================================= */
-// // POST /single-projects/:id/add-scenario
-// exports.addScenario = async (req, res) => {
-//   try {
-//     const projectId = req.params.id;
-//     const { scenario_text, moduleId, module_name } = req.body;
-
-//     if (!scenario_text) {
-//       return res.status(400).json({ error: "Scenario text is required" });
-//     }
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ error: "Invalid project ID" });
-//     }
-
-//     const project = await Project.findById(projectId);
-//     if (!project) return res.status(404).json({ error: "Project not found" });
-
-//     const createdBy = req.user?.id || req.body.createdBy;
-//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
-//       return res
-//         .status(401)
-//         .json({ error: "Authentication required: createdBy missing/invalid" });
-//     }
-//     const creator = await User.findById(createdBy).select("_id");
-//     if (!creator)
-//       return res.status(404).json({ error: "Creator user not found" });
-
-//     // You must provide either moduleId OR module_name
-//     if (!moduleId && !module_name) {
-//       return res.status(400).json({
-//         error: "Module is required. Provide either moduleId or module_name.",
-//       });
-//     }
-
-//     // Duplicate prevention
-//     const scenario_key = normalizeKey(scenario_text);
-//     const dupe = await Scenario.findOne({ project: projectId, scenario_key });
-//     if (dupe) {
-//       return res
-//         .status(409)
-//         .json({ error: "A scenario with similar text already exists." });
-//     }
-
-//     let moduleDoc = null;
-//     if (moduleId) {
-//       if (!mongoose.Types.ObjectId.isValid(moduleId)) {
-//         return res.status(400).json({ error: "Invalid moduleId" });
-//       }
-//       moduleDoc = await Module.findOne({ _id: moduleId, project: projectId });
-//       if (!moduleDoc) {
-//         return res
-//           .status(404)
-//           .json({ error: "Module not found for this project" });
-//       }
-//     } else if (module_name) {
-//       moduleDoc = await findOrCreateModule(projectId, module_name, createdBy);
-//     }
-
-//     const scenario_number = generateScenarioNumber(project.project_name);
-
-//     const scenario = new Scenario({
-//       scenario_text,
-//       scenario_key,
-//       scenario_number,
-//       project: projectId,
-//       module: moduleDoc._id,
-//       createdBy,
-//     });
-
-//     await scenario.save();
-
-//     await Project.findByIdAndUpdate(projectId, {
-//       $push: { scenarios: scenario._id },
-//     });
-
-//     const populated = await Scenario.findById(scenario._id).populate(
-//       "module",
-//       "name"
-//     );
-
-//     return res
-//       .status(201)
-//       .json({ message: "Scenario added successfully", scenario: populated });
-//   } catch (error) {
-//     console.error("Error adding scenario:", error);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// };
-
-// /* =========================================================
-//    UPDATE (PUT) — duplicate guard + optional module move
-//    + auto-assign Unassigned if legacy scenario has no module
-//    ========================================================= */
-// // PUT /single-project/scenario/:scenarioId
-// exports.updateScenario = async (req, res) => {
-//   const { scenario_text, userId, moduleId, module_name } = req.body;
-//   const { scenarioId } = req.params;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
-//       return res.status(400).json({ message: "Invalid scenario ID" });
-//     }
-
-//     const scenario = await Scenario.findById(scenarioId).populate("project");
-//     if (!scenario) {
-//       return res.status(404).json({ message: "Scenario not found" });
-//     }
-
-//     const actorId = req.user?.id || userId;
-//     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
-//       return res.status(400).json({ message: "Invalid user ID" });
-//     }
-
-//     const user = await User.findById(actorId);
-//     if (!user) {
-//       return res.status(404).json({ message: "User not found" });
-//     }
-
-//     // Track changes for scenario_text + prevent duplicates
-//     if (
-//       typeof scenario_text === "string" &&
-//       scenario_text !== scenario.scenario_text
-//     ) {
-//       const newKey = normalizeKey(scenario_text);
-//       const dupe = await Scenario.findOne({
-//         project: scenario.project._id,
-//         scenario_key: newKey,
-//         _id: { $ne: scenario._id },
-//       });
-//       if (dupe) {
-//         return res
-//           .status(409)
-//           .json({
-//             message: "Another scenario with similar text already exists.",
-//           });
-//       }
-
-//       const change = new Change({
-//         scenario: scenario._id,
-//         previous_text: scenario.scenario_text,
-//         user: user._id,
-//         time: Date.now(),
-//       });
-//       await change.save();
-
-//       scenario.scenario_text = scenario_text;
-//       scenario.scenario_key = newKey; // keep index in sync
-//     }
-
-//     // Optional: allow updating the module as well
-//     if (moduleId || module_name) {
-//       let moduleDoc;
-//       if (moduleId) {
-//         if (!mongoose.Types.ObjectId.isValid(moduleId)) {
-//           return res.status(400).json({ message: "Invalid moduleId" });
-//         }
-//         moduleDoc = await Module.findOne({
-//           _id: moduleId,
-//           project: scenario.project._id,
-//         });
-//         if (!moduleDoc)
-//           return res
-//             .status(404)
-//             .json({ message: "Module not found for this project" });
-//       } else {
-//         moduleDoc = await findOrCreateModule(
-//           scenario.project._id,
-//           module_name,
-//           actorId
-//         );
-//       }
-//       scenario.module = moduleDoc._id;
-//     }
-
-//     // Auto-assign Unassigned for legacy scenarios missing module
-//     if (!scenario.module) {
-//       const fallback = await getOrCreateUnassignedModule(
-//         scenario.project._id,
-//         actorId
-//       );
-//       scenario.module = fallback._id;
-//     }
-
-//     // Update updater metadata
-//     scenario.updatedBy = { user: user._id, updateTime: Date.now() };
-
-//     await scenario.save();
-//     const populated = await Scenario.findById(scenario._id).populate(
-//       "module",
-//       "name"
-//     );
-
-//     return res.json({
-//       message: "Scenario updated successfully",
-//       scenario: populated,
-//     });
-//   } catch (error) {
-//     console.error("Error updating scenario:", error);
-//     return res
-//       .status(500)
-//       .json({ message: "Error updating scenario", error: error.message });
-//   }
-// };
-
-// /* =========================================================
-//    EXISTING LIST/HISTORY/DELETE/GET NUMBER/SIMPLE LIST — kept
-//    ========================================================= */
-
-// // GET /single-project/:id/view-all-scenarios
-// exports.listScenariosByProject = async (req, res) => {
-//   try {
-//     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-
-//     const project = await Project.findById(id);
-//     if (!project) {
-//       return res.status(404).json({ message: "Project not found" });
-//     }
-
-//     const scenarios = await Scenario.find({ project: id })
-//       .populate("createdBy", "name")
-//       .populate("project", "project_name")
-//       .populate("testCases", "title description")
-//       .populate("module", "name");
-
-//     if (!scenarios || scenarios.length === 0) {
-//       return res.json([]);
-//     }
-
-//     return res.json(scenarios);
-//   } catch (error) {
-//     console.error("Error fetching scenarios:", error.message);
-//     return res.status(500).json({ message: "Server error: " + error.message });
-//   }
-// };
-
-// // GET /single-project/:projectId/scenario-history/:scenarioId
-// exports.getScenarioHistory = async (req, res) => {
-//   const { scenarioId } = req.params;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
-//       return res.status(400).json({ message: "Invalid scenario ID" });
-//     }
-
-//     const scenario = await Scenario.findById(scenarioId)
-//       .populate("createdBy project")
-//       .populate("module", "name");
-//     if (!scenario) {
-//       return res.status(404).json({ message: "Scenario not found" });
-//     }
-
-//     const changes = await Change.find({ scenario: scenarioId })
-//       .populate("user")
-//       .sort({ time: -1 });
-
-//     return res.json({ scenario, changes });
-//   } catch (error) {
-//     console.error("Error fetching scenario details:", error);
-//     return res
-//       .status(500)
-//       .json({ message: "Error fetching scenario details", error });
-//   }
-// };
-
-// // DELETE /single-project/scenario/:scenarioId
-// exports.deleteScenario = async (req, res) => {
-//   try {
-//     const { scenarioId } = req.params;
-
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
-//       return res.status(400).json({ message: "Invalid scenario ID" });
-//     }
-
-//     const scenario = await Scenario.findByIdAndDelete(scenarioId);
-//     if (!scenario) {
-//       return res.status(404).json({ message: "Scenario not found" });
-//     }
-
-//     await Change.deleteMany({ scenario: scenarioId });
-
-//     return res.status(200).json({
-//       message: "Scenario and its history deleted successfully",
-//     });
-//   } catch (error) {
-//     console.error("Error deleting scenario:", error);
-//     return res.status(500).json({ error: "Server error" });
-//   }
-// };
-
-// // GET /single-project/scenario/:scenarioId/scenario-number
-// exports.getScenarioNumber = async (req, res) => {
-//   const { scenarioId } = req.params;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
-//       return res.status(400).json({ message: "Invalid scenario ID" });
-//     }
-
-//     const scenario = await Scenario.findById(scenarioId);
-//     if (!scenario) {
-//       return res.status(404).json({ message: "Scenario not found" });
-//     }
-
-//     return res.json({ scenarioNumber: scenario.scenario_number });
-//   } catch (error) {
-//     console.error("Error fetching scenario number:", error);
-//     return res
-//       .status(500)
-//       .json({ message: "Error fetching scenario number", error });
-//   }
-// };
-
-// // GET /projects/:projectId/scenarios  (simple)
-// exports.getScenariosSimple = async (req, res) => {
-//   const { projectId } = req.params;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-
-//     const project = await Project.findById(projectId).populate("scenarios");
-//     if (!project) {
-//       return res.status(404).json({ message: "Project not found" });
-//     }
-
-//     const scenarios = await Scenario.find({ project: projectId }).populate(
-//       "module",
-//       "name"
-//     );
-//     if (!scenarios || scenarios.length === 0) {
-//       return res.json([]);
-//     }
-
-//     const response = scenarios.map((s) => ({
-//       _id: s._id,
-//       scenario_number: s.scenario_number,
-//       scenario_text: s.scenario_text,
-//       module: s.module ? { _id: s.module._id, name: s.module.name } : null,
-//     }));
-
-//     return res.json(response);
-//   } catch (error) {
-//     console.error("Error fetching scenarios:", error);
-//     return res.status(500).json({ message: "Error fetching scenarios" });
-//   }
-// };
-
-// /* ===========================
-//    MODULE CONTROLLER METHODS
-//    =========================== */
-
-// // GET /single-projects/:projectId/modules
-// exports.listModulesByProject = async (req, res) => {
-//   const { projectId } = req.params;
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-//     const mods = await Module.find({ project: projectId }).sort({ name: 1 });
-//     return res.json(mods);
-//   } catch (err) {
-//     console.error("Error listing modules:", err);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// // POST /single-projects/:projectId/modules  (create/find by name)
-// exports.createOrGetModule = async (req, res) => {
-//   const { projectId } = req.params;
-//   const { name } = req.body;
-//   try {
-//     if (!name || !name.trim()) {
-//       return res.status(400).json({ message: "Module name is required" });
-//     }
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-
-//     const createdBy = req.user?.id || req.body.createdBy;
-//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
-//       return res.status(401).json({ message: "Authentication required" });
-//     }
-
-//     const mod = await findOrCreateModule(projectId, name, createdBy);
-//     return res.status(201).json(mod);
-//   } catch (err) {
-//     console.error("Error creating module:", err);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// /* =====================================
-//    SEARCH/AUTOSUGGEST & BULK MOVES
-//    ===================================== */
-
-// // GET /single-projects/:projectId/scenarios/search?q=...
-// exports.searchScenarios = async (req, res) => {
-//   const { projectId } = req.params;
-//   const { q = "" } = req.query;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-
-//     if (!q.trim()) return res.json([]);
-
-//     // simple regex search; tune as needed
-//     const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-
-//     const results = await Scenario.find(
-//       { project: projectId, scenario_text: { $regex: regex } },
-//       { scenario_text: 1, scenario_number: 1, module: 1 }
-//     )
-//       .limit(10)
-//       .populate({ path: "module", select: "name" })
-//       .lean(); // avoid virtuals/getters for stability + perf
-
-//     return res.json(results);
-//   } catch (error) {
-//     console.error("Error searching scenarios:", error);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// // POST /single-projects/:projectId/scenarios/transfer
-// // body: { scenarioIds: [..], toModuleId?, toModuleName? }
-// exports.transferScenarios = async (req, res) => {
-//   const { projectId } = req.params;
-//   const { scenarioIds = [], toModuleId, toModuleName } = req.body;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
-//       return res.status(400).json({ message: "scenarioIds is required" });
-//     }
-
-//     // resolve destination module
-//     let targetModule;
-//     if (toModuleId) {
-//       if (!mongoose.Types.ObjectId.isValid(toModuleId)) {
-//         return res.status(400).json({ message: "Invalid toModuleId" });
-//       }
-//       targetModule = await Module.findOne({
-//         _id: toModuleId,
-//         project: projectId,
-//       });
-//       if (!targetModule)
-//         return res
-//           .status(404)
-//           .json({ message: "Destination module not found" });
-//     } else if (toModuleName) {
-//       const actorId = req.user?.id || null;
-//       targetModule = await findOrCreateModule(
-//         projectId,
-//         toModuleName,
-//         actorId || undefined
-//       );
-//     } else {
-//       return res
-//         .status(400)
-//         .json({ message: "Provide toModuleId or toModuleName" });
-//     }
-
-//     const validIds = scenarioIds.filter((id) =>
-//       mongoose.Types.ObjectId.isValid(id)
-//     );
-//     const { modifiedCount } = await Scenario.updateMany(
-//       { _id: { $in: validIds }, project: projectId },
-//       {
-//         $set: {
-//           module: targetModule._id,
-//           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
-//         },
-//       }
-//     );
-
-//     return res.json({
-//       message: "Scenarios transferred",
-//       modifiedCount,
-//       to: { _id: targetModule._id, name: targetModule.name },
-//     });
-//   } catch (error) {
-//     console.error("Error transferring scenarios:", error);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-// // POST /single-projects/:projectId/scenarios/detach
-// // body: { scenarioIds: [..] } -> move to "Unassigned"
-// exports.detachScenariosToUnassigned = async (req, res) => {
-//   const { projectId } = req.params;
-//   const { scenarioIds = [] } = req.body;
-
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
-//       return res.status(400).json({ message: "Invalid project ID" });
-//     }
-//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
-//       return res.status(400).json({ message: "scenarioIds is required" });
-//     }
-
-//     const unassigned = await getOrCreateUnassignedModule(
-//       projectId,
-//       req.user?.id || undefined
-//     );
-
-//     const validIds = scenarioIds.filter((id) =>
-//       mongoose.Types.ObjectId.isValid(id)
-//     );
-//     const { modifiedCount } = await Scenario.updateMany(
-//       { _id: { $in: validIds }, project: projectId },
-//       {
-//         $set: {
-//           module: unassigned._id,
-//           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
-//         },
-//       }
-//     );
-
-//     return res.json({
-//       message: "Scenarios detached to Unassigned",
-//       modifiedCount,
-//       to: { _id: unassigned._id, name: unassigned.name },
-//     });
-//   } catch (error) {
-//     console.error("Error detaching scenarios:", error);
-//     return res.status(500).json({ message: "Server error" });
-//   }
-// };
-
-//
-
 // controllers/ScenarioController.js
 const mongoose = require("mongoose");
 const Scenario = require("../models/ScenarioModel");
@@ -606,7 +6,7 @@ const Project = require("../models/ProjectModel");
 const User = require("../models/UserModel");
 const Module = require("../models/ModuleModel");
 
-// ---- helpers ----
+/* -------------------------- utils & helpers -------------------------- */
 const generateScenarioNumber = (projectName) => {
   const initials = projectName
     .split(" ")
@@ -616,46 +16,50 @@ const generateScenarioNumber = (projectName) => {
   return `${initials}-${randomNum}`;
 };
 
-// very rare race-proof wrapper (one retry, then timestamp suffix)
 const safeGenerateScenarioNumber = async (projectId, projectName) => {
   let candidate = generateScenarioNumber(projectName);
-  let exists = await Scenario.exists({ project: projectId, scenario_number: candidate });
+  let exists = await Scenario.exists({
+    project: projectId,
+    scenario_number: candidate,
+  });
   if (!exists) return candidate;
   candidate = generateScenarioNumber(projectName);
-  exists = await Scenario.exists({ project: projectId, scenario_number: candidate });
+  exists = await Scenario.exists({
+    project: projectId,
+    scenario_number: candidate,
+  });
   if (!exists) return candidate;
-  return `${projectName.split(" ").map(w => w[0]?.toUpperCase() ?? "").join("")}-${Date.now().toString().slice(-8)}`;
+  return `${projectName
+    .split(" ")
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("")}-${Date.now().toString().slice(-8)}`;
 };
 
-// Normalize strings into a stable key (used for modules and scenario texts)
 const normalizeKey = (text = "") =>
   text
     .toLowerCase()
     .trim()
-    .replace(/[^a-z0-9]+/g, " ") // non-alphanumerics to space
-    .replace(/\s+/g, " ") // collapse spaces
-    .replace(/\s+/g, "") // remove all spaces
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+/g, "")
     .substring(0, 200);
 
 const normalizeModuleKey = normalizeKey;
 
-// Find or create module by display name for a specific project
 const findOrCreateModule = async (projectId, name, createdBy) => {
   const key = normalizeModuleKey(name);
   const nameTrim = String(name || "").trim();
   try {
     const existing = await Module.findOne({ project: projectId, key });
     if (existing) return existing;
-
     const created = await Module.create({
-      name: nameTrim, // using "name" to match ModuleModel
+      name: nameTrim,
       key,
       project: projectId,
       createdBy,
     });
     return created;
   } catch (err) {
-    // Handle race condition (unique index)
     if (err?.code === 11000) {
       const again = await Module.findOne({ project: projectId, key });
       if (again) return again;
@@ -664,133 +68,174 @@ const findOrCreateModule = async (projectId, name, createdBy) => {
   }
 };
 
-// Ensure an "Unassigned" module exists (used for detach ops and legacy docs)
-const getOrCreateUnassignedModule = async (projectId, createdBy) => {
-  return await findOrCreateModule(projectId, "Unassigned", createdBy);
-};
+const getOrCreateUnassignedModule = async (projectId, createdBy) =>
+  findOrCreateModule(projectId, "Unassigned", createdBy);
 
-/* =========================================================
-   CREATE (POST)  — keeps your logic and adds duplicate guard
-   ========================================================= */
+/* ---------------------------- core helpers --------------------------- */
+// Back-compat: given a Scenario doc (lean or not), ensure it has modules[] at read time.
+const withHydratedModules = (s) => {
+  if (!s) return s;
+  const out = { ...s };
+  // If modules is missing/empty but legacy single `module` exists, hydrate
+  if ((!Array.isArray(out.modules) || out.modules.length === 0) && out.module) {
+    out.modules = [out.module];
+  }
+  return out;
+};
+// Map array safely for lean results
+const hydrateMany = (arr) =>
+  Array.isArray(arr) ? arr.map(withHydratedModules) : [];
+
+/* ============================== CREATE =============================== */
 // POST /single-projects/:id/add-scenario
+// Accepts: moduleId / module_name (legacy single) OR moduleIds[] / module_names[] (multi)
 const addScenario = async (req, res) => {
   try {
     const projectId = req.params.id;
-    const { scenario_text, moduleId, module_name } = req.body;
+    const {
+      scenario_text,
+      moduleId, // legacy single id
+      module_name, // legacy single name
+      moduleIds = [], // multi ids
+      module_names = [], // multi names
+    } = req.body;
 
-    if (!scenario_text) {
+    if (!scenario_text)
       return res.status(400).json({ error: "Scenario text is required" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ error: "Invalid project ID" });
-    }
 
     const project = await Project.findById(projectId);
     if (!project) return res.status(404).json({ error: "Project not found" });
 
     const createdBy = req.user?.id || req.body.createdBy;
-    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
-      return res
-        .status(401)
-        .json({ error: "Authentication required: createdBy missing/invalid" });
-    }
-    const creator = await User.findById(createdBy).select("_id");
-    if (!creator)
+    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
+      return res.status(401).json({ error: "Authentication required" });
+
+    if (!(await User.exists({ _id: createdBy })))
       return res.status(404).json({ error: "Creator user not found" });
 
-    // You must provide either moduleId OR module_name
-    if (!moduleId && !module_name) {
-      return res.status(400).json({
-        error: "Module is required. Provide either moduleId or module_name.",
-      });
-    }
-
-    // Duplicate prevention
     const scenario_key = normalizeKey(scenario_text);
-    const dupe = await Scenario.findOne({ project: projectId, scenario_key });
-    if (dupe) {
+    if (await Scenario.exists({ project: projectId, scenario_key }))
       return res
         .status(409)
         .json({ error: "A scenario with similar text already exists." });
-    }
 
-    let moduleDoc = null;
+    // Resolve module IDs
+    const resolvedIds = [];
+
     if (moduleId) {
-      if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+      if (!mongoose.Types.ObjectId.isValid(moduleId))
         return res.status(400).json({ error: "Invalid moduleId" });
-      }
-      moduleDoc = await Module.findOne({ _id: moduleId, project: projectId });
-      if (!moduleDoc) {
+      const md = await Module.findOne({ _id: moduleId, project: projectId });
+      if (!md)
         return res
           .status(404)
           .json({ error: "Module not found for this project" });
-      }
-    } else if (module_name) {
-      moduleDoc = await findOrCreateModule(projectId, module_name, createdBy);
+      resolvedIds.push(md._id);
     }
 
-    // safer generator (still your format)
-    const scenario_number = await safeGenerateScenarioNumber(projectId, project.project_name);
+    if (module_name) {
+      const md = await findOrCreateModule(projectId, module_name, createdBy);
+      resolvedIds.push(md._id);
+    }
+
+    for (const mid of moduleIds || []) {
+      if (!mongoose.Types.ObjectId.isValid(mid))
+        return res
+          .status(400)
+          .json({ error: "Invalid module id in moduleIds" });
+      const md = await Module.findOne({ _id: mid, project: projectId });
+      if (!md)
+        return res
+          .status(404)
+          .json({ error: `Module not found for this project: ${mid}` });
+      resolvedIds.push(md._id);
+    }
+
+    for (const name of module_names || []) {
+      if (!String(name || "").trim()) continue;
+      const md = await findOrCreateModule(projectId, name, createdBy);
+      resolvedIds.push(md._id);
+    }
+
+    const uniqueResolved = [...new Set(resolvedIds.map(String))].map(
+      (id) => new mongoose.Types.ObjectId(id)
+    );
+    if (uniqueResolved.length === 0)
+      return res.status(400).json({
+        error:
+          "Provide at least one module (moduleId/module_name/moduleIds/module_names).",
+      });
+
+    const scenario_number = await safeGenerateScenarioNumber(
+      projectId,
+      project.project_name
+    );
+
+    // 🔑 Back-compat: keep legacy `module` in sync with first module
+    const primaryModuleId = uniqueResolved[0];
 
     const scenario = new Scenario({
       scenario_text,
       scenario_key,
       scenario_number,
       project: projectId,
-      module: moduleDoc._id,
+      module: primaryModuleId, // legacy single
+      modules: uniqueResolved, // new multi
       createdBy,
     });
 
     await scenario.save();
-
     await Project.findByIdAndUpdate(projectId, {
       $push: { scenarios: scenario._id },
     });
 
-    const populated = await Scenario.findById(scenario._id).populate(
-      "module",
-      "name"
-    );
+    const populated = await Scenario.findById(scenario._id)
+      .populate("module", "name")
+      .populate("modules", "name")
+      .lean();
 
-    return res
-      .status(201)
-      .json({ message: "Scenario added successfully", scenario: populated });
+    return res.status(201).json({
+      message: "Scenario added successfully",
+      scenario: withHydratedModules(populated),
+    });
   } catch (error) {
     console.error("Error adding scenario:", error);
     return res.status(500).json({ error: "Server error" });
   }
 };
 
-/* =========================================================
-   UPDATE (PUT) — duplicate guard + optional module move
-   + auto-assign Unassigned if legacy scenario has no module
-   ========================================================= */
+/* ============================== UPDATE =============================== */
 // PUT /single-project/scenario/:scenarioId
+// If moduleId/moduleIds/module_name/module_names provided => replace full set.
+// Also keep legacy `module = modules[0]`.
 const updateScenario = async (req, res) => {
-  const { scenario_text, userId, moduleId, module_name } = req.body;
+  const {
+    scenario_text,
+    userId,
+    moduleId,
+    module_name,
+    moduleIds = [],
+    module_names = [],
+  } = req.body;
   const { scenarioId } = req.params;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    if (!mongoose.Types.ObjectId.isValid(scenarioId))
       return res.status(400).json({ message: "Invalid scenario ID" });
-    }
 
     const scenario = await Scenario.findById(scenarioId).populate("project");
-    if (!scenario) {
+    if (!scenario)
       return res.status(404).json({ message: "Scenario not found" });
-    }
 
     const actorId = req.user?.id || userId;
-    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
+    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId))
       return res.status(400).json({ message: "Invalid user ID" });
-    }
-
-    const user = await User.findById(actorId);
-    if (!user) {
+    if (!(await User.exists({ _id: actorId })))
       return res.status(404).json({ message: "User not found" });
-    }
 
-    // Track changes for scenario_text + prevent duplicates
+    // Text change + duplicate guard
     if (
       typeof scenario_text === "string" &&
       scenario_text !== scenario.scenario_text
@@ -801,72 +246,98 @@ const updateScenario = async (req, res) => {
         scenario_key: newKey,
         _id: { $ne: scenario._id },
       });
-      if (dupe) {
-        return res
-          .status(409)
-          .json({
-            message: "Another scenario with similar text already exists.",
-          });
-      }
+      if (dupe)
+        return res.status(409).json({
+          message: "Another scenario with similar text already exists.",
+        });
 
-      const change = new Change({
+      await new Change({
         scenario: scenario._id,
         previous_text: scenario.scenario_text,
-        user: user._id,
+        user: actorId,
         time: Date.now(),
-      });
-      await change.save();
+      }).save();
 
       scenario.scenario_text = scenario_text;
-      scenario.scenario_key = newKey; // keep index in sync
+      scenario.scenario_key = newKey;
     }
 
-    // Optional: allow updating the module as well
-    if (moduleId || module_name) {
-      let moduleDoc;
+    // Modules replacement if any provided
+    const wantsModuleUpdate =
+      moduleId ||
+      module_name ||
+      (Array.isArray(moduleIds) && moduleIds.length) ||
+      (Array.isArray(module_names) && module_names.length);
+
+    if (wantsModuleUpdate) {
+      const ids = [];
+
       if (moduleId) {
-        if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+        if (!mongoose.Types.ObjectId.isValid(moduleId))
           return res.status(400).json({ message: "Invalid moduleId" });
-        }
-        moduleDoc = await Module.findOne({
+        const md = await Module.findOne({
           _id: moduleId,
           project: scenario.project._id,
         });
-        if (!moduleDoc)
+        if (!md)
           return res
             .status(404)
             .json({ message: "Module not found for this project" });
-      } else {
-        moduleDoc = await findOrCreateModule(
+        ids.push(md._id);
+      }
+
+      for (const mid of moduleIds || []) {
+        if (!mongoose.Types.ObjectId.isValid(mid))
+          return res
+            .status(400)
+            .json({ message: "Invalid module id in moduleIds" });
+        const md = await Module.findOne({
+          _id: mid,
+          project: scenario.project._id,
+        });
+        if (!md)
+          return res
+            .status(404)
+            .json({ message: `Module not found for this project: ${mid}` });
+        ids.push(md._id);
+      }
+
+      if (module_name) {
+        const md = await findOrCreateModule(
           scenario.project._id,
           module_name,
           actorId
         );
+        ids.push(md._id);
       }
-      scenario.module = moduleDoc._id;
-    }
 
-    // Auto-assign Unassigned for legacy scenarios missing module
-    if (!scenario.module) {
-      const fallback = await getOrCreateUnassignedModule(
-        scenario.project._id,
-        actorId
+      for (const name of module_names || []) {
+        const md = await findOrCreateModule(
+          scenario.project._id,
+          name,
+          actorId
+        );
+        ids.push(md._id);
+      }
+
+      const uniqueResolved = [...new Set(ids.map(String))].map(
+        (id) => new mongoose.Types.ObjectId(id)
       );
-      scenario.module = fallback._id;
+      scenario.modules = uniqueResolved;
+      scenario.module = uniqueResolved[0] || undefined; // 🔑 keep primary in sync
     }
 
-    // Update updater metadata
-    scenario.updatedBy = { user: user._id, updateTime: Date.now() };
-
+    scenario.updatedBy = { user: actorId, updateTime: Date.now() };
     await scenario.save();
-    const populated = await Scenario.findById(scenario._id).populate(
-      "module",
-      "name"
-    );
+
+    const populated = await Scenario.findById(scenario._id)
+      .populate("module", "name")
+      .populate("modules", "name")
+      .lean();
 
     return res.json({
       message: "Scenario updated successfully",
-      scenario: populated,
+      scenario: withHydratedModules(populated),
     });
   } catch (error) {
     console.error("Error updating scenario:", error);
@@ -876,34 +347,27 @@ const updateScenario = async (req, res) => {
   }
 };
 
-/* =========================================================
-   EXISTING LIST/HISTORY/DELETE/GET NUMBER/SIMPLE LIST — kept
-   ========================================================= */
+/* ========================= LIST / HISTORY ============================ */
 
 // GET /single-project/:id/view-all-scenarios
 const listScenariosByProject = async (req, res) => {
   try {
     const { id } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(id)) {
+    if (!mongoose.Types.ObjectId.isValid(id))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
 
-    const project = await Project.findById(id);
-    if (!project) {
+    if (!(await Project.exists({ _id: id })))
       return res.status(404).json({ message: "Project not found" });
-    }
 
     const scenarios = await Scenario.find({ project: id })
       .populate("createdBy", "name")
       .populate("project", "project_name")
       .populate("testCases", "title description")
-      .populate("module", "name");
+      .populate("module", "name") // legacy
+      .populate("modules", "name") // new
+      .lean();
 
-    if (!scenarios || scenarios.length === 0) {
-      return res.json([]);
-    }
-
-    return res.json(scenarios);
+    return res.json(hydrateMany(scenarios));
   } catch (error) {
     console.error("Error fetching scenarios:", error.message);
     return res.status(500).json({ message: "Server error: " + error.message });
@@ -915,22 +379,22 @@ const getScenarioHistory = async (req, res) => {
   const { scenarioId } = req.params;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    if (!mongoose.Types.ObjectId.isValid(scenarioId))
       return res.status(400).json({ message: "Invalid scenario ID" });
-    }
 
     const scenario = await Scenario.findById(scenarioId)
       .populate("createdBy project")
-      .populate("module", "name");
-    if (!scenario) {
+      .populate("module", "name")
+      .populate("modules", "name")
+      .lean();
+    if (!scenario)
       return res.status(404).json({ message: "Scenario not found" });
-    }
 
     const changes = await Change.find({ scenario: scenarioId })
       .populate("user")
       .sort({ time: -1 });
 
-    return res.json({ scenario, changes });
+    return res.json({ scenario: withHydratedModules(scenario), changes });
   } catch (error) {
     console.error("Error fetching scenario details:", error);
     return res
@@ -939,44 +403,17 @@ const getScenarioHistory = async (req, res) => {
   }
 };
 
-// DELETE /single-project/scenario/:scenarioId
-const deleteScenario = async (req, res) => {
-  try {
-    const { scenarioId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
-      return res.status(400).json({ message: "Invalid scenario ID" });
-    }
-
-    const scenario = await Scenario.findByIdAndDelete(scenarioId);
-    if (!scenario) {
-      return res.status(404).json({ message: "Scenario not found" });
-    }
-
-    await Change.deleteMany({ scenario: scenarioId });
-
-    return res.status(200).json({
-      message: "Scenario and its history deleted successfully",
-    });
-  } catch (error) {
-    console.error("Error deleting scenario:", error);
-    return res.status(500).json({ error: "Server error" });
-  }
-};
-
 // GET /single-project/scenario/:scenarioId/scenario-number
 const getScenarioNumber = async (req, res) => {
   const { scenarioId } = req.params;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    if (!mongoose.Types.ObjectId.isValid(scenarioId))
       return res.status(400).json({ message: "Invalid scenario ID" });
-    }
 
     const scenario = await Scenario.findById(scenarioId);
-    if (!scenario) {
+    if (!scenario)
       return res.status(404).json({ message: "Scenario not found" });
-    }
 
     return res.json({ scenarioNumber: scenario.scenario_number });
   } catch (error) {
@@ -993,58 +430,60 @@ const getScenariosSimple = async (req, res) => {
   const { moduleId } = req.query;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
 
-    const project = await Project.findById(projectId).select("_id");
-    if (!project) {
+    if (!(await Project.exists({ _id: projectId })))
       return res.status(404).json({ message: "Project not found" });
-    }
 
     const filter = { project: projectId };
     if (moduleId) {
-      if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+      if (!mongoose.Types.ObjectId.isValid(moduleId))
         return res.status(400).json({ message: "Invalid moduleId" });
-      }
-      filter.module = moduleId;
+      // match either legacy single or new multi
+      filter.$or = [
+        { module: moduleId },
+        { modules: { $in: [new mongoose.Types.ObjectId(moduleId)] } },
+      ];
     }
 
-    // keep response lean for speed
-    const scenarios = await Scenario.find(
-      filter,
-      { scenario_text: 1, scenario_number: 1, module: 1 }
-    )
+    const scenarios = await Scenario.find(filter, {
+      scenario_text: 1,
+      scenario_number: 1,
+      module: 1,
+      modules: 1,
+    })
       .sort({ scenario_number: 1 })
       .populate("module", "name")
+      .populate("modules", "name")
       .lean();
 
-    const response = scenarios.map((s) => ({
+    const hydrated = hydrateMany(scenarios).map((s) => ({
       _id: s._id,
       scenario_number: s.scenario_number,
       scenario_text: s.scenario_text,
-      module: s.module ? { _id: s.module._id, name: s.module.name } : null,
+      // Keep legacy single for old UIs + full array for new UIs
+      module: s.module
+        ? { _id: s.module._id, name: s.module.name }
+        : s.modules?.[0] || null,
+      modules: (s.modules || []).map((m) => ({ _id: m._id, name: m.name })),
     }));
 
-    return res.json(response);
+    return res.json(hydrated);
   } catch (error) {
     console.error("Error fetching scenarios:", error);
     return res.status(500).json({ message: "Error fetching scenarios" });
   }
 };
 
-
-/* ===========================
-   MODULE CONTROLLER METHODS
-   =========================== */
+/* ============================ MODULE APIS ============================ */
 
 // GET /single-projects/:projectId/modules
 const listModulesByProject = async (req, res) => {
   const { projectId } = req.params;
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
     const mods = await Module.find({ project: projectId }).sort({ name: 1 });
     return res.json(mods);
   } catch (err) {
@@ -1053,22 +492,19 @@ const listModulesByProject = async (req, res) => {
   }
 };
 
-// POST /single-projects/:projectId/modules  (create/find by name)
+// POST /single-projects/:projectId/modules
 const createOrGetModule = async (req, res) => {
   const { projectId } = req.params;
   const { name } = req.body;
   try {
-    if (!name || !name.trim()) {
+    if (!name || !name.trim())
       return res.status(400).json({ message: "Module name is required" });
-    }
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
 
     const createdBy = req.user?.id || req.body.createdBy;
-    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
+    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
       return res.status(401).json({ message: "Authentication required" });
-    }
 
     const mod = await findOrCreateModule(projectId, name, createdBy);
     return res.status(201).json(mod);
@@ -1078,60 +514,26 @@ const createOrGetModule = async (req, res) => {
   }
 };
 
-/* =====================================
-   SEARCH/AUTOSUGGEST & BULK MOVES
-   ===================================== */
-
-// GET /single-projects/:projectId/scenarios/search?q=...
-const searchScenarios = async (req, res) => {
-  const { projectId } = req.params;
-  const { q = "" } = req.query;
-
-  try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
-
-    if (!q.trim()) return res.json([]);
-
-    // simple regex search; tune as needed
-    const regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-
-    const results = await Scenario.find(
-      { project: projectId, scenario_text: { $regex: regex } },
-      { scenario_text: 1, scenario_number: 1, module: 1 }
-    )
-      .limit(10)
-      .populate({ path: "module", select: "name" })
-      .lean(); // avoid virtuals/getters for stability + perf
-
-    return res.json(results);
-  } catch (error) {
-    console.error("Error searching scenarios:", error);
-    return res.status(500).json({ message: "Server error" });
-  }
-};
+/* ========================== BULK OPERATIONS ========================== */
 
 // POST /single-projects/:projectId/scenarios/transfer
 // body: { scenarioIds: [..], toModuleId?, toModuleName? }
+// Adds destination to modules[] and DOES NOT clear legacy `module`.
+// Primary module remains unchanged here.
 const transferScenarios = async (req, res) => {
   const { projectId } = req.params;
   const { scenarioIds = [], toModuleId, toModuleName } = req.body;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
-    if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
+    if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
       return res.status(400).json({ message: "scenarioIds is required" });
-    }
 
-    // resolve destination module
     let targetModule;
     if (toModuleId) {
-      if (!mongoose.Types.ObjectId.isValid(toModuleId)) {
+      if (!mongoose.Types.ObjectId.isValid(toModuleId))
         return res.status(400).json({ message: "Invalid toModuleId" });
-      }
       targetModule = await Module.findOne({
         _id: toModuleId,
         project: projectId,
@@ -1159,15 +561,15 @@ const transferScenarios = async (req, res) => {
     const { modifiedCount } = await Scenario.updateMany(
       { _id: { $in: validIds }, project: projectId },
       {
+        $addToSet: { modules: targetModule._id }, // add (do not replace)
         $set: {
-          module: targetModule._id,
           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
         },
       }
     );
 
     return res.json({
-      message: "Scenarios transferred",
+      message: "Scenarios transferred (added to module)",
       modifiedCount,
       to: { _id: targetModule._id, name: targetModule.name },
     });
@@ -1178,41 +580,36 @@ const transferScenarios = async (req, res) => {
 };
 
 // POST /single-projects/:projectId/scenarios/detach
-// body: { scenarioIds: [..] } -> move to "Unassigned"
+// body: { scenarioIds: [..] } -> clear modules[] and legacy module (fully unassigned)
 const detachScenariosToUnassigned = async (req, res) => {
   const { projectId } = req.params;
   const { scenarioIds = [] } = req.body;
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
-    if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
+    if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
       return res.status(400).json({ message: "scenarioIds is required" });
-    }
 
-    const unassigned = await getOrCreateUnassignedModule(
-      projectId,
-      req.user?.id || undefined
-    );
-
-    const validIds = scenarioIds.filter((id) =>
-      mongoose.Types.ObjectId.isValid(id)
-    );
     const { modifiedCount } = await Scenario.updateMany(
-      { _id: { $in: validIds }, project: projectId },
+      {
+        _id: {
+          $in: scenarioIds.filter((id) => mongoose.Types.ObjectId.isValid(id)),
+        },
+        project: projectId,
+      },
       {
         $set: {
-          module: unassigned._id,
+          modules: [],
+          module: undefined, // 🔑 also clear legacy primary when explicitly detaching
           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
         },
       }
     );
 
     return res.json({
-      message: "Scenarios detached to Unassigned",
+      message: "Scenarios detached (unassigned)",
       modifiedCount,
-      to: { _id: unassigned._id, name: unassigned.name },
     });
   } catch (error) {
     console.error("Error detaching scenarios:", error);
@@ -1220,29 +617,52 @@ const detachScenariosToUnassigned = async (req, res) => {
   }
 };
 
-// NEW: list modules with their scenario counts for a project
+// GET /single-projects/:projectId/modules-with-counts
 const listModulesWithCounts = async (req, res) => {
   const { projectId } = req.params;
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
       return res.status(400).json({ message: "Invalid project ID" });
-    }
 
-    // 1) fetch all modules (so we include zero-count ones too)
     const mods = await Module.find({ project: projectId }, { name: 1 })
       .sort({ name: 1 })
       .lean();
 
-    // 2) aggregate scenario counts per module
+    // Count scenarios by either legacy single OR multi
     const countsAgg = await Scenario.aggregate([
       { $match: { project: new mongoose.Types.ObjectId(projectId) } },
-      { $group: { _id: "$module", count: { $sum: 1 } } },
+      {
+        $facet: {
+          legacy: [
+            { $match: { module: { $ne: null } } },
+            { $group: { _id: "$module", count: { $sum: 1 } } },
+          ],
+          multi: [
+            {
+              $unwind: { path: "$modules", preserveNullAndEmptyArrays: false },
+            },
+            { $group: { _id: "$modules", count: { $sum: 1 } } },
+          ],
+        },
+      },
+      {
+        $project: {
+          combined: { $setUnion: ["$legacy", "$multi"] },
+        },
+      },
+      { $unwind: "$combined" },
+      { $replaceRoot: { newRoot: "$combined" } },
+      {
+        $group: {
+          _id: "$_id",
+          count: { $sum: "$count" },
+        },
+      },
     ]);
 
     const countMap = new Map(
       countsAgg.map((c) => [String(c._id || ""), c.count])
     );
-
     const payload = mods.map((m) => ({
       _id: m._id,
       name: m.name,
@@ -1256,6 +676,60 @@ const listModulesWithCounts = async (req, res) => {
   }
 };
 
+const searchScenarios = async (req, res) => {
+  const { projectId } = req.params;
+  const q = String(req.query.q || "").trim();
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(projectId))
+      return res.status(400).json({ message: "Invalid project ID" });
+
+    if (!q) return res.json([]);
+
+    // simple text search on scenario_text (case-insensitive)
+    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+
+    const rows = await Scenario.find(
+      { project: projectId, scenario_text: rx },
+      { scenario_text: 1, modules: 1 } // keep it light
+    )
+      .limit(15)
+      .populate("modules", "name")
+      .lean();
+
+    res.json(rows.map(withHydratedModules));
+  } catch (err) {
+    console.error("searchScenarios error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// DELETE /single-project/scenario/:scenarioId
+const deleteScenario = async (req, res) => {
+  const { scenarioId } = req.params;
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(scenarioId))
+      return res.status(400).json({ message: "Invalid scenario ID" });
+
+    const doc = await Scenario.findById(scenarioId);
+    if (!doc) return res.status(404).json({ message: "Scenario not found" });
+
+    // remove from project's array (best-effort)
+    await Project.updateOne(
+      { _id: doc.project },
+      { $pull: { scenarios: doc._id } }
+    );
+
+    await Change.deleteMany({ scenario: doc._id });
+    await Scenario.deleteOne({ _id: doc._id });
+
+    return res.json({ message: "Scenario deleted", _id: scenarioId });
+  } catch (err) {
+    console.error("deleteScenario error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 module.exports = {
   addScenario,
@@ -1267,7 +741,7 @@ module.exports = {
   getScenariosSimple,
   listModulesByProject,
   createOrGetModule,
-  searchScenarios,
+  searchScenarios, // unchanged above (uses populate module/modules)
   transferScenarios,
   detachScenariosToUnassigned,
   listModulesWithCounts,
