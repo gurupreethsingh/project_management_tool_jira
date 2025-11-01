@@ -131,11 +131,11 @@ public interface AutomationConstants
 //		    String URL_SINGLE_BLOG_TPL      = URL_OF_APPLICATION + PATH_SINGLE_BLOG_TPL;
 		//
 //		    // ========= Shop / Product (public shop) =========
-		    String PATH_SHOP                = "/shop";
+//		    String PATH_SHOP                = "/shop";
 //		    String PATH_SINGLE_PRODUCT_TPL  = "/single-product/%s";  // :id
 //		    String PATH_SEARCH_PRODUCTS     = "/search-products";
 		//
-		    String URL_SHOP                 = URL_OF_APPLICATION + PATH_SHOP;
+//		    String URL_SHOP                 = URL_OF_APPLICATION + PATH_SHOP;
 //		    String URL_SINGLE_PRODUCT_TPL   = URL_OF_APPLICATION + PATH_SINGLE_PRODUCT_TPL;
 //		    String URL_SEARCH_PRODUCTS      = URL_OF_APPLICATION + PATH_SEARCH_PRODUCTS;
 		//
@@ -144,13 +144,13 @@ public interface AutomationConstants
 //		    String PATH_CHECKOUT            = "/checkout";
 //		    String PATH_MY_ORDERS           = "/my-orders";
 //		    String PATH_THANK_YOU           = "/thank-you";
-		    String PATH_WISHLIST            = "/wishlist";
+//		    String PATH_WISHLIST            = "/wishlist";
 		//
 //		    String URL_CART                 = URL_OF_APPLICATION + PATH_CART;
 //		    String URL_CHECKOUT             = URL_OF_APPLICATION + PATH_CHECKOUT;
 //		    String URL_MY_ORDERS            = URL_OF_APPLICATION + PATH_MY_ORDERS;
 //		    String URL_THANK_YOU            = URL_OF_APPLICATION + PATH_THANK_YOU;
-		    String URL_WISHLIST             = URL_OF_APPLICATION + PATH_WISHLIST;
+//		    String URL_WISHLIST             = URL_OF_APPLICATION + PATH_WISHLIST;
 		//
 //		    // ========= Category / Subcategory (admin) =========
 //		    String PATH_ADD_CATEGORY            = "/add-category";
@@ -213,4 +213,4 @@ public interface AutomationConstants
 //		    String EXCEL_SHEET_PATH = EXCEL_SHEET.toString();
 //		    String FAILED_SCREENSHOTS_PATH = FAILED_SCREENSHOTS_DIR.toString();
 		    
-}
+//}
