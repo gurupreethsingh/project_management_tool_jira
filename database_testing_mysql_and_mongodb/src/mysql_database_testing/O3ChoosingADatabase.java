@@ -22,5 +22,16 @@ public class O3ChoosingADatabase {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
     }
 }

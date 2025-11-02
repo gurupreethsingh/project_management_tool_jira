@@ -19,8 +19,20 @@ public class O4ReadingFromTableAdmin {
                     System.out.println(rs.getInt(1) + " " + rs.getString(2) + " " + rs.getString(3));
                 }
             }
-        } catch (Exception ex) {
+        } 
+        catch (Exception ex) {
             ex.printStackTrace();
         }
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
     }
 }

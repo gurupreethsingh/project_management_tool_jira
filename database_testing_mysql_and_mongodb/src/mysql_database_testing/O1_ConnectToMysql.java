@@ -7,7 +7,6 @@ public class O1_ConnectToMysql {
 	public static void main(String[] args)
 	{
 		Connection conn = null;
-		
 		try
 		{
 			// try to connect mysql
@@ -25,7 +24,16 @@ public class O1_ConnectToMysql {
 		catch(Exception ex){
 			ex.printStackTrace();
 		}
-
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
 	}
-
 }

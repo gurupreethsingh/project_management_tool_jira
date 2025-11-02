@@ -31,6 +31,17 @@ public class O8DeletingRecords {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
     }
 }
 

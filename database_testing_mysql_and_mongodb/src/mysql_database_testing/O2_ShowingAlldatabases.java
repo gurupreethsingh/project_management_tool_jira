@@ -7,10 +7,8 @@ public class O2_ShowingAlldatabases {
 	public static void main(String[] args)
 	{
 		Connection conn = null;
-		
 		try
 		{
-			// try to connect mysql
 			Class.forName("com.mysql.cj.jdbc.Driver");
 			conn=DriverManager.getConnection("jdbc:mysql://localhost:3306", "root", "root");
 			if(conn==null)
@@ -31,7 +29,16 @@ public class O2_ShowingAlldatabases {
 		catch(Exception ex){
 			ex.printStackTrace();
 		}
-
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
 	}
-
 }

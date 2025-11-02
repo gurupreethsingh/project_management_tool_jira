@@ -25,6 +25,17 @@ public class O5ReadingSpecificUser {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+		finally
+		{
+			 try {
+	                if (conn != null && !conn.isClosed()) {
+	                    conn.close();
+	                    System.out.println("Connection closed.");
+	                }
+	            } catch (SQLException e) {
+	                e.printStackTrace();
+	            }
+		}
     }
 }
 
