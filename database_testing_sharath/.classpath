@@ -6,6 +6,9 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="lib" path="C:/Program Files/Java/jdk-17/bin/mysql-connector-j-8.0.31.jar"/>
+	<classpathentry kind="lib" path="E:/selenium_jar_files/selenium-java-4.35.0/mysql-connector-j-8.0.33.jar"/>
+	<classpathentry kind="lib" path="E:/selenium_jar_files/selenium-java-4.35.0/mongodb-driver-sync-5.6.1.jar"/>
+	<classpathentry kind="lib" path="E:/selenium_jar_files/selenium-java-4.35.0/bson-5.6.1.jar"/>
+	<classpathentry kind="lib" path="E:/selenium_jar_files/selenium-java-4.35.0/mongodb-driver-core-5.6.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
