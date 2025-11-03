@@ -33,6 +33,7 @@ const instructorRoutes = require("./routes/InstructorRoutes");
 const activityRoutes = require("./routes/ActivityRoutes.js");
 const chatRoutes = require("./routes/ChatInteractionRoutes.js");
 const simpleChatBotRoutes = require("./routes/SimpleChatBotRoutes.js");
+const uiGenRoutes = require("./routes/UiGenRoutes");
 
 // ---- App ----
 const app = express();
@@ -120,6 +121,7 @@ app.use("/api", questionRoutes);
 app.use("/api", QuizRoutes);
 app.use("/api/instructors", instructorRoutes);
 app.use("/api", activityRoutes);
+app.use("/api", uiGenRoutes); // exposes /api/ui-gen/...
 
 // 👉 This exposes: /api/ai/ask, /api/ai/model-info, /api/ai/reload (Node -> Flask)
 app.use("/api", simpleChatBotRoutes);
