@@ -1,0 +1,5 @@
+<<<<<<< HEAD
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"vendor_email":{"$numberInt":"1"}},"name":"vendor_email_1","background":true,"unique":true},{"v":{"$numberInt":"2"},"key":{"company_registration_number":{"$numberInt":"1"}},"name":"company_registration_number_1","background":true,"unique":true}],"uuid":"40934bc07e3c4041a5a815a5af39e1ed","collectionName":"vendors","type":"collection"}
+=======
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"vendor_email":{"$numberInt":"1"}},"name":"vendor_email_1","background":true,"unique":true},{"v":{"$numberInt":"2"},"key":{"company_registration_number":{"$numberInt":"1"}},"name":"company_registration_number_1","background":true,"unique":true}],"uuid":"588c3cc225f84e5a8844b0ba301c058e","collectionName":"vendors","type":"collection"}
+>>>>>>> 9c4396370a549c6dce6b3616f5315cafa1c6d50d
