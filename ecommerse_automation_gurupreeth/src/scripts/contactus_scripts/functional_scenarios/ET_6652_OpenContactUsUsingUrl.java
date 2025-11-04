@@ -2,23 +2,18 @@ package scripts.contactus_scripts.functional_scenarios;
 
 import org.testng.annotations.Test;
 import org.testng.asserts.SoftAssert;
-
 import generic.AllVerifications;
-import generic.Excel;
-import generic.OpenClose;
-import generic.OpenClose_Contactus;
+import generic.BaseClass_Shilpa;
 
-public class ET_6652_OpenContactUsUsingUrl  extends OpenClose_Contactus
+public class ET_6652_OpenContactUsUsingUrl   extends BaseClass_Shilpa
 {
 	SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
    public void openContactpageUsingUrl()
    {
-		String expectedContactpageTitle = (String)Excel.getData("ContactUspage",1,0);
+		String expectedContactpageTitle = (String)Excel_Shilpa.getData("ContactUspage",1,0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
 		sa.assertAll();
    }
-	
 }
-   
