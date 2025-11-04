@@ -4,6 +4,7 @@ import org.testng.annotations.Test;
 import org.testng.asserts.SoftAssert;
 import generic.AllVerifications;
 import generic.BaseClass_Shilpa;
+import generic.TakingScreenshot;
 import pom.ContactUspage;
 
 public class ET_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
@@ -33,6 +34,10 @@ public class ET_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 		cp.enterValueInMessageAreaField(messageFromExcel);
 		
 		cp.clickOnSubmitForm();
+		
+		   TakingScreenshot.captureScreenshot(driver);
+		
+		
 
 		sa.assertAll();
 
