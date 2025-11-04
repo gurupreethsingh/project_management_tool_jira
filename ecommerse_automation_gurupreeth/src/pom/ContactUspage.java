@@ -37,7 +37,10 @@ public class ContactUspage extends AllVerifications
 	@FindBy(css="button.px-4")
 	private WebElement searchIcon;
 	
-	//contactpage elements
+	
+	
+	
+	//CONTACT US PAGE  elements
 	
 	@FindBy(xpath="//input[@id='firstName']")
 	private WebElement firstNameField;
@@ -142,9 +145,13 @@ public class ContactUspage extends AllVerifications
 		Thread.sleep(1000);
 	}
 	
-	public void clickOnSubmitForm()
+	public void clickOnSubmitForm() throws InterruptedException
 	{
 		AllVerifications.clickIfVisibleAndEnabled(submitForm, driver, sa);
+		
+		Thread.sleep(1000);
+		
+		
 	}
 	
 	
