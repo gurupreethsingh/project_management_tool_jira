@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"project":{"$numberInt":"1"},"key":{"$numberInt":"1"}},"name":"project_1_key_1","background":true,"unique":true}],"uuid":"d01260b16647415989bcc4fb1b54eeb9","collectionName":"modules","type":"collection"}
