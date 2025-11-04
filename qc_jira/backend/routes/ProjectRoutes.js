@@ -1,7 +1,10 @@
+// routes/ProjectRoutes.js
 const express = require("express");
 const router = express.Router();
 const projectController = require("../controllers/ProjectController");
+const { getModulesForProject } = require("../controllers/TaskController");
 
+// Optional auth stubs (replace with your real middlewares if present)
 let authenticateToken = (_req, _res, next) => next();
 let protect = (_req, _res, next) => next();
 let requireAdmin = (_req, _res, next) => next();
@@ -13,7 +16,7 @@ try {
   if (typeof auth.requireAdmin === "function") requireAdmin = auth.requireAdmin;
 } catch (_) {}
 
-// NOTE: mounted at /api in app.js
+// NOTE: mounted at /api in index.js
 
 // ===== Project names for datalist (NEW)
 router.get("/projects/names", projectController.getAllProjectNames);
@@ -102,7 +105,7 @@ router.get(
   projectController.getAllTestCasesForProject
 );
 
-// bulk (enabled — handler is implemented)
+// bulk
 router.post(
   "/projects/:projectId/test-cases/bulk-update-execution-type",
   protect,
@@ -135,5 +138,8 @@ router.get(
   protect,
   projectController.getTestCaseHistory
 );
+
+// ✅ Modules list for a project — THIS is the only place exposing the endpoint
+router.get("/projects/:projectId/modules", protect, getModulesForProject);
 
 module.exports = router;
