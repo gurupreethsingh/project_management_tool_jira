@@ -2,20 +2,20 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-03T18:14:07 IST" name="Default suite" finished-at="2025-11-03T18:14:11 IST" duration-ms="3982">
+  <suite started-at="2025-11-04T13:16:52 IST" name="Default suite" finished-at="2025-11-04T13:16:58 IST" duration-ms="5746">
     <groups>
     </groups>
-    <test started-at="2025-11-03T18:14:07 IST" name="Default test" finished-at="2025-11-03T18:14:11 IST" duration-ms="3982">
+    <test started-at="2025-11-04T13:16:52 IST" name="Default test" finished-at="2025-11-04T13:16:58 IST" duration-ms="5746">
       <class name="scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@4b29d1d2]" started-at="2025-11-03T18:14:07 IST" name="openApplication" finished-at="2025-11-03T18:14:10 IST" duration-ms="2657" status="PASS">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:52 IST" name="openApplication" finished-at="2025-11-04T13:16:56 IST" duration-ms="3337" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="openContactpageUsingUrl()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@4b29d1d2]" started-at="2025-11-03T18:14:10 IST" name="openContactpageUsingUrl" finished-at="2025-11-03T18:14:11 IST" duration-ms="1071" status="PASS">
+        <test-method signature="openContactpageUsingUrl()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:56 IST" name="openContactpageUsingUrl" finished-at="2025-11-04T13:16:58 IST" duration-ms="2011" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openContactpageUsingUrl -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@4b29d1d2]" started-at="2025-11-03T18:14:11 IST" name="closeApplication" finished-at="2025-11-03T18:14:11 IST" duration-ms="201" status="PASS">
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:58 IST" name="closeApplication" finished-at="2025-11-04T13:16:58 IST" duration-ms="321" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
