@@ -2,24 +2,24 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-04T13:16:52 IST" name="Default suite" finished-at="2025-11-04T13:16:58 IST" duration-ms="5746">
+  <suite started-at="2025-11-04T15:43:38 IST" name="Default suite" finished-at="2025-11-04T15:43:54 IST" duration-ms="16090">
     <groups>
     </groups>
-    <test started-at="2025-11-04T13:16:52 IST" name="Default test" finished-at="2025-11-04T13:16:58 IST" duration-ms="5746">
-      <class name="scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:52 IST" name="openApplication" finished-at="2025-11-04T13:16:56 IST" duration-ms="3337" status="PASS">
+    <test started-at="2025-11-04T15:43:38 IST" name="Default test" finished-at="2025-11-04T15:43:54 IST" duration-ms="16090">
+      <class name="scripts.contactus_scripts.functional_scenarios.ET_9081_Toast_Message_Displayed">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_9081_Toast_Message_Displayed@8519cb4]" started-at="2025-11-04T15:43:38 IST" name="openApplication" finished-at="2025-11-04T15:43:41 IST" duration-ms="2560" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="openContactpageUsingUrl()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:56 IST" name="openContactpageUsingUrl" finished-at="2025-11-04T13:16:58 IST" duration-ms="2011" status="PASS">
+        <test-method signature="toastMessageDisplayed()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_9081_Toast_Message_Displayed@8519cb4]" started-at="2025-11-04T15:43:41 IST" name="toastMessageDisplayed" finished-at="2025-11-04T15:43:54 IST" duration-ms="13143" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- openContactpageUsingUrl -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl@d737b89]" started-at="2025-11-04T13:16:58 IST" name="closeApplication" finished-at="2025-11-04T13:16:58 IST" duration-ms="321" status="PASS">
+        </test-method> <!-- toastMessageDisplayed -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_9081_Toast_Message_Displayed@8519cb4]" started-at="2025-11-04T15:43:54 IST" name="closeApplication" finished-at="2025-11-04T15:43:54 IST" duration-ms="303" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
-      </class> <!-- scripts.contactus_scripts.functional_scenarios.ET_6652_OpenContactUsUsingUrl -->
+      </class> <!-- scripts.contactus_scripts.functional_scenarios.ET_9081_Toast_Message_Displayed -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>

@@ -37,13 +37,27 @@ public class ContactUspage extends AllVerifications
 	@FindBy(css="button.px-4")
 	private WebElement searchIcon;
 	
+	//contactpage elements
 	
-	@FindBy(css="section.mt-16>div:first-child>h2")
-	private WebElement exploreProductsHeading;
+	@FindBy(xpath="//input[@id='firstName']")
+	private WebElement firstNameField;
+	
+	@FindBy(xpath="//input[@id='lastName']")
+	private WebElement lastNameField;
+	
+	@FindBy(xpath="//input[@id='email']")
+	private WebElement emailField;
+	
+	@FindBy(xpath="//input[@id='phone']")
+	private WebElement phoneField;
+	
+	@FindBy(xpath="//textarea[@id='message_text']")
+	private WebElement yourMessageArea;
 	
 	
-	@FindBy(css = "div#brandProductsCarousel>div")
-	private List<WebElement> bottomProductCount;
+	@FindBy(css="button.bg-red-500")
+	private WebElement submitForm;
+
 	
 	
 	// initializing all the elements in this page. using the constructor of this class. 
@@ -62,15 +76,86 @@ public class ContactUspage extends AllVerifications
 	}
 	
 	
-	public void clickOnshopAllLink()
+	public void enterValueInFirstNameField(String firstNamekeys)
 	{
-		AllVerifications.clickIfVisibleAndEnabled(shopAllLink, driver, sa);
+		
+		AllVerifications.clickIfVisibleAndEnabled(firstNameField, driver, sa);
+		firstNameField.clear();
+		firstNameField.sendKeys(firstNamekeys);
+
 	}
 	
-	public void clickOnSignInLink()
+	public void enterValueInLastNameField(String lastNamekeys) throws InterruptedException
 	{
-		AllVerifications.clickIfVisibleAndEnabled(signInLink, driver, sa);
+		
+		AllVerifications.clickIfVisibleAndEnabled(lastNameField, driver, sa);
+		lastNameField.clear();
+		lastNameField.sendKeys(lastNamekeys);
+		Thread.sleep(1000);
+
 	}
+	
+	
+	public void enterValueInEmailField(String emailkeys) throws InterruptedException
+	{
+		
+		AllVerifications.clickIfVisibleAndEnabled(emailField, driver, sa);
+		emailField.clear();
+		Thread.sleep(1000);
+		emailField.sendKeys(emailkeys);
+		Thread.sleep(1000);
+	}
+	
+	public void enterValueInPhoneField(String phoneNumFromExcel) throws InterruptedException
+	{
+		
+		AllVerifications.clickIfVisibleAndEnabled(phoneField, driver, sa);
+		phoneField.clear();
+		Thread.sleep(1000);
+		phoneField.sendKeys(phoneNumFromExcel);
+		Thread.sleep(1000);
+	}
+	
+	public static String toPlainString(Object v) {
+	    if (v == null) return "";
+	    if (v instanceof String) return ((String) v).trim();
+	    if (v instanceof Double) {
+	        java.math.BigDecimal bd = java.math.BigDecimal.valueOf((Double) v);
+	        return bd.stripTrailingZeros().toPlainString();
+	    }
+	    return v.toString().trim();
+	}
+	
+	// (Optional) If you want to keep a convenience overload:
+	public void enterValueInPhoneField(Object phone) throws InterruptedException {
+	    enterValueInPhoneField(toPlainString(phone));
+	}
+	
+	
+	public void enterValueInMessageAreaField(String messagekeys) throws InterruptedException
+	{
+		
+		AllVerifications.clickIfVisibleAndEnabled(yourMessageArea, driver, sa);
+		yourMessageArea.clear();
+		Thread.sleep(1000);
+		yourMessageArea.sendKeys(messagekeys);
+		Thread.sleep(1000);
+	}
+	
+	public void clickOnSubmitForm()
+	{
+		AllVerifications.clickIfVisibleAndEnabled(submitForm, driver, sa);
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	public void enterValueInSearchField(String keys)
 	{
@@ -94,28 +179,12 @@ public class ContactUspage extends AllVerifications
 	}
 	
 	
-	public void verifyexploreProductHeadingText()
-	{
-		AllVerifications.textIsPresentOrNot("Explore Products from Popular Brands", driver, exploreProductsHeading, sa);
-		Actions actions=new Actions(driver);
-		actions.scrollToElement(exploreProductsHeading).build().perform();
-		driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-		 String Heading= exploreProductsHeading.getText();
-		 System.out.println("Heading of the product section is : "+Heading);
-		 driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-	}
+
+
 	
 	
-	public int countAllProductText()
-	{
-		int allProductCount = 0; 
-		 List<WebElement> allProduct= bottomProductCount ; //findElements-->multiple elements
-		  allProductCount =allProduct.size();
-		 System.out.println("Total number of products found:"+allProductCount);
-		 
-		 return allProductCount;
-	}
-	
+
+
 	
 	
 }
