@@ -66,6 +66,8 @@ import Wishlist from "./pages/wishlist_pages/Wishlist";
 import { CartProvider } from "./components/cart_components/CartContext";
 import { WishlistProvider } from "./components/wishlist_components/WishlistContext";
 
+import UiGen from "./pages/chatbot_pages/UiGen";
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     document.title = title ? `${title} | ECODERS` : "ECODERS";
@@ -497,6 +499,14 @@ function App() {
                   }
                 />
                 <Route
+                  path="/ui-gen"
+                  element={
+                    <PageTitle title="Ui-Gen">
+                      <UiGen />
+                    </PageTitle>
+                  }
+                />
+                <Route
                   path="/page-not-found"
                   element={
                     <PageTitle title="404 Not Found">
@@ -513,6 +523,7 @@ function App() {
                   }
                 />
               </Routes>
+
               <Footer />
             </div>
 
