@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"employee":{"$numberInt":"1"},"date":{"$numberInt":"1"}},"name":"employee_1_date_1","background":true,"unique":true}],"uuid":"17f4546fab494fed80079ed0964df1bf","collectionName":"attendances","type":"collection"}
