@@ -16,7 +16,7 @@ const emptyStep = (n) => ({
   input_data: "",
   expected_result: "",
   actual_result: "",
-  status: "Pass",
+  status: "Pending", // ✅ default to Pending, not Pass
   remark: "",
 });
 
@@ -97,15 +97,20 @@ export default function UpdateTestCase() {
         const data = tcRes.data;
         const steps =
           Array.isArray(data.testing_steps) && data.testing_steps.length
-            ? data.testing_steps.map((s, i) => ({
-                step_number: i + 1,
-                action_description: s.action_description || "",
-                input_data: s.input_data || "",
-                expected_result: s.expected_result || "",
-                actual_result: s.actual_result || "",
-                status: s.status === "Fail" ? "Fail" : "Pass",
-                remark: s.remark || "",
-              }))
+            ? data.testing_steps.map((s, i) => {
+                const raw = String(s?.status || "").trim().toLowerCase();
+                const status =
+                  raw === "fail" ? "Fail" : raw === "pass" ? "Pass" : "Pending"; // ✅ preserve Pending
+                return {
+                  step_number: i + 1,
+                  action_description: s.action_description || "",
+                  input_data: s.input_data || "",
+                  expected_result: s.expected_result || "",
+                  actual_result: s.actual_result || "",
+                  status,
+                  remark: s.remark || "",
+                };
+              })
             : [emptyStep(1)];
 
         setTestCase((prev) => ({
@@ -166,10 +171,15 @@ export default function UpdateTestCase() {
     const steps = Array.isArray(testCase.testing_steps)
       ? testCase.testing_steps
       : [];
-    if (!steps.length) return "N/A";
-    return steps.some((s) => String(s?.status).toLowerCase() === "fail")
-      ? "Fail"
-      : "Pass";
+    if (!steps.length) return "Pending"; // ✅ for zero steps
+    const hasFail = steps.some(
+      (s) => String(s?.status || "").toLowerCase() === "fail"
+    );
+    if (hasFail) return "Fail";
+    const hasPending = steps.some(
+      (s) => String(s?.status || "").toLowerCase() === "pending"
+    );
+    return hasPending ? "Pending" : "Pass"; // ✅ show Pending if any pending
   }, [testCase.testing_steps]);
 
   const approvedDateValue =
@@ -238,15 +248,19 @@ export default function UpdateTestCase() {
 
       const payload = {
         ...testCase,
-        testing_steps: testCase.testing_steps.map((s, i) => ({
-          step_number: i + 1,
-          action_description: s.action_description || "",
-          input_data: s.input_data || "",
-          expected_result: s.expected_result || "",
-          actual_result: s.actual_result || "",
-          status: String(s.status).toLowerCase() === "fail" ? "Fail" : "Pass",
-          remark: s.remark || "",
-        })),
+        testing_steps: testCase.testing_steps.map((s, i) => {
+          const raw = String(s.status || "").trim().toLowerCase();
+          const status = raw === "fail" ? "Fail" : raw === "pass" ? "Pass" : "Pending"; // ✅ send exact intent
+          return {
+            step_number: i + 1,
+            action_description: s.action_description || "",
+            input_data: s.input_data || "",
+            expected_result: s.expected_result || "",
+            actual_result: s.actual_result || "",
+            status,
+            remark: s.remark || "",
+          };
+        }),
         footer: {
           ...testCase.footer,
           approved_date: approvedDateValue || "",
@@ -276,10 +290,6 @@ export default function UpdateTestCase() {
       } catch (_) {}
 
       // stay on page
-      const projectId = testCase.project_id;
-      if (projectId) {
-        // no redirect as requested
-      }
     } catch (err) {
       console.error("Error updating test case:", err?.response?.data || err);
       setError(err?.response?.data?.message || "Failed to update test case.");
@@ -321,10 +331,12 @@ export default function UpdateTestCase() {
               </span>
               <span
                 className={[
-                  "inline-flex items-center rounded-full px-2 py-0.5 font-semibold",
+                  "inline-flex items-center rounded-full px-2 py-0.5 font-semibold border",
                   statusFromSteps === "Pass"
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 border"
-                    : "border-rose-200 bg-rose-50 text-rose-700 border",
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                    : statusFromSteps === "Fail"
+                    ? "border-rose-200 bg-rose-50 text-rose-700"
+                    : "border-slate-200 bg-slate-50 text-slate-700", // ✅ Pending style
                 ].join(" ")}
               >
                 {statusFromSteps}
@@ -667,6 +679,7 @@ export default function UpdateTestCase() {
                     >
                       <option value="Pass">Pass</option>
                       <option value="Fail">Fail</option>
+                      <option value="Pending">Pending</option>
                     </select>
                   </div>
 
