@@ -13,11 +13,10 @@ public class ET_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 	@Test(enabled = true, priority = 1)
 	public void toastMessageDisplayed() throws InterruptedException {
 		ContactUspage cp = new ContactUspage(driver);
-		
+
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
 
-		
 		String firstNameFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 2);
 		cp.enterValueInFirstNameField(firstNameFromExcel);
 
@@ -27,17 +26,15 @@ public class ET_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 		String emailFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 4);
 		cp.enterValueInEmailField(emailFromExcel);
 
-		String phoneNumFromExcel  = cp.toPlainString(Excel_Shilpa.getData("ContactUspage", 1, 5)); // <- String now
-        cp.enterValueInPhoneField(phoneNumFromExcel);
+		String phoneNumFromExcel = cp.toPlainString(Excel_Shilpa.getData("ContactUspage", 1, 5)); // <- String now
+		cp.enterValueInPhoneField(phoneNumFromExcel);
 
 		String messageFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 6);
 		cp.enterValueInMessageAreaField(messageFromExcel);
-		
+
 		cp.clickOnSubmitForm();
-		
-		   TakingScreenshot.captureScreenshot(driver);
-		
-		
+
+		TakingScreenshot.captureScreenshot(driver);
 
 		sa.assertAll();
 
