@@ -2,36 +2,6 @@
 <testng-results ignored="0" total="2" passed="2" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-05T15:35:54 IST" name="Default suite" finished-at="2025-11-05T15:36:03 IST" duration-ms="9487">
-    <groups>
-    </groups>
-    <test started-at="2025-11-05T15:35:54 IST" name="Default test" finished-at="2025-11-05T15:36:03 IST" duration-ms="9487">
-      <class name="scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:35:54 IST" name="openApplication" finished-at="2025-11-05T15:35:56 IST" duration-ms="1593" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- openApplication -->
-        <test-method signature="reloadContactpageClickContactLink()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:35:56 IST" name="reloadContactpageClickContactLink" finished-at="2025-11-05T15:35:59 IST" duration-ms="3490" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- reloadContactpageClickContactLink -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:35:59 IST" name="closeApplication" finished-at="2025-11-05T15:35:59 IST" duration-ms="182" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- closeApplication -->
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:35:59 IST" name="openApplication" finished-at="2025-11-05T15:36:01 IST" duration-ms="1830" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- openApplication -->
-        <test-method signature="reloadContactpageClickContactLink()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:36:01 IST" name="reloadContactpageClickContactLink" finished-at="2025-11-05T15:36:03 IST" duration-ms="2130" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- reloadContactpageClickContactLink -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link@8519cb4]" started-at="2025-11-05T15:36:03 IST" name="closeApplication" finished-at="2025-11-05T15:36:03 IST" duration-ms="205" status="PASS">
-          <reporter-output>
-          </reporter-output>
-        </test-method> <!-- closeApplication -->
-      </class> <!-- scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>
