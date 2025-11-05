@@ -7,7 +7,7 @@ import generic.BaseClass_Shilpa;
 import generic.TakingScreenshot;
 import pom.ContactUspage;
 
-public class ET_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
+public class AS_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 	SoftAssert sa = new SoftAssert();
 
 	@Test(enabled = true, priority = 1)

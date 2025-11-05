@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
@@ -104,7 +105,6 @@ public class ContactUspage extends AllVerifications {
 
 	@FindBy(css = "footer>div>div:first-child>div:nth-of-type(3)>div>a:nth-of-type(4)")
 	private WebElement footerLinkedINlink;
-	
 
 	@FindBy(css = "form.space-y-3>input")
 	private WebElement footerSubscribeField;
@@ -112,8 +112,6 @@ public class ContactUspage extends AllVerifications {
 	@FindBy(css = "form.space-y-3>button")
 	private WebElement footerSubscribeBtn;
 	//
-	
-
 
 	// initializing all the elements in this page. using the constructor of this
 	// class.
@@ -196,7 +194,13 @@ public class ContactUspage extends AllVerifications {
 
 	}
 
-	public void clickOnFooterContactUsLink() {
+	public void clickOnFooterContactUsLink() throws InterruptedException {
+
+		JavascriptExecutor js = (JavascriptExecutor) driver;
+		// Ensure visible & centered, then lift a bit
+		js.executeScript("window.scrollTo(0, document.documentElement.scrollHeight);");
+		Thread.sleep(500);
+
 		AllVerifications.clickIfVisibleAndEnabled(footerContactUslink, driver, sa);
 	}
 
