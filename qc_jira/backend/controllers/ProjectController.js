@@ -1,3 +1,4 @@
+// controllers/ProjectController.js
 const mongoose = require("mongoose");
 const Project = require("../models/ProjectModel");
 const User = require("../models/UserModel");
@@ -67,25 +68,39 @@ function userIsPrivileged(req) {
   return PRIVILEGED_ROLES.has(role);
 }
 
+// Normalize any value to one of: Pass | Fail | Pending
 function normStepStatus(v) {
-  const s = String(v || "")
-    .trim()
-    .toLowerCase();
-  if (s === "fail") return "Fail";
-  if (s === "pass") return "Pass";
+  const s = String(v || "").trim().toLowerCase();
+  if (s === "fail" || s === "failed") return "Fail";
+  if (s === "pass" || s === "passed") return "Pass";
+  if (s === "pending" || s === "in progress" || s === "na" || s === "n/a") return "Pending";
   return "Pending";
 }
 
-function normalizeSteps(steps, canEditStatus) {
-  return (steps || []).map((s, i) => ({
-    step_number: i + 1,
-    action_description: s?.action_description || "",
-    input_data: s?.input_data || "",
-    expected_result: s?.expected_result || "",
-    actual_result: s?.actual_result || "",
-    status: canEditStatus ? normStepStatus(s?.status) : "Pending",
-    remark: s?.remark || "",
-  }));
+/**
+ * Normalize step rows:
+ * - If canEditStatus = true → use the incoming status (normalized).
+ * - If canEditStatus = false → **preserve existing status** when present; otherwise accept the incoming
+ *   status (normalized). We never force "Pending" just because the user isn't privileged.
+ */
+function normalizeSteps(steps, canEditStatus, existingSteps = []) {
+  const arr = Array.isArray(steps) ? steps : [];
+  return arr.map((s, i) => {
+    const prev = Array.isArray(existingSteps) ? (existingSteps[i] || {}) : {};
+    const desired = normStepStatus(s?.status ?? prev?.status ?? "Pending");
+    const finalStatus = canEditStatus
+      ? desired
+      : normStepStatus(prev?.status ?? s?.status ?? "Pending");
+    return {
+      step_number: i + 1,
+      action_description: s?.action_description || "",
+      input_data: s?.input_data || "",
+      expected_result: s?.expected_result || "",
+      actual_result: s?.actual_result || "",
+      status: finalStatus,
+      remark: s?.remark || "",
+    };
+  });
 }
 
 /* ---------------------- history helpers ---------------------- */
@@ -793,12 +808,13 @@ async function addTestCase(req, res) {
       });
     }
 
-    // status gating
+    // status gating (we compute it but DO NOT force Pending on creation)
     const isPriv = userIsPrivileged(req);
     const approvedBy = String(footer?.approved_by || "").trim();
     const canEditStatus = Boolean(isPriv && approvedBy);
 
-    const normalizedSteps = normalizeSteps(testing_steps, canEditStatus);
+    // Accept engineer-provided statuses on creation; do not coerce to Pending
+    const normalizedSteps = normalizeSteps(testing_steps, canEditStatus, []);
 
     const tc = new TestCase({
       project_id,
@@ -978,7 +994,13 @@ async function updateTestCase(req, res) {
     const canEditStatus = Boolean(
       userIsPrivileged(req) && String(nextApprovedBy || "").trim()
     );
-    const normalizedSteps = normalizeSteps(testing_steps, canEditStatus);
+
+    // Preserve existing step statuses when not allowed to edit
+    const normalizedSteps = normalizeSteps(
+      testing_steps,
+      canEditStatus,
+      existing.testing_steps
+    );
 
     const updateDoc = {
       test_case_name,
