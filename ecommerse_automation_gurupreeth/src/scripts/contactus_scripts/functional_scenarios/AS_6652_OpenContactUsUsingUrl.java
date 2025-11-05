@@ -5,7 +5,7 @@ import org.testng.asserts.SoftAssert;
 import generic.AllVerifications;
 import generic.BaseClass_Shilpa;
 
-public class ET_6652_OpenContactUsUsingUrl   extends BaseClass_Shilpa
+public class AS_6652_OpenContactUsUsingUrl   extends BaseClass_Shilpa
 {
 	SoftAssert sa = new SoftAssert();
 	
