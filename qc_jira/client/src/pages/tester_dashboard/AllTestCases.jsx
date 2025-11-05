@@ -14,7 +14,7 @@ import {
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
-const STATUS_PENDING_ID = "__status_missing__";
+const STATUS_PENDING_ID = "__status_pending__";
 
 export default function AllTestCases() {
   const { projectId } = useParams();
@@ -25,65 +25,64 @@ export default function AllTestCases() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  // itemsPerPage: number; 0 means "All"
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const [sortOrder, setSortOrder] = useState("asc");
+  const [sortOrder, setSortOrder] = useState("desc"); // newest first (server sort)
+  const [execType, setExecType] = useState(""); // "", Manual, Automation, Both
 
   const [totalTestCases, setTotalTestCases] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
 
-  // pass/fail/missing counters (recomputed from filtered list)
+  // pass/fail/pending counters (recomputed from filtered list)
   const [passedCount, setPassedCount] = useState(0);
   const [failedCount, setFailedCount] = useState(0);
-  const [missingCount, setMissingCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  // Module filter (supports either embedded module {name} or flat module_name)
-  // Also used to hold the "Status Pending" pseudo-chip selection.
+  // Module filter + special "Pending" chip
   const [selectedModuleId, setSelectedModuleId] = useState(null);
 
-  // ---- helpers ----
   const norm = (v) => (v ?? "").toString().toLowerCase();
 
-  const isMissingStatus = (tc) => {
-    const steps = Array.isArray(tc?.testing_steps) ? tc.testing_steps : [];
-    if (steps.length === 0) return true;
-    // Missing when every step either has no status or not equal to pass/fail
-    return steps.every((s) => {
-      const st = String(s?.status || "")
-        .trim()
-        .toLowerCase();
-      return st !== "pass" && st !== "fail";
-    });
-  };
-
   const getTestStatus = (tc) => {
-    if (isMissingStatus(tc)) return "Missing";
     const steps = Array.isArray(tc?.testing_steps) ? tc.testing_steps : [];
-    const hasFailed = steps.some(
-      (s) => String(s?.status).toLowerCase() === "fail"
-    );
-    return hasFailed ? "Fail" : "Pass";
+    if (steps.length === 0) return "Missing";
+    let hasAny = false, hasFail = false, hasPending = false;
+    for (const s of steps) {
+      const raw = String(s?.status ?? "").trim().toLowerCase();
+      if (!raw) continue;
+      hasAny = true;
+      if (raw === "fail") hasFail = true;
+      else if (raw === "pending") hasPending = true;
+    }
+    if (!hasAny) return "Missing";
+    if (hasFail) return "Fail";
+    if (hasPending) return "Pending";
+    return "Pass";
   };
 
   // ---- fetch ----
+  const fetchTCs = async (opts = {}) => {
+    try {
+      const token = localStorage.getItem("token");
+      const params = new URLSearchParams();
+      if (execType) params.append("execType", execType);
+      params.append("sortBy", "createdAt");
+      params.append("order", sortOrder);
+      const url = `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases?${params.toString()}`;
+      const res = await axios.get(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+      const rows = Array.isArray(res.data) ? res.data : [];
+      setTestCases(rows);
+      setTotalTestCases(rows.length);
+      if (opts.resetPage) setCurrentPage(1);
+    } catch (err) {
+      console.error("Error fetching test cases:", err?.response?.data || err);
+    }
+  };
+
   useEffect(() => {
-    const fetchTCs = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        const res = await axios.get(
-          `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
-          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
-        );
-        const rows = Array.isArray(res.data) ? res.data : [];
-        setTestCases(rows);
-        setTotalTestCases(rows.length);
-      } catch (err) {
-        console.error("Error fetching test cases:", err);
-      }
-    };
-    fetchTCs();
-  }, [projectId]);
+    fetchTCs({ resetPage: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, execType, sortOrder]);
 
   // ---- debounce search ----
   useEffect(() => {
@@ -91,25 +90,19 @@ export default function AllTestCases() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // ---- module chips from dataset + special "Status Pending" chip ----
+  // ---- module chips + special "Pending" chip ----
   const modules = useMemo(() => {
     const counts = new Map(); // key -> { _id, name, count }
-    let missingTotal = 0;
+    let pendingTotal = 0;
 
     for (const tc of testCases) {
-      if (isMissingStatus(tc)) missingTotal += 1;
+      if (getTestStatus(tc) === "Pending") pendingTotal += 1;
 
-      const modObj = tc?.module;
-      const modId =
-        (modObj && (modObj._id || modObj.id)) ||
-        (tc?.module_name ? `name:${tc.module_name}` : "__unassigned__");
-      const modName =
-        (modObj && (modObj.name || modObj.module_name)) ||
-        tc?.module_name ||
-        "Unassigned";
+      // From list API we have only `module_name` (not populated object)
+      const modId = tc?.module_name ? `name:${tc.module_name}` : "__unassigned__";
+      const modName = tc?.module_name || "Unassigned";
 
-      if (!counts.has(modId))
-        counts.set(modId, { _id: modId, name: modName, count: 0 });
+      if (!counts.has(modId)) counts.set(modId, { _id: modId, name: modName, count: 0 });
       counts.get(modId).count += 1;
     }
 
@@ -117,30 +110,27 @@ export default function AllTestCases() {
       a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
     );
 
-    // append special status-pending chip
+    // special status-pending chip (top)
     list.unshift({
       _id: STATUS_PENDING_ID,
-      name: "Status Pending",
-      count: missingTotal,
+      name: "Pending",
+      count: pendingTotal,
     });
 
     return list;
   }, [testCases]);
 
-  // ---- filtered (search + module OR status-pending special) ----
+  // ---- filtered (search + module OR special pending) ----
   const filtered = useMemo(() => {
     const q = norm(debouncedQuery);
 
     const rows = testCases.filter((tc) => {
-      // special "Status Pending" filter
+      // special "Pending" filter
       if (selectedModuleId === STATUS_PENDING_ID) {
-        if (!isMissingStatus(tc)) return false;
+        if (getTestStatus(tc) !== "Pending") return false;
       } else if (selectedModuleId) {
         // module match
-        const modObj = tc?.module;
-        const modIdCandidate =
-          (modObj && (modObj._id || modObj.id)) ||
-          (tc?.module_name ? `name:${tc.module_name}` : "__unassigned__");
+        const modIdCandidate = tc?.module_name ? `name:${tc.module_name}` : "__unassigned__";
         if (modIdCandidate !== selectedModuleId) return false;
       }
 
@@ -148,27 +138,24 @@ export default function AllTestCases() {
       const fields = [
         norm(tc?.test_case_name),
         norm(tc?.test_case_number),
-        norm(tc?.module?.name || tc?.module_name || "Unassigned"),
+        norm(tc?.module_name || "Unassigned"),
         norm(tc?.requirement_number),
-        norm(tc?.project?.project_name),
-        norm(tc?.createdBy?.name),
+        norm(tc?.project_name), // list API returns project_name in select (safe if missing)
       ];
       return q ? fields.some((f) => f.includes(q)) : true;
     });
 
-    // recompute pass/fail/missing on filtered set
-    let pass = 0;
-    let fail = 0;
-    let miss = 0;
+    // recompute pass/fail/pending on filtered set
+    let pass = 0, fail = 0, pend = 0;
     for (const r of rows) {
       const st = getTestStatus(r);
       if (st === "Pass") pass += 1;
       else if (st === "Fail") fail += 1;
-      else miss += 1;
+      else if (st === "Pending") pend += 1;
     }
     setPassedCount(pass);
     setFailedCount(fail);
-    setMissingCount(miss);
+    setPendingCount(pend);
 
     return rows;
   }, [testCases, debouncedQuery, selectedModuleId]);
@@ -178,7 +165,6 @@ export default function AllTestCases() {
     setFilteredCount(filtered.length);
 
     if (itemsPerPage === 0) {
-      // All
       setTotalPages(1);
       setCurrentPage(1);
       return;
@@ -189,29 +175,14 @@ export default function AllTestCases() {
     setCurrentPage((p) => Math.min(p, pages));
   }, [filtered, itemsPerPage]);
 
-  // ---- sort by createdAt ----
-  const handleSort = () => {
-    const sorted = [...testCases].sort((a, b) => {
-      const dateA = a?.createdAt ? new Date(a.createdAt) : new Date(0);
-      const dateB = b?.createdAt ? new Date(b.createdAt) : new Date(0);
-      return sortOrder === "asc" ? dateA - dateB : dateB - dateA;
-    });
-    setTestCases(sorted);
-    setSortOrder((s) => (s === "asc" ? "desc" : "asc"));
-  };
-
   // ---- pagination slice ----
-  const computeCurrentSlice = () => {
+  const current = useMemo(() => {
     if (itemsPerPage === 0) return filtered; // All
     const indexOfLast = currentPage * itemsPerPage;
     const indexOfFirst = indexOfLast - itemsPerPage;
     return filtered.slice(indexOfFirst, indexOfLast);
-  };
-  const current = computeCurrentSlice();
+  }, [filtered, itemsPerPage, currentPage]);
 
-  const handlePageChange = (newPage) => setCurrentPage(newPage);
-
-  // ---- delete ----
   const handleDelete = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this test case? This action is irreversible."
@@ -246,7 +217,6 @@ export default function AllTestCases() {
     setCurrentPage(1);
   };
 
-  // ---- UI ----
   return (
     <div className="bg-white py-10 sm:py-12">
       <div className="mx-auto container px-2 sm:px-3 lg:px-4">
@@ -259,18 +229,18 @@ export default function AllTestCases() {
             <p className="text-xs text-gray-600 mt-1">
               Total Test Cases: {totalTestCases}
             </p>
-            {(searchQuery || selectedModuleId) && (
+            {(searchQuery || selectedModuleId || execType) && (
               <p className="text-xs text-gray-600">
                 Showing {filteredCount} result(s)
                 {searchQuery ? <> for “{searchQuery}”</> : null}
                 {selectedModuleId
                   ? selectedModuleId === STATUS_PENDING_ID
-                    ? " with status pending"
+                    ? " with status Pending"
                     : " in selected module"
                   : null}
+                {execType ? ` · Exec: ${execType}` : null}
               </p>
             )}
-            {/* pass/fail/missing badges */}
             <p className="text-[11px] text-slate-600 mt-1">
               <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 mr-1 font-medium text-emerald-700">
                 Pass: {passedCount}
@@ -279,20 +249,35 @@ export default function AllTestCases() {
                 Fail: {failedCount}
               </span>
               <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
-                Missing: {missingCount}
+                Pending: {pendingCount}
               </span>
             </p>
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Page size dropdown */}
+            {/* Exec type filter */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-600">Exec:</label>
+              <select
+                value={execType}
+                onChange={(e) => setExecType(e.target.value)}
+                className="text-sm border rounded-md px-2 py-1"
+                title="Filter by execution type"
+              >
+                <option value="">All</option>
+                <option value="Manual">Manual</option>
+                <option value="Automation">Automation</option>
+                <option value="Both">Both</option>
+              </select>
+            </div>
+
+            {/* Page size */}
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-600">Rows:</label>
               <select
                 value={itemsPerPage}
                 onChange={(e) => {
-                  const v =
-                    e.target.value === "0" ? 0 : parseInt(e.target.value, 10);
+                  const v = e.target.value === "0" ? 0 : parseInt(e.target.value, 10);
                   setItemsPerPage(v);
                   setCurrentPage(1);
                 }}
@@ -309,23 +294,17 @@ export default function AllTestCases() {
             </div>
 
             <FaThList
-              className={`text-lg cursor-pointer ${
-                view === "list" ? "text-blue-500" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "list" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("list")}
               title="List view"
             />
             <FaThLarge
-              className={`text-lg cursor-pointer ${
-                view === "card" ? "text-blue-500" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "card" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("card")}
               title="Card view"
             />
             <FaTh
-              className={`text-lg cursor-pointer ${
-                view === "grid" ? "text-blue-500" : "text-gray-500"
-              }`}
+              className={`text-lg cursor-pointer ${view === "grid" ? "text-blue-500" : "text-gray-500"}`}
               onClick={() => setView("grid")}
               title="Grid view"
             />
@@ -342,8 +321,9 @@ export default function AllTestCases() {
             </div>
 
             <button
-              onClick={handleSort}
+              onClick={() => setSortOrder((s) => (s === "asc" ? "desc" : "asc"))}
               className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm inline-flex items-center"
+              title="Server sort by Created date"
             >
               <FaSort className="mr-1" />
               Sort ({sortOrder === "asc" ? "Oldest" : "Newest"})
@@ -400,7 +380,6 @@ export default function AllTestCases() {
         {/* List View */}
         {view === "list" && (
           <div className="mt-5">
-            {/* global header */}
             <div className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
               <div>#</div>
               <div>TC Number</div>
@@ -412,7 +391,6 @@ export default function AllTestCases() {
               <div className="text-center">Del</div>
             </div>
 
-            {/* rows */}
             <div className="divide-y divide-slate-200">
               {current.map((tc, idx) => {
                 const status = getTestStatus(tc);
@@ -421,18 +399,16 @@ export default function AllTestCases() {
                     ? "text-emerald-600"
                     : status === "Fail"
                     ? "text-rose-600"
-                    : "text-amber-600";
+                    : status === "Pending"
+                    ? "text-amber-600"
+                    : "text-slate-600";
                 return (
                   <div
                     key={tc._id}
                     className="grid grid-cols-[56px,140px,1fr,160px,140px,90px,40px,40px] items-center text-[12px] px-3 py-2"
                   >
                     <div className="text-slate-700">
-                      {(itemsPerPage === 0
-                        ? 0
-                        : (currentPage - 1) * itemsPerPage) +
-                        idx +
-                        1}
+                      {(itemsPerPage === 0 ? 0 : (currentPage - 1) * itemsPerPage) + idx + 1}
                     </div>
 
                     <div className="text-slate-900 font-medium truncate">
@@ -445,7 +421,7 @@ export default function AllTestCases() {
 
                     <div className="truncate">
                       <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                        {tc?.module_name || "Unassigned"}
                       </span>
                     </div>
 
@@ -453,11 +429,8 @@ export default function AllTestCases() {
                       {tc?.requirement_number || "-"}
                     </div>
 
-                    <div className={`font-semibold ${statusClass}`}>
-                      {status}
-                    </div>
+                    <div className={`font-semibold ${statusClass}`}>{status}</div>
 
-                    {/* View column */}
                     <div className="flex justify-center">
                       <Link
                         to={`/test-case-detail/${tc._id}`}
@@ -468,7 +441,6 @@ export default function AllTestCases() {
                       </Link>
                     </div>
 
-                    {/* Delete column */}
                     <div className="flex justify-center">
                       <button
                         onClick={() => handleDelete(tc._id)}
@@ -495,17 +467,16 @@ export default function AllTestCases() {
                   ? "text-emerald-600"
                   : status === "Fail"
                   ? "text-rose-600"
-                  : "text-amber-600";
+                  : status === "Pending"
+                  ? "text-amber-600"
+                  : "text-slate-600";
               return (
-                <div
-                  key={tc._id}
-                  className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-                >
+                <div key={tc._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
                   <div>
                     <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
                       <span>TC: {tc?.test_case_number || "-"}</span>
                       <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                        {tc?.module_name || "Unassigned"}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
@@ -514,23 +485,13 @@ export default function AllTestCases() {
                     <div className="mt-1 text-[11px] text-slate-600">
                       Requirement: {tc?.requirement_number || "-"}
                     </div>
-                    <div
-                      className={`mt-1 text-[12px] font-semibold ${statusClass}`}
-                    >
-                      {status}
-                    </div>
+                    <div className={`mt-1 text-[12px] font-semibold ${statusClass}`}>{status}</div>
                   </div>
                   <div className="mt-2 flex justify-between">
-                    <Link
-                      to={`/test-case-detail/${tc._id}`}
-                      className="text-blue-500 hover:text-blue-700 text-sm"
-                    >
+                    <Link to={`/test-case-detail/${tc._id}`} className="text-blue-500 hover:text-blue-700 text-sm">
                       <FaEye className="text-sm" />
                     </Link>
-                    <button
-                      onClick={() => handleDelete(tc._id)}
-                      className="text-rose-500 hover:text-rose-700 text-sm"
-                    >
+                    <button onClick={() => handleDelete(tc._id)} className="text-rose-500 hover:text-rose-700 text-sm">
                       <FaTrashAlt className="text-sm" />
                     </button>
                   </div>
@@ -550,17 +511,16 @@ export default function AllTestCases() {
                   ? "text-emerald-600"
                   : status === "Fail"
                   ? "text-rose-600"
-                  : "text-amber-600";
+                  : status === "Pending"
+                  ? "text-amber-600"
+                  : "text-slate-600";
               return (
-                <div
-                  key={tc._id}
-                  className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
-                >
+                <div key={tc._id} className="bg-white rounded-lg shadow p-4 flex flex-col justify-between">
                   <div>
                     <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
                       <span>TC: {tc?.test_case_number || "-"}</span>
                       <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                        {tc?.module?.name || tc?.module_name || "Unassigned"}
+                        {tc?.module_name || "Unassigned"}
                       </span>
                     </div>
                     <div className="text-sm text-gray-600 break-words whitespace-normal mt-1">
@@ -569,23 +529,13 @@ export default function AllTestCases() {
                     <div className="mt-1 text-[11px] text-slate-600">
                       Requirement: {tc?.requirement_number || "-"}
                     </div>
-                    <div
-                      className={`mt-1 text-[12px] font-semibold ${statusClass}`}
-                    >
-                      {status}
-                    </div>
+                    <div className={`mt-1 text-[12px] font-semibold ${statusClass}`}>{status}</div>
                   </div>
                   <div className="mt-2 flex justify-between">
-                    <Link
-                      to={`/test-case-detail/${tc._id}`}
-                      className="text-blue-500 hover:text-blue-700 text-sm"
-                    >
+                    <Link to={`/test-case-detail/${tc._id}`} className="text-blue-500 hover:text-blue-700 text-sm">
                       <FaEye className="text-sm" />
                     </Link>
-                    <button
-                      onClick={() => handleDelete(tc._id)}
-                      className="text-rose-500 hover:text-rose-700 text-sm"
-                    >
+                    <button onClick={() => handleDelete(tc._id)} className="text-rose-500 hover:text-rose-700 text-sm">
                       <FaTrashAlt className="text-sm" />
                     </button>
                   </div>
@@ -600,7 +550,7 @@ export default function AllTestCases() {
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={itemsPerPage === 0 || currentPage === 1}
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => setCurrentPage((p) => p - 1)}
           >
             <FaArrowLeft className="text-lg" />
           </button>
@@ -608,15 +558,13 @@ export default function AllTestCases() {
             {itemsPerPage === 0 ? (
               <>Showing all {filteredCount} test cases</>
             ) : (
-              <>
-                Page {currentPage} of {totalPages}
-              </>
+              <>Page {currentPage} of {totalPages}</>
             )}
           </span>
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={itemsPerPage === 0 || currentPage === totalPages}
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => setCurrentPage((p) => p + 1)}
           >
             <FaArrowRight className="text-lg" />
           </button>
