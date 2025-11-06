@@ -75,7 +75,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <a
-                    href="contact"
+                    href="/contact-us"
                     className="text-base text-gray-300 hover:text-white"
                   >
                     Events
@@ -83,7 +83,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <a
-                    href="contact"
+                    href="/contact-us"
                     className="text-base text-gray-300 hover:text-white"
                   >
                     Alumni
@@ -91,7 +91,7 @@ const Footer = () => {
                 </li>
                 <li>
                   <a
-                    href="/contact"
+                    href="/careers"
                     className="text-base text-gray-300 hover:text-white"
                   >
                     Careers

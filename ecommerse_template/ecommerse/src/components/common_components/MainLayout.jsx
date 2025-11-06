@@ -10,6 +10,10 @@ import PageTitle from "./PageTitle";
 import Homepage from "../../pages/common_pages/Homepage";
 import PageNotFound from "../../pages/common_pages/PageNotFound";
 import AboutUs from "../../pages/common_pages/AboutUs";
+import Careers from "../../pages/common_pages/Careers";
+import HelpCenter from "../../pages/common_pages/HelpCenter";
+import PrivacyPolicy from "../../pages/common_pages/PrivacyPolicy";
+import TermsOfServices from "../../pages/common_pages/TermsOfServices";
 import Register from "../../pages/user_pages/Register";
 import Login from "../../pages/user_pages/Login";
 import Dashboard from "../../pages/user_pages/Dashboard";
@@ -88,6 +92,43 @@ const MainLayout = () => {
               </PageTitle>
             }
           />
+
+          <Route
+            path="/careers"
+            element={
+              <PageTitle title="Careers">
+                <Careers />
+              </PageTitle>
+            }
+          />
+
+          <Route
+            path="/help-center"
+            element={
+              <PageTitle title="Help Center">
+                <HelpCenter />
+              </PageTitle>
+            }
+          />
+
+          <Route
+            path="/privacy-policy"
+            element={
+              <PageTitle title="Privacy Policy">
+                <PrivacyPolicy />
+              </PageTitle>
+            }
+          />
+
+          <Route
+            path="/terms-of-service"
+            element={
+              <PageTitle title="Terms Of Service">
+                <TermsOfServices />
+              </PageTitle>
+            }
+          />
+
           <Route
             path="/login"
             element={

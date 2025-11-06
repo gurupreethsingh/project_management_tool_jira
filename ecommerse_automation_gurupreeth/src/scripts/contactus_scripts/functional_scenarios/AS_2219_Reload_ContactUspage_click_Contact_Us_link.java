@@ -13,7 +13,7 @@ import pom.ContactUspage;
 public class AS_2219_Reload_ContactUspage_click_Contact_Us_link extends BaseClass_Shilpa {
 	SoftAssert sa = new SoftAssert();
 
-	@Test(enabled = true, priority = 1,invocationCount = 2)
+	@Test(enabled = true, priority = 1,invocationCount = 1)
 	public void reloadContactpageClickContactLink() throws InterruptedException {
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);

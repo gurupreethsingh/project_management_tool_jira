@@ -20,6 +20,7 @@ import ReplyMessage from "./pages/contact_pages/ReplyMessage";
 // common pages
 import PrivacyPolicy from "./pages/common_pages/PrivacyPolicy";
 import AboutUs from "./pages/common_pages/AboutUs";
+import Careers from "./pages/common_pages/Careers";
 import NewsLetter from "./components/NewsLetter";
 import WorkWithUs from "./components/WorkWithUs";
 import Footer from "./components/Footer";
@@ -100,6 +101,8 @@ import AllRequirements from "./pages/requirement_pages/AllRequirements";
 import SingleModuleRequirements from "./pages/requirement_pages/SingleModuleRequirements";
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
+
+import TopArrow from "./components/common_components/TopArrow";
 
 /** Match the “PageTitle” pattern from your sample */
 const PageTitle = ({ title, children }) => {
@@ -182,6 +185,15 @@ function App() {
             </PageTitle>
           }
         />
+
+          <Route
+            path="/careers"
+            element={
+              <PageTitle title="Careers">
+                <Careers />
+              </PageTitle>
+            }
+          />
 
         <Route
           path="/all-blogs"
@@ -1133,6 +1145,7 @@ function App() {
       <WorkWithUs />
       <NewsLetter />
       <Footer />
+      <TopArrow scrollTargetId="app-scroll" />
     </Router>
   );
 }
