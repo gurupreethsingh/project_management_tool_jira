@@ -28,6 +28,11 @@ const Footer = () => {
                   Careers
                 </a>
               </li>
+              <li>
+                <a href="/all-blogs" className="hover:text-white transition">
+                  Blogs
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -63,16 +68,16 @@ const Footer = () => {
           <div>
             <h3 className="text-white text-lg font-semibold mb-4">Follow Us</h3>
             <div className="flex space-x-4">
-              <a href="#" className="hover:text-white transition">
+              <a href="https://www.facebook.com" target="_blank" className="hover:text-white transition">
                 <FaFacebookF />
               </a>
-              <a href="#" className="hover:text-white transition">
+              <a href="https://www.twitter.com"  target="_blank"  className="hover:text-white transition">
                 <FaTwitter />
               </a>
-              <a href="#" className="hover:text-white transition">
+              <a href="https://www.github.com"  target="_blank"  className="hover:text-white transition">
                 <FaGithub />
               </a>
-              <a href="#" className="hover:text-white transition">
+              <a href="https://www.linkedin.com"  target="_blank"  className="hover:text-white transition">
                 <FaLinkedinIn />
               </a>
             </div>
@@ -90,7 +95,7 @@ const Footer = () => {
           <p className="text-sm">
             &copy; 2025 Ecoders, Inc. All rights reserved.
           </p>
-          <p className="text-sm mt-4 md:mt-0">Made with ❤️ in Bengaluru</p>
+          <p className="text-sm mt-4 md:mt-0">Empowering online shopping — one click at a time.</p>
         </div>
       </div>
     </footer>
