@@ -11,7 +11,7 @@ public class AS_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 	SoftAssert sa = new SoftAssert();
 
 	@Test(enabled = true, priority = 1)
-	public void toastMessageDisplayed() throws InterruptedException {
+	public void enterAllFieldstoastMessageDisplayed() throws InterruptedException {
 		ContactUspage cp = new ContactUspage(driver);
 
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
