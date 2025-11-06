@@ -18,5 +18,5 @@ SoftAssert sa = new SoftAssert();
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
    }
-
+	
 }
