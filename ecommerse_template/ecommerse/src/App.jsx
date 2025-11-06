@@ -9,6 +9,7 @@ import MainLayout from "./components/common_components/MainLayout";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { WishlistProvider } from "./components/wishlist_components/WishlistContext";
+import TopArrow from "./components/common_components/TopArrow";
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <WishlistProvider>
             <Router>
               <MainLayout />
+               <TopArrow scrollTargetId="app-scroll" />
             </Router>
           </WishlistProvider>
         </CartProvider>

@@ -1,16 +1,18 @@
+// file: src/pages/ContactUs.jsx
 "use client";
 
 import React, { useState } from "react";
-import { Switch } from "@headlessui/react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { FaUser, FaEnvelope, FaPhone, FaComment } from "react-icons/fa";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import globalBackendRoute from "../../config/Config";
-import { MdOutlineAttachEmail } from "react-icons/md";
-import { MdOutlineLocalPhone } from "react-icons/md";
+import { MdOutlineAttachEmail, MdOutlineLocalPhone } from "react-icons/md";
 import { CiLocationOn } from "react-icons/ci";
+
+function Required() {
+  return <span className="text-red-600 ms-0.5" aria-hidden="true">*</span>;
+}
 
 const ContactUs = () => {
   const [formData, setFormData] = useState({
@@ -23,31 +25,34 @@ const ContactUs = () => {
   });
 
   const navigate = useNavigate();
-  const [submitted, setSubmitted] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
+    setFormData((p) => ({
+      ...p,
       [name]: type === "checkbox" ? checked : value,
-    });
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
     try {
+      // Frontend sanity check in case someone bypasses HTML5 validation
+      const { firstName, email, message_text, agreeToLicense } = formData;
+      if (!firstName || !email || !message_text || !agreeToLicense) {
+        toast.error("Please fill all required fields.", { position: "top-right" });
+        return;
+      }
+
       const response = await axios.post(
         `${globalBackendRoute}/api/add-contact-message`,
         formData
       );
+
       if (response.status === 201) {
-        setSubmitted(true);
         toast.success(
           "Message successfully sent! You will be notified within 24 hours.",
-          {
-            position: "top-right",
-          }
+          { position: "top-right" }
         );
         setFormData({
           firstName: "",
@@ -61,32 +66,30 @@ const ContactUs = () => {
       }
     } catch (error) {
       console.error("Error submitting contact message:", error);
-      toast.error(
-        "There was an issue submitting your message. Please try again.",
-        {
-          position: "top-right",
-        }
-      );
+      toast.error("There was an issue submitting your message. Please try again.", {
+        position: "top-right",
+      });
     }
   };
 
   return (
     <div>
       <ToastContainer />
-      <div className="flex flex-col md:flex-row justify-between items-center w-full md:w-5/6 mx-auto  gap-10">
+      <div className="flex flex-col md:flex-row justify-between items-center w-full md:w-5/6 mx-auto gap-10">
         {/* Contact Form Section */}
-        <div className="w-full md:w-1/2 p-5  rounded-lg">
+        <div className="w-full md:w-1/2 p-5 rounded-lg">
           <h2 className="text-xl font-bold text-red-500 mb-3">Contact Us</h2>
-          <p className="text-4xl text-gray-900 mb-4 font-bold ">Get In Touch</p>
+          <p className="text-4xl text-gray-900 mb-4 font-bold">Get In Touch</p>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* First name (required) */}
               <div>
                 <label
-                  htmlFor="first_name"
+                  htmlFor="firstName"
                   className="block text-gray-700 font-medium mb-1"
                 >
-                  First Name
+                  First Name <Required />
                 </label>
                 <input
                   id="firstName"
@@ -95,10 +98,13 @@ const ContactUs = () => {
                   value={formData.firstName}
                   onChange={handleChange}
                   required
+                  aria-required="true"
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="First name"
                 />
               </div>
+
+              {/* Last name (optional) */}
               <div>
                 <label
                   htmlFor="lastName"
@@ -113,17 +119,18 @@ const ContactUs = () => {
                   value={formData.lastName}
                   onChange={handleChange}
                   className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Last name"
+                  placeholder="Last name (optional)"
                 />
               </div>
             </div>
 
+            {/* Email (required) */}
             <div className="mb-4">
               <label
                 htmlFor="email"
                 className="block text-gray-700 font-medium mb-1"
               >
-                Email
+                Email <Required />
               </label>
               <input
                 id="email"
@@ -131,12 +138,14 @@ const ContactUs = () => {
                 type="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your email"
                 required
+                aria-required="true"
+                className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="you@example.com"
               />
             </div>
 
+            {/* Phone (optional) */}
             <div className="mb-4">
               <label
                 htmlFor="phone"
@@ -151,28 +160,55 @@ const ContactUs = () => {
                 value={formData.phone}
                 onChange={handleChange}
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your phone"
-                required
+                placeholder="Your phone (optional)"
               />
             </div>
 
+            {/* Message (required) */}
             <div className="mb-4">
               <label
-                htmlFor="message"
+                htmlFor="message_text"
                 className="block text-gray-700 font-medium mb-1"
               >
-                Your Message
+                Your Message <Required />
               </label>
               <textarea
                 className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Your Message"
+                placeholder="How can we help?"
                 id="message_text"
                 name="message_text"
                 rows={4}
                 value={formData.message_text}
                 onChange={handleChange}
                 required
+                aria-required="true"
               ></textarea>
+            </div>
+
+            {/* Terms / License (required) */}
+            <div className="mb-5">
+              <label className="inline-flex items-start gap-2 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  name="agreeToLicense"
+                  checked={formData.agreeToLicense}
+                  onChange={handleChange}
+                  required
+                  aria-required="true"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <span className="text-sm text-gray-700">
+                  I agree to the{" "}
+                  <a href="/terms-of-services" className="text-blue-600 underline">
+                    Terms of Service
+                  </a>{" "}
+                  and{" "}
+                  <a href="/privacy-policy" className="text-blue-600 underline">
+                    Privacy Policy
+                  </a>{" "}
+                  <Required />
+                </span>
+              </label>
             </div>
 
             <button
@@ -184,10 +220,9 @@ const ContactUs = () => {
           </form>
         </div>
 
-        {/* Google Maps and Register Section */}
+        {/* Map / Visit section */}
         <div className="w-full md:w-1/2 flex flex-col gap-6">
           <p className="text-4xl font-bold text-gray-800">Visit Our Store</p>
-          {/* Google Maps Section */}
           <div className="h-96 bg-gray-100 rounded-lg shadow-lg overflow-hidden">
             <iframe
               src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d31108.599258635925!2d77.57704956430813!3d12.99238005173825!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bae1670c7b245a9%3A0x41bcb92d6e83e60!2sBangalore%20Palace!5e0!3m2!1sen!2sin!4v1698522816618!5m2!1sen!2sin"
@@ -201,10 +236,11 @@ const ContactUs = () => {
           </div>
         </div>
       </div>
+
+      {/* Contact details row */}
       <div className="shipping_section p-4">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 ">
-          {/* Card 1 */}
-          <div className="flex justify-center items-center p-4 ">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex justify-center items-center p-4">
             <MdOutlineAttachEmail className="w-8 h-8 text-red-500 mr-4" />
             <div className="flex items-center">
               <h5 className="text-lg font-bold">Email</h5>
@@ -212,8 +248,7 @@ const ContactUs = () => {
             </div>
           </div>
 
-          {/* Card 2 */}
-          <div className="flex justify-center items-center p-4 ">
+          <div className="flex justify-center items-center p-4">
             <MdOutlineLocalPhone className="w-8 h-8 text-green-600 mt-1" />
             <div className="flex items-center">
               <h5 className="text-lg font-bold">Phone</h5>
@@ -221,14 +256,11 @@ const ContactUs = () => {
             </div>
           </div>
 
-          {/* Card 3 */}
-          <div className="flex justify-center items-center p-4 ">
+          <div className="flex justify-center items-center p-4">
             <CiLocationOn className="w-16 h-16 text-blue-600 mt-1" />
             <div className="flex items-center">
-              <h5 className="text-lg font-bold"> </h5>
               <p className="text-md text-gray-600 ms-2">
-                <span className="font-bold text-dark">Address :</span># 193,
-                Hesaraghatta Raod, Bagalagunte, Bangalore. 560073
+                <span className="font-bold text-dark">Address :</span> #193, Hesaraghatta Road, Bagalagunte, Bangalore 560073
               </p>
             </div>
           </div>
