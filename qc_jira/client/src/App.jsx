@@ -101,7 +101,6 @@ import SingleModuleRequirements from "./pages/requirement_pages/SingleModuleRequ
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
 
-
 /** Match the “PageTitle” pattern from your sample */
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
@@ -796,6 +795,7 @@ function App() {
                 "admin",
                 "project_manager",
                 "qa_lead",
+                "test_lead",
               ]}
             >
               <PageTitle title="Task History">
@@ -875,18 +875,16 @@ function App() {
           }
         />
 
-
-          <Route
-    path="/module-requirements/:projectId/:moduleName"
-    element={<PrivateRoute>
+        <Route
+          path="/module-requirements/:projectId/:moduleName"
+          element={
+            <PrivateRoute>
               <PageTitle title="Single Requirement">
-                    <SingleModuleRequirements />
-                  </PageTitle>
+                <SingleModuleRequirements />
+              </PageTitle>
             </PrivateRoute>
-    }
-  />
-
-
+          }
+        />
 
         <Route
           path="/single-requirement/:id"

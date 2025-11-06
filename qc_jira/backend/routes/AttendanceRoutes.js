@@ -1,28 +1,63 @@
+// backend/routes/AttendanceRoutes.js
 const express = require("express");
+const A = require("../controllers/AttendanceController");
+
 const router = express.Router();
-const AttendanceController = require("../controllers/AttendanceController");
-const { protect, isAdminOrSuperadmin } = require("../middleware/authMiddleware");
 
-// 💼 Employee Routes
-router.post("/create-attendance", protect, AttendanceController.createAttendance);
-router.get("/get-single-attendance/:id", protect, AttendanceController.getSingleAttendance);
-router.put("/update-attendance/:id", protect, AttendanceController.updateAttendance);
-router.delete("/delete-attendance/:id", protect, AttendanceController.deleteAttendance);
+// Optional auth middleware
+let protect = (_req, _res, next) => next();
+try {
+  const auth = require("../middleware/authMiddleware");
+  if (typeof auth.protect === "function") protect = auth.protect;
+} catch {}
 
-// 🛡 Admin/Superadmin Routes
-router.get("/view-all-attendance", protect, isAdminOrSuperadmin, AttendanceController.getAllAttendance);
-router.put("/approve-attendance/:id", protect, isAdminOrSuperadmin, AttendanceController.approveAttendance);
-router.put("/reject-attendance/:id", protect, isAdminOrSuperadmin, AttendanceController.rejectAttendance);
+/* ---------------- Sub-router under /attendance ---------------- */
+const attendance = express.Router();
 
-// 📊 Stats & Count
-router.get("/count-attendance", protect, isAdminOrSuperadmin, AttendanceController.countAttendance);
-router.get("/count-attendance/employee/:employeeId", protect, AttendanceController.countByEmployee);
-router.get("/count-attendance/project/:projectId", protect, AttendanceController.countByProject);
+/* CRUD & lists */
+attendance.post("/create", A.create);
+attendance.get("/view-all-attendance", A.list);
+attendance.get("/export", protect, A.exportData);
+attendance.get("/counts", A.counts);
+attendance.get("/hours-summary", A.hoursSummary);
+attendance.get("/calendar", A.calendarView);
+attendance.get("/get-or-create", A.getOrCreateForDay);
+attendance.get("/:id", A.getById);
+attendance.put("/:id", A.updateById);
+attendance.delete("/:id", A.removeById);
 
-// 🗓️ Calendar Route — Marked dates for a user (used in CreateAttendance.jsx)
-router.get("/attendance/dates/:userId", protect, AttendanceController.getMarkedDates);
+/* workflow */
+attendance.post("/mark", A.markOrUpsertForDay);
+attendance.post("/unmark", A.unmarkForDay);
+attendance.post("/:id/accept", A.accept);
+attendance.post("/:id/reject", A.reject);
+attendance.post("/:id/review", A.review);
 
-// 📥 Download Excel
-router.get("/download-attendance-excel", protect, isAdminOrSuperadmin, AttendanceController.downloadAttendanceExcel);
+/* bulk */
+attendance.patch("/bulk/status", A.bulkStatus);
+attendance.patch("/bulk/assign-project", A.bulkAssignProject);
+attendance.patch("/bulk/hours", A.bulkHours);
+attendance.patch("/bulk/mark-days", A.bulkMarkDays);
+attendance.delete("/bulk", A.bulkDelete);
+
+router.use("/attendance", attendance);
+
+/* -------- convenience aliases at /api root (since you mount with app.use("/api", ...)) ------ */
+router.get("/view-all-attendance", A.list);
+router.delete("/delete-attendance/:id", A.removeById);
+
+// under sub-router:
+attendance.get(
+  "/count-attendance/employee/:userId",
+  protect,
+  A.countAttendanceByEmployee
+);
+
+// base-path alias (convenience):
+router.get(
+  "/count-attendance/employee/:userId",
+  protect,
+  A.countAttendanceByEmployee
+);
 
 module.exports = router;

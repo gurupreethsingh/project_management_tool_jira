@@ -36,6 +36,13 @@ const SingleProject = () => {
   const [totalDefects, setTotalDefects] = useState(0);
   const navigate = useNavigate();
 
+  // after: const { projectId } = useParams();
+  useEffect(() => {
+    if (projectId && /^[0-9a-fA-F]{24}$/.test(projectId)) {
+      localStorage.setItem("lastProjectId", projectId);
+    }
+  }, [projectId]);
+
   // read once for ids we need elsewhere
   const loggedInUser = JSON.parse(localStorage.getItem("user"));
   const developerId = loggedInUser ? loggedInUser.id : null;

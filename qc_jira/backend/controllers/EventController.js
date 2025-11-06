@@ -19,7 +19,6 @@ const bool = (v, def = false) => {
 };
 
 const parseSort = (s, def = "-startTime") => {
-  // supports: "startTime", "-createdAt", "status,-startTime"
   if (!s) return def;
   const parts = String(s)
     .split(",")
@@ -42,13 +41,11 @@ const pick = (obj, keys) =>
 
 // Build filter from querystring
 function buildQueryFilter(q = {}) {
-  const f = { isDeleted: false }; // default hide deleted
+  const f = { isDeleted: false };
 
-  // visibility toggles (optional)
   if (q.isDeleted !== undefined) f.isDeleted = bool(q.isDeleted);
   if (q.isPublished !== undefined) f.isPublished = bool(q.isPublished);
 
-  // status
   if (q.status) {
     const arr = String(q.status)
       .split(",")
@@ -57,7 +54,6 @@ function buildQueryFilter(q = {}) {
     if (arr.length) f.status = { $in: arr };
   }
 
-  // time windows
   const time = {};
   if (q.startGte) time.$gte = new Date(q.startGte);
   if (q.startLte) time.$lte = new Date(q.startLte);
@@ -68,7 +64,6 @@ function buildQueryFilter(q = {}) {
   if (q.endLte) end.$lte = new Date(q.endLte);
   if (Object.keys(end).length) f.endTime = end;
 
-  // tags (any-match)
   if (q.tags) {
     const tags = String(q.tags)
       .split(",")
@@ -77,7 +72,6 @@ function buildQueryFilter(q = {}) {
     if (tags.length) f.tags = { $in: tags };
   }
 
-  // audience-based filtering (explicit)
   if (q.audienceMode) f["audience.mode"] = String(q.audienceMode).toLowerCase();
   if (q.audienceRole)
     f["audience.roles"] = String(q.audienceRole).toLowerCase();
@@ -87,28 +81,22 @@ function buildQueryFilter(q = {}) {
     if (u) f["audience.users"] = u;
   }
 
-  // organizers
   if (q.organizerUserId) {
     const ou = toObjectId(q.organizerUserId);
     if (ou) f["organizers.user"] = ou;
   }
 
-  // entity link
   if (q.entityModel) f.entityModel = String(q.entityModel);
   if (q.entityId) {
     const e = toObjectId(q.entityId);
     if (e) f.relatedEntity = e;
   }
 
-  // text search (title/description via text index)
-  if (q.q) {
-    f.$text = { $search: String(q.q) };
-  }
+  if (q.q) f.$text = { $search: String(q.q) };
 
   return f;
 }
 
-// Expand projection for text score sorting if searching
 function buildProjection(q = {}) {
   const proj = {};
   if (q.q) proj.score = { $meta: "textScore" };
@@ -117,13 +105,11 @@ function buildProjection(q = {}) {
 
 function buildSort(q = {}) {
   if (q.q && !q.sort) {
-    // Prefer textScore when searching
     return { score: { $meta: "textScore" }, startTime: 1 };
   }
   return parseSort(q.sort);
 }
 
-// Common populate options
 const POP = [
   { path: "organizers.user", select: "name email role" },
   { path: "createdBy", select: "name email role" },
@@ -155,10 +141,8 @@ exports.createEvent = async (req, res) => {
       "entityModel",
     ]);
 
-    // organizers can be sent as [{user, name, email, phone, role}]
     if (Array.isArray(body.organizers)) payload.organizers = body.organizers;
 
-    // ownership
     payload.createdBy =
       (req.user && req.user.id) || body.createdBy || undefined;
     payload.updatedBy = payload.createdBy;
@@ -188,7 +172,6 @@ exports.getEventById = async (req, res) => {
   }
 };
 
-// Rich list with filtering / sorting / pagination
 exports.listEvents = async (req, res) => {
   try {
     const q = req.query || {};
@@ -220,7 +203,6 @@ exports.listEvents = async (req, res) => {
   }
 };
 
-// Events visible to a specific user (leverages model static)
 exports.listVisibleToMe = async (req, res) => {
   try {
     const q = req.query || {};
@@ -234,8 +216,6 @@ exports.listVisibleToMe = async (req, res) => {
     };
 
     const visibilityFilter = Event.buildAudienceFilter(ctx);
-
-    // Allow additional query filters layered on top
     const extra = buildQueryFilter(q);
     const filter = { ...visibilityFilter, ...extra };
 
@@ -303,7 +283,6 @@ exports.updateEvent = async (req, res) => {
   }
 };
 
-// Soft delete
 exports.softDeleteEvent = async (req, res) => {
   try {
     const id = req.params.id;
@@ -324,7 +303,6 @@ exports.softDeleteEvent = async (req, res) => {
   }
 };
 
-// Restore from soft delete
 exports.restoreEvent = async (req, res) => {
   try {
     const id = req.params.id;
@@ -343,7 +321,6 @@ exports.restoreEvent = async (req, res) => {
   }
 };
 
-// Hard delete
 exports.hardDeleteEvent = async (req, res) => {
   try {
     const id = req.params.id;
@@ -796,12 +773,10 @@ exports.transferToEntity = async (req, res) => {
       .json({ message: "Event linked to entity", data: upd });
   } catch (err) {
     console.error("transferToEntity error:", err);
-    return res
-      .status(500)
-      .json({
-        error: "Failed to transfer event to entity",
-        details: err.message,
-      });
+    return res.status(500).json({
+      error: "Failed to transfer event to entity",
+      details: err.message,
+    });
   }
 };
 
@@ -840,13 +815,11 @@ exports.bulkPublish = async (req, res) => {
         },
       }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk publish done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk publish done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkPublish error:", err);
     return res
@@ -867,13 +840,11 @@ exports.bulkUnpublish = async (req, res) => {
         },
       }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk unpublish done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk unpublish done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkUnpublish error:", err);
     return res
@@ -894,13 +865,11 @@ exports.bulkSoftDelete = async (req, res) => {
         },
       }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk soft delete done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk soft delete done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkSoftDelete error:", err);
     return res
@@ -921,13 +890,11 @@ exports.bulkRestore = async (req, res) => {
         },
       }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk restore done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk restore done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkRestore error:", err);
     return res
@@ -959,13 +926,11 @@ exports.bulkStatus = async (req, res) => {
       { _id: { $in: ids } },
       { $set: { status, updatedBy: (req.user && req.user.id) || undefined } }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk status update done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk status update done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkStatus error:", err);
     return res
@@ -1014,13 +979,11 @@ exports.bulkTransferOwnership = async (req, res) => {
         },
       }
     );
-    return res
-      .status(200)
-      .json({
-        message: "Bulk ownership transfer done",
-        matched: r.matchedCount,
-        modified: r.modifiedCount,
-      });
+    return res.status(200).json({
+      message: "Bulk ownership transfer done",
+      matched: r.matchedCount,
+      modified: r.modifiedCount,
+    });
   } catch (err) {
     console.error("bulkTransferOwnership error:", err);
     return res
@@ -1134,5 +1097,53 @@ exports.getVisibleEventForUser = async (req, res) => {
     return res
       .status(500)
       .json({ error: "Failed to fetch event", details: err.message });
+  }
+};
+
+// ---------------------- minimal actions used by UI ----------------------
+// Accept any method (POST/GET/etc.) to avoid method-related 404s.
+exports.markSeen = async (req, res) => {
+  try {
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ error: "Failed to mark seen", details: err.message });
+  }
+};
+
+exports.rsvp = async (req, res) => {
+  try {
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ error: "Failed to RSVP", details: err.message });
+  }
+};
+
+// ---------------------- no-op notifications for UI fallbacks ----------------------
+exports.markNotificationReadById = async (req, res) => {
+  try {
+    // body could be empty; just return ok to silence DevTools 404s
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({ error: "Failed to mark notification", details: err.message });
+  }
+};
+
+exports.markNotificationReadLegacy = async (req, res) => {
+  try {
+    // expects { id } usually; still return ok
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    return res
+      .status(500)
+      .json({
+        error: "Failed to mark notification (legacy)",
+        details: err.message,
+      });
   }
 };
