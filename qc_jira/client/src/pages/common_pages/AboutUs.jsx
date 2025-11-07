@@ -86,9 +86,9 @@ export default function AboutUs() {
       {/* Title row with inline icon toggle */}
       <div className="w-full px-4 sm:px-6 lg:px-10 py-4">
         <div className="flex items-center justify-between gap-3">
-          <h2 className="font-bold text-gray-800 text-2xl sm:text-3xl">
+          <h3 className="text-2xl font-bold tracking-tight text-gray-600 sm:text-4xl">
             About Us
-          </h2>
+          </h3>
           <IconToggle
             options={OPTIONS}
             value={selectedLayout}

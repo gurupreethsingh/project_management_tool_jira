@@ -197,7 +197,7 @@ export default function SingleScenario() {
 
   return (
     <div className="bg-white py-10 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-4 sm:px-6 lg:px-8">
         {/* Top bar */}
         <div className="flex justify-between items-center gap-3 flex-wrap mb-4">
           <div>
