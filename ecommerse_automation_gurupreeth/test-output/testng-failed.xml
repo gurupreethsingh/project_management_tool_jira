@@ -8,6 +8,7 @@
           <include name="openShoppageUsingUrl"/>
           <include name="closeApplication"/>
           <include name="openApplication"/>
+          <include name="openShoppageUsingUrl"/>
         </methods>
       </class> <!-- scripts.contactus_scripts.functional_scenarios.AddProductToCart -->
     </classes>

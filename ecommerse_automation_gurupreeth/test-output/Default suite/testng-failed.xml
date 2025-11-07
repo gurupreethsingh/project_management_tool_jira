@@ -3,11 +3,14 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
+
       <class name="scripts.contactus_scripts.functional_scenarios.AddProductToCart">
         <methods>
           <include name="openShoppageUsingUrl"/>
+
           <include name="closeApplication"/>
           <include name="openApplication"/>
+          <include name="openShoppageUsingUrl"/>
         </methods>
       </class> <!-- scripts.contactus_scripts.functional_scenarios.AddProductToCart -->
     </classes>

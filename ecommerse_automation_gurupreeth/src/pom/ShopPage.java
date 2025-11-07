@@ -19,31 +19,25 @@ public class ShopPage extends AllVerifications
 	SoftAssert sa = new SoftAssert();
 	
 	// finding your weblements 
-	@FindBy(css = "nav>div.flex:first-child>a:first-child")
-   private WebElement logo;
-	
-	@FindBy(css = "div.animate__fadeInUp>a.inline-block")
-	private WebElement shopAllLink;
-	
-	@FindBy(css="div.hidden.items-center.gap-6>a:first-child")
-	private WebElement wishListIcon;
-	
-	@FindBy(css="a.flex:last-child>span")
-	private WebElement signInLink;
-	
-	@FindBy(css="input.flex-grow")
-	private WebElement searchField;
-	
-	@FindBy(css="button.px-4")
-	private WebElement searchIcon;
 	
 	
-	@FindBy(css="section.mt-16>div:first-child>h2")
-	private WebElement exploreProductsHeading;
+	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>div.pt-3>button")
+	private WebElement addToCartButton;
 	
 	
-	@FindBy(css = "div#brandProductsCarousel>div")
-	private List<WebElement> bottomProductCount;
+	@FindBy(css = "div.hidden.items-center.gap-6>div.relative>button")
+	private WebElement cartIcon;
+	
+	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>h3")
+	private WebElement productNameInProductCard;
+	
+	
+	@FindBy(css = "div.overflow-y-auto>div:nth-of-type(1)>div.flex-grow>h3")
+	private WebElement productNameInMiniCart;
+	
+	
+	@FindBy(css = "div.mt-4.border-t>a")
+	private WebElement viewCartButtonInMiniCart;
 	
 	
 	// initializing all the elements in this page. using the constructor of this class. 
@@ -56,66 +50,34 @@ public class ShopPage extends AllVerifications
 	
 	
 	// utilization (create fucntions to perform operations on elements ) 
-	public void clickOnLogo()
+	public void clickOnAddToCartButton()
 	{
-		AllVerifications.clickIfVisibleAndEnabled(logo, driver, sa);
+		AllVerifications.clickIfVisibleAndEnabled(addToCartButton, driver, sa);
+	}
+	
+	public void clickOnCartIcon()
+	{
+		AllVerifications.clickIfVisibleAndEnabled(cartIcon, driver, sa);
+	}
+	
+	public void verifyProductNameInMinicart(String expectedText)
+	{
+		AllVerifications.textIsPresentOrNot(expectedText, driver,  productNameInMiniCart, sa);
 	}
 	
 	
-	public void clickOnshopAllLink()
+	public String  verifyProductName()
 	{
-		AllVerifications.clickIfVisibleAndEnabled(shopAllLink, driver, sa);
-	}
-	
-	public void clickOnSignInLink()
-	{
-		AllVerifications.clickIfVisibleAndEnabled(signInLink, driver, sa);
-	}
-	
-	public void enterValueInSearchField(String keys)
-	{
-		AllVerifications.clickIfVisibleAndEnabled(searchField, driver, sa);
-		searchField.clear();
-		searchField.sendKeys(keys);
+		String actualProductText  =  productNameInProductCard.getText();
+		return  actualProductText;
 	}
 	
 	
-	public void clickOnSearchButton()
+	public void clickOnViewCartButtonOFMiniCart()
 	{
-		AllVerifications.clickIfVisibleAndEnabled(searchIcon, driver, sa);
+		AllVerifications.clickIfVisibleAndEnabled(viewCartButtonInMiniCart, driver, sa);
 	}
 	
-	
-	public void clickOnwishListIcon() throws InterruptedException
-	{
-		Thread.sleep(1000);
-		AllVerifications.clickIfVisibleAndEnabled(wishListIcon, driver, sa);
-		Thread.sleep(1000);
-	}
-	
-	
-	public void verifyexploreProductHeadingText()
-	{
-		AllVerifications.textIsPresentOrNot("Explore Products from Popular Brands", driver, exploreProductsHeading, sa);
-		Actions actions=new Actions(driver);
-		actions.scrollToElement(exploreProductsHeading).build().perform();
-		driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-		 String Heading= exploreProductsHeading.getText();
-		 System.out.println("Heading of the product section is : "+Heading);
-		 driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(10));
-	}
-	
-	
-	public int countAllProductText()
-	{
-		int allProductCount = 0; 
-		 List<WebElement> allProduct= bottomProductCount ; //findElements-->multiple elements
-		  allProductCount =allProduct.size();
-		 System.out.println("Total number of products found:"+allProductCount);
-		 
-		 return allProductCount;
-	}
-	
-	
+	 
 	
 }
