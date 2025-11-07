@@ -119,10 +119,6 @@ target/
 # Maven wrapper files (optional)
 .mvn/wrapper/maven-wrapper.jar
 
-
-# Temporary screenshots
-
-
 ########################################
 # 6. TESTNG & TEST REPORT OUTPUT
 ########################################
