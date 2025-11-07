@@ -435,7 +435,6 @@ export default function TestEngineerDashboard() {
               onClick={() => setView("list")}
             >
               <FaThList className="text-base" />
-              <span className="hidden sm:inline">List</span>
             </button>
             <button
               className={`rounded-lg border px-2.5 py-1.5 text-sm flex items-center gap-2 ${
@@ -446,7 +445,6 @@ export default function TestEngineerDashboard() {
               onClick={() => setView("card")}
             >
               <FaThLarge className="text-base" />
-              <span className="hidden sm:inline">Card</span>
             </button>
             <button
               className={`rounded-lg border px-2.5 py-1.5 text-sm flex items-center gap-2 ${
@@ -457,7 +455,6 @@ export default function TestEngineerDashboard() {
               onClick={() => setView("grid")}
             >
               <FaTh className="text-base" />
-              <span className="hidden sm:inline">Grid</span>
             </button>
           </div>
         </div>

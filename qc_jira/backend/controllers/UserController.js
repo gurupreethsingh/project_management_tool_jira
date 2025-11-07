@@ -179,6 +179,31 @@ exports.updateUser = async (req, res) => {
   }
 };
 
+// ====== UPDATE USER ROLE ======
+exports.updateUserRole = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { role } = req.body;
+
+    if (!role) return res.status(400).json({ message: "Role is required" });
+
+    const user = await User.findById(id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    user.role = role;
+    user.updatedAt = Date.now();
+    await user.save();
+
+    res.status(200).json({
+      message: `User role updated successfully to ${role}`,
+      user,
+    });
+  } catch (error) {
+    console.error("Error updating user role:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
 exports.deleteUser = async (req, res) => {
   try {
     const userToDelete = await User.findByIdAndDelete(req.params.id);

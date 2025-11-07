@@ -19,6 +19,7 @@ const {
   listApproverEligibleUsers,
   listAllForReview,
   listApprovers,
+  updateUserRole, // ← add this
 } = require("../controllers/UserController");
 
 const router = express.Router();
@@ -26,23 +27,29 @@ const router = express.Router();
 // ===== AUTH + PROFILE =====
 router.post("/register", register);
 router.post("/login", login);
-router.get("/user/:id", getUserById); // keep legacy path
-router.get("/get-user/:id", getUserById); // keep both variants for compatibility
+router.get("/user/:id", getUserById);
+router.get("/get-user/:id", getUserById);
+
 router.get("/all-users", getAllUsers);
-router.get("/users", getAllUsers); // ← NEW alias
-router.get("/users/all", getAllUsers); // ← NEW alias
-router.get("/users/approvers", listApproverEligibleUsers); // <<< NEW
+router.get("/users", getAllUsers);
+router.get("/users/all", getAllUsers);
+
+// keep ONE of these (remove duplicates). Pick one path for each list:
+router.get("/users/approvers", listApprovers); // approver roles only
+router.get("/users/approver-eligible", listApproverEligibleUsers); // broader/alias list
 
 router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
 
+// restrict destructive ops to admins
 router.delete("/delete-user/:id", authenticateToken, requireAdmin, deleteUser);
 
 // ===== USER LISTS =====
 router.get("/users/developers", listDevelopers);
 router.get("/users/test-engineers", listTestEngineers);
-// ===== DROPDOWNS for TestCase footer =====
-router.get("/users/reviewers", listAllForReview); // all users
-router.get("/users/approvers", listApprovers); // approver roles only
+
+// ===== DROPDOWNS =====
+router.get("/users/reviewers", listAllForReview);
+router.get("/users/approvers", listApprovers); // (keep only once)
 
 // ===== COUNTS =====
 router.get("/count-developers", countDevelopersFromProjects);
@@ -60,5 +67,12 @@ router.get("/count-event-coordinators", countByRole("event_coordinator"));
 router.get("/count-exam-controllers", countByRole("exam_controller"));
 router.get("/count-hr-managers", countByRole("hr_manager"));
 router.get("/count-users", countUsersSummary);
+
+// ✅ Role update route (optional auth)
+router.patch(
+  "/user/:id/role",
+  // authenticateToken, requireAdmin, // ← uncomment if you want only admins to change roles
+  updateUserRole
+);
 
 module.exports = router;

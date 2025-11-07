@@ -18,6 +18,7 @@ import {
   FaSquare,
   FaTrashAlt,
 } from "react-icons/fa";
+import * as XLSX from "xlsx"; // for client-side Excel export
 import globalBackendRoute from "../../config/Config";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -42,7 +43,6 @@ const badge = (status) => {
 
 const STATUS_VALUES = ["pending", "marked", "accepted", "rejected", "unmarked"];
 
-// normalize any {_id} / {id} / string to a String id
 const getIdStr = (x) => {
   if (!x) return "";
   if (typeof x === "string") return x;
@@ -89,23 +89,23 @@ export default function GetAllAttendance() {
   const [statusFilter, setStatusFilter] = useState("");
   const [billableFilter, setBillableFilter] = useState(""); // "", "true", "false"
   const [quick, setQuick] = useState(""); // "", "today", "week", "month"
-  const [employeeFilter, setEmployeeFilter] = useState(""); // NEW
-  const [projectFilter, setProjectFilter] = useState(""); // NEW
+  const [employeeFilter, setEmployeeFilter] = useState("");
+  const [projectFilter, setProjectFilter] = useState("");
 
-  // Counts for header badges
+  // Counts
   const [statusCounts, setStatusCounts] = useState([]);
   const [employeeCounts, setEmployeeCounts] = useState([]);
   const [projectCounts, setProjectCounts] = useState([]);
 
-  // Optional: list of projects for bulk assign UI (best-effort)
+  // Optional: list of projects for bulk assign UI
   const [projectsList, setProjectsList] = useState([]);
 
-  // Bulk ops state
+  // Bulk ops
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkMode, setBulkMode] = useState("status"); // 'status' | 'assignProject' | 'hoursSet' | 'hoursInc' | 'delete'
   const [bulkStatus, setBulkStatus] = useState("");
-  const [bulkProject, setBulkProject] = useState(""); // projectId
-  const [bulkHours, setBulkHours] = useState(""); // numeric
+  const [bulkProject, setBulkProject] = useState("");
+  const [bulkHours, setBulkHours] = useState("");
 
   // ---------- fetch ----------
   const fetchAll = async () => {
@@ -116,7 +116,9 @@ export default function GetAllAttendance() {
       const [listRes, scStatus, scEmp, scProj, projRes] = await Promise.all([
         axios.get(
           `${api}/attendance/view-all-attendance?limit=5000&order=desc`,
-          { headers: authHeader }
+          {
+            headers: authHeader,
+          }
         ),
         axios.get(`${api}/attendance/counts?groupBy=status`, {
           headers: authHeader,
@@ -175,7 +177,7 @@ export default function GetAllAttendance() {
     else navigate("/dashboard");
   };
 
-  // ---------- lookup maps (names for badges) ----------
+  // ---------- lookup maps ----------
   const employeeNameById = useMemo(() => {
     const map = new Map();
     for (const r of rows) {
@@ -211,7 +213,6 @@ export default function GetAllAttendance() {
   const matchAny = (r, q) => {
     if (!q) return true;
     const lc = q.toLowerCase();
-
     const fields = [
       r?.employee?.name || "",
       r?.employee?.email || "",
@@ -229,7 +230,6 @@ export default function GetAllAttendance() {
     ]
       .join(" ")
       .toLowerCase();
-
     const terms = lc.split(/\s+/).filter(Boolean);
     return terms.every((t) => fields.includes(t));
   };
@@ -287,7 +287,6 @@ export default function GetAllAttendance() {
     }
 
     if (quick) out = out.filter((r) => inQuickRange(r));
-
     if (search.trim()) out = out.filter((r) => matchAny(r, search));
 
     out.sort((a, b) => {
@@ -359,11 +358,10 @@ export default function GetAllAttendance() {
     }
   };
 
-  const toggleOne = (id) => {
+  const toggleOne = (id) =>
     setSelectedIds((ids) =>
       ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
     );
-  };
 
   const doBulk = async () => {
     if (!selectedIds.length) return alert("Select at least one record.");
@@ -422,7 +420,7 @@ export default function GetAllAttendance() {
     }
   };
 
-  // ---------- CSV export ----------
+  // ---------- CSV export (client, filtered) ----------
   const exportCSV = () => {
     const data = filtered.map((r) => ({
       id: r._id,
@@ -470,6 +468,121 @@ export default function GetAllAttendance() {
     a.download = `attendance_export_${moment().format("YYYYMMDD_HHmm")}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // ---------- Excel export (client, filtered) ----------
+  const exportXLSX = () => {
+    try {
+      const data = filtered.map((r) => ({
+        ID: r._id,
+        Employee: r.employee?.name || "",
+        EmployeeEmail: r.employee?.email || "",
+        Project: r.project?.project_name || "",
+        Date: r.date ? moment(r.date).format("YYYY-MM-DD") : "",
+        DayKey: r.dayKey || "",
+        Status: r.status || "",
+        HoursWorked: r.hoursWorked ?? "",
+        TaskDescription: (r.taskDescription || "").replace(/\n/g, " "),
+        Billable: r.isBillable ? "Yes" : "No",
+        Location: r.location || "",
+        Shift: r.shift || "",
+        SubmittedAt: r.submittedAt
+          ? moment(r.submittedAt).format("YYYY-MM-DD HH:mm")
+          : "",
+        ReviewedAt: r.reviewedAt
+          ? moment(r.reviewedAt).format("YYYY-MM-DD HH:mm")
+          : "",
+        ReviewedBy: r.reviewedBy || "",
+        CreatedAt: r.createdAt
+          ? moment(r.createdAt).format("YYYY-MM-DD HH:mm")
+          : "",
+        UpdatedAt: r.updatedAt
+          ? moment(r.updatedAt).format("YYYY-MM-DD HH:mm")
+          : "",
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(data, { skipHeader: false });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+
+      // Optional widths
+      ws["!cols"] = [
+        { wch: 24 }, // ID
+        { wch: 22 }, // Employee
+        { wch: 28 }, // Email
+        { wch: 22 }, // Project
+        { wch: 12 }, // Date
+        { wch: 12 }, // DayKey
+        { wch: 12 }, // Status
+        { wch: 10 }, // Hours
+        { wch: 60 }, // Task
+        { wch: 10 }, // Billable
+        { wch: 14 }, // Location
+        { wch: 10 }, // Shift
+        { wch: 20 }, // SubmittedAt
+        { wch: 20 }, // ReviewedAt
+        { wch: 16 }, // ReviewedBy
+        { wch: 20 }, // CreatedAt
+        { wch: 20 }, // UpdatedAt
+      ];
+
+      const filename = `attendance_${moment().format("YYYYMMDD_HHmm")}.xlsx`;
+      XLSX.writeFile(wb, filename);
+    } catch (e) {
+      console.error("Client XLSX export failed:", e);
+      alert(`Client XLSX export failed: ${e?.message || e}`);
+    }
+  };
+
+  // ---------- Excel export (server, DB) ----------
+  const exportServerXLSX = async () => {
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter) params.set("status", statusFilter);
+      if (billableFilter) params.set("billable", billableFilter);
+      if (employeeFilter) params.set("employee", employeeFilter);
+      if (projectFilter) params.set("project", projectFilter);
+      if (search) params.set("search", search);
+      if (quick) params.set("quick", quick);
+
+      const url = `${api}/attendance/export.xlsx?${params.toString()}`;
+      const res = await axios.get(url, {
+        headers: authHeader,
+        responseType: "arraybuffer",
+        validateStatus: () => true,
+      });
+
+      const ct = (res.headers["content-type"] || "").toLowerCase();
+      const isXlsx = ct.includes(
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+
+      if (!isXlsx || res.status < 200 || res.status >= 300) {
+        let msg = `Export failed (status ${res.status}).`;
+        try {
+          const decoder = new TextDecoder("utf-8");
+          const text = decoder.decode(new Uint8Array(res.data || []));
+          try {
+            const j = JSON.parse(text);
+            msg += `\n${j.message || text}`;
+          } catch {
+            msg += `\n${text.slice(0, 600)}`;
+          }
+        } catch {}
+        alert(msg);
+        return;
+      }
+
+      const blob = new Blob([res.data], { type: ct });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `attendance_${moment().format("YYYYMMDD_HHmm")}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      console.error("Server export failed:", e);
+      alert(`Server export failed: ${e?.message || e}`);
+    }
   };
 
   // ---------- UI ----------
@@ -571,13 +684,34 @@ export default function GetAllAttendance() {
               </select>
             </div>
 
+            {/* Export buttons */}
+            <button
+              onClick={exportXLSX}
+              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              title="Export Excel (filtered on client)"
+            >
+              <FaDownload />{" "}
+              <span className="hidden sm:inline">Export (Client)</span>
+            </button>
+
+            <button
+              onClick={exportServerXLSX}
+              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              title="Export Excel from server (DB)"
+            >
+              <FaDownload />{" "}
+              <span className="hidden sm:inline">Export (Server)</span>
+            </button>
+
             <button
               onClick={exportCSV}
               className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
               title="Export CSV (filtered)"
             >
-              <FaDownload /> <span className="hidden sm:inline">Export</span>
+              <FaDownload />{" "}
+              <span className="hidden sm:inline">Export CSV</span>
             </button>
+
             <button
               onClick={fetchAll}
               className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
@@ -660,8 +794,8 @@ export default function GetAllAttendance() {
                 setBillableFilter("");
                 setQuick("");
                 setSearch("");
-                setEmployeeFilter(""); // NEW
-                setProjectFilter(""); // NEW
+                setEmployeeFilter("");
+                setProjectFilter("");
                 setPage(1);
               }}
             >
@@ -698,7 +832,7 @@ export default function GetAllAttendance() {
             })}
           </div>
 
-          {/* Project badges — CLICKABLE filter */}
+          {/* Project badges */}
           <div className="flex gap-2 overflow-x-auto pb-1">
             {projectCounts.slice(0, 12).map((p) => {
               const projId = getIdStr(p._id);
@@ -730,7 +864,7 @@ export default function GetAllAttendance() {
             )}
           </div>
 
-          {/* Employee badges — CLICKABLE filter */}
+          {/* Employee badges */}
           <div className="flex gap-2 overflow-x-auto pb-1">
             {employeeCounts.slice(0, 12).map((e) => {
               const empId = getIdStr(e._id);

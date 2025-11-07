@@ -12,7 +12,7 @@ public class AS_4707_ToastMessageDisplayedInEmailField extends BaseClass_Shilpa 
 	SoftAssert sa = new SoftAssert();
 
 	@Test(enabled = true, priority = 1)
-	public void toastMessageDisplayedInEmailField() throws InterruptedException {
+	public void enterFirstNameFieldToastMessageDisplayedInEmailField() throws InterruptedException {
 		ContactUspage cp = new ContactUspage(driver);
 
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);

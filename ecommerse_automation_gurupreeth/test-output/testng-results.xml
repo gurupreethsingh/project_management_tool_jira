@@ -2,6 +2,7 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
+<<<<<<< HEAD
   <suite started-at="2025-11-06T12:03:11 IST" name="Default suite" finished-at="2025-11-06T12:03:32 IST" duration-ms="20970">
     <groups>
     </groups>
@@ -16,6 +17,22 @@
           </reporter-output>
         </test-method> <!-- toastMessageDisplayed -->
         <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@7eac9008]" started-at="2025-11-06T12:03:32 IST" name="closeApplication" finished-at="2025-11-06T12:03:32 IST" duration-ms="329" status="PASS">
+=======
+  <suite started-at="2025-11-06T17:25:27 IST" name="Default suite" finished-at="2025-11-06T17:25:45 IST" duration-ms="17384">
+    <groups>
+    </groups>
+    <test started-at="2025-11-06T17:25:27 IST" name="Default test" finished-at="2025-11-06T17:25:45 IST" duration-ms="17384">
+      <class name="scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@196a42c3]" started-at="2025-11-06T17:25:27 IST" name="openApplication" finished-at="2025-11-06T17:25:31 IST" duration-ms="3487" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- openApplication -->
+        <test-method signature="toastMessageDisplayed()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@196a42c3]" started-at="2025-11-06T17:25:31 IST" name="toastMessageDisplayed" finished-at="2025-11-06T17:25:44 IST" duration-ms="13391" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- toastMessageDisplayed -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@196a42c3]" started-at="2025-11-06T17:25:44 IST" name="closeApplication" finished-at="2025-11-06T17:25:45 IST" duration-ms="429" status="PASS">
+>>>>>>> 3df15cb10f5a63490d9472daf1d4d1dae4eebdc1
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->

@@ -3,13 +3,16 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link">
+      <class name="scripts.contactus_scripts.regression_scenarios.ContactUsRegressionScenarios">
         <methods>
+          <include name="toastMessageDisplayedInFirstNameField"/>
+          <include name="toastMessageDisplayedInEmailField"/>
           <include name="closeApplication"/>
-          <include name="openApplication"/>
+          <include name="fillAllFields_toastMessageDisplayed"/>
           <include name="reloadContactpageClickContactLink"/>
+          <include name="openApplication"/>
         </methods>
-      </class> <!-- scripts.contactus_scripts.functional_scenarios.ET_2219_Reload_ContactUspage_click_Contact_Us_link -->
+      </class> <!-- scripts.contactus_scripts.regression_scenarios.ContactUsRegressionScenarios -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->

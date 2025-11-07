@@ -1,10 +1,9 @@
 // controllers/AttendanceController.js
 const mongoose = require("mongoose");
+const ExcelJS = require("exceljs");
 const Attendance = require("../models/AttendanceModel");
 
-// -----------------------------
-// Helpers
-// -----------------------------
+/* ----------------------------- Helpers ----------------------------- */
 const asObjectId = (v) => {
   try {
     return v ? new mongoose.Types.ObjectId(String(v)) : null;
@@ -123,9 +122,227 @@ const buildQuery = (q = {}) => {
 const SAFE_SELECT =
   "employee project date dayKey hoursWorked taskDescription status submittedAt reviewedAt reviewedBy remarks isBillable location shift modifiedByAdmin createdAt updatedAt statusHistory";
 
-// -----------------------------
-// CRUD
-// -----------------------------
+/* -------- Headers helper for XLSX streaming -------- */
+const prepXlsxHeaders = (res, filename) => {
+  res.setHeader(
+    "Content-Type",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+  );
+  res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+  if (res.removeHeader) res.removeHeader("Content-Encoding"); // avoid gzip on some stacks
+  if (res.flushHeaders) res.flushHeaders();
+};
+
+/* =================================================================== */
+/* ============================= EXPORTS ============================== */
+/* =================================================================== */
+
+/** GET /api/attendance/export.test.xlsx  */
+exports.exportTestXlsx = async (_req, res) => {
+  try {
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Hello");
+    ws.columns = [
+      { header: "Col", key: "col", width: 8 },
+      { header: "Type", key: "type", width: 14 },
+      { header: "Value", key: "value", width: 28 },
+    ];
+    ws.addRow({ col: 1, type: "string", value: "ok" });
+    ws.addRow({ col: 2, type: "number", value: 123.45 });
+    ws.addRow({ col: 3, type: "date", value: new Date() });
+    ws.getColumn("value").numFmt = "yyyy-mm-dd hh:mm";
+
+    prepXlsxHeaders(res, `test_${Date.now()}.xlsx`);
+    await wb.xlsx.write(res); // stream
+    res.end();
+  } catch (e) {
+    console.error("exportTestXlsx error:", e);
+    res.status(500).json({ message: "Test export failed.", err: String(e) });
+  }
+};
+
+/** GET /api/attendance/export.xlsx — XLSX (DB + filters) */
+exports.exportData = async (req, res) => {
+  try {
+    const { status, billable, employee, project, search, quick } = req.query;
+    const criteria = {};
+
+    if (status) {
+      criteria.status =
+        String(status).toLowerCase() === "approved" ? "accepted" : status;
+    }
+    if (billable === "true") criteria.isBillable = true;
+    if (billable === "false") criteria.isBillable = false;
+
+    if (employee && mongoose.isValidObjectId(employee)) {
+      criteria.employee = new mongoose.Types.ObjectId(employee);
+    }
+    if (project && mongoose.isValidObjectId(project)) {
+      criteria.project = new mongoose.Types.ObjectId(project);
+    }
+
+    if (quick) {
+      const now = new Date();
+      let from = null;
+      if (quick === "today")
+        from = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          now.getDate(),
+          0,
+          0,
+          0,
+          0
+        );
+      else if (quick === "week")
+        from = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      else if (quick === "month")
+        from = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+      if (from) criteria.date = { $gte: from };
+    }
+
+    if (search) {
+      const s = String(search).trim();
+      if (s) {
+        const re = new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+        criteria.$or = [
+          { dayKey: re },
+          { status: re },
+          { taskDescription: re },
+          { location: re },
+          { shift: re },
+        ];
+      }
+    }
+
+    const rows = await Attendance.find(criteria)
+      .populate("employee", "name email")
+      .populate("project", "project_name")
+      .sort({ date: -1 })
+      .lean();
+
+    const wb = new ExcelJS.Workbook();
+    const ws = wb.addWorksheet("Attendance");
+
+    ws.columns = [
+      { header: "ID", key: "_id", width: 24 },
+      { header: "Employee", key: "employeeName", width: 22 },
+      { header: "EmployeeEmail", key: "employeeEmail", width: 28 },
+      { header: "Project", key: "projectName", width: 24 },
+      {
+        header: "Date",
+        key: "date",
+        width: 20,
+        style: { numFmt: "yyyy-mm-dd" },
+      },
+      { header: "DayKey", key: "dayKey", width: 14 },
+      { header: "Status", key: "status", width: 14 },
+      { header: "HoursWorked", key: "hoursWorked", width: 14 },
+      { header: "TaskDescription", key: "taskDescription", width: 60 },
+      { header: "Billable", key: "billable", width: 12 },
+      { header: "Location", key: "location", width: 16 },
+      { header: "Shift", key: "shift", width: 12 },
+      {
+        header: "SubmittedAt",
+        key: "submittedAt",
+        width: 20,
+        style: { numFmt: "yyyy-mm-dd hh:mm" },
+      },
+      {
+        header: "ReviewedAt",
+        key: "reviewedAt",
+        width: 20,
+        style: { numFmt: "yyyy-mm-dd hh:mm" },
+      },
+      { header: "ReviewedBy", key: "reviewedBy", width: 16 },
+      {
+        header: "CreatedAt",
+        key: "createdAt",
+        width: 20,
+        style: { numFmt: "yyyy-mm-dd hh:mm" },
+      },
+      {
+        header: "UpdatedAt",
+        key: "updatedAt",
+        width: 20,
+        style: { numFmt: "yyyy-mm-dd hh:mm" },
+      },
+    ];
+
+    for (const r of rows) {
+      ws.addRow({
+        _id: String(r._id),
+        employeeName: r.employee?.name || "",
+        employeeEmail: r.employee?.email || "",
+        projectName: r.project?.project_name || "",
+        date: r.date ? new Date(r.date) : null,
+        dayKey: r.dayKey || "",
+        status: r.status || "",
+        hoursWorked: Number(r.hoursWorked ?? 0),
+        taskDescription: r.taskDescription || "",
+        billable: r.isBillable ? "Yes" : "No",
+        location: r.location || "",
+        shift: r.shift || "",
+        submittedAt: r.submittedAt ? new Date(r.submittedAt) : null,
+        reviewedAt: r.reviewedAt ? new Date(r.reviewedAt) : null,
+        reviewedBy: r.reviewedBy || "",
+        createdAt: r.createdAt ? new Date(r.createdAt) : null,
+        updatedAt: r.updatedAt ? new Date(r.updatedAt) : null,
+      });
+    }
+
+    prepXlsxHeaders(res, `attendance_${Date.now()}.xlsx`);
+    await wb.xlsx.write(res); // stream to response
+    res.end();
+  } catch (e) {
+    console.error("exportData error:", e);
+    res
+      .status(500)
+      .json({ message: "Failed to export Excel.", err: String(e) });
+  }
+};
+
+/** GET /api/attendance/export — JSON (same filters) */
+exports.exportDataJSON = async (req, res) => {
+  try {
+    const q = buildQuery(req.query);
+    const rows = await Attendance.find(q)
+      .select(SAFE_SELECT)
+      .sort({ date: 1 })
+      .populate("employee", "name email")
+      .populate("project", "project_name");
+
+    const out = rows.map((r) => ({
+      id: String(r._id),
+      employee: r.employee ? r.employee.name : "",
+      employeeEmail: r.employee ? r.employee.email : "",
+      project: r.project ? r.project.project_name : "",
+      date: r.date ? r.date.toISOString() : "",
+      dayKey: r.dayKey || "",
+      status: r.status,
+      hoursWorked: r.hoursWorked,
+      taskDescription: r.taskDescription || "",
+      remarks: r.remarks || "",
+      isBillable: r.isBillable,
+      location: r.location,
+      shift: r.shift,
+      submittedAt: r.submittedAt ? r.submittedAt.toISOString() : "",
+      reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : "",
+      reviewedBy: r.reviewedBy ? String(r.reviewedBy) : "",
+      createdAt: r.createdAt ? r.createdAt.toISOString() : "",
+      updatedAt: r.updatedAt ? r.updatedAt.toISOString() : "",
+    }));
+
+    return res.json({ count: out.length, rows: out });
+  } catch (e) {
+    return res.status(400).json({ message: e.message || "Export failed" });
+  }
+};
+
+/* =================================================================== */
+/* ============================ CRUD/etc ============================= */
+/* =================================================================== */
+
 exports.create = async (req, res) => {
   try {
     const actor = getActorId(req);
@@ -215,9 +432,7 @@ exports.list = async (req, res) => {
   }
 };
 
-// -----------------------------
-// Marking / Review
-// -----------------------------
+/* --------------------------- Marking / Review --------------------------- */
 exports.markOrUpsertForDay = async (req, res) => {
   try {
     const actor = getActorId(req);
@@ -372,9 +587,7 @@ exports.review = async (req, res) => {
   }
 };
 
-// -----------------------------
-// Counts & summaries
-// -----------------------------
+/* --------------------------- Counts & summaries --------------------------- */
 exports.counts = async (req, res) => {
   try {
     const q = buildQuery(req.query);
@@ -451,9 +664,7 @@ exports.hoursSummary = async (req, res) => {
   }
 };
 
-// -----------------------------
-// Bulk operations
-// -----------------------------
+/* ------------------------------ Bulk ops ------------------------------ */
 exports.bulkStatus = async (req, res) => {
   try {
     const actor = getActorId(req);
@@ -604,9 +815,7 @@ exports.bulkMarkDays = async (req, res) => {
   }
 };
 
-// -----------------------------
-// Calendar & utilities
-// -----------------------------
+/* -------------------------- Calendar & utils -------------------------- */
 exports.calendarView = async (req, res) => {
   try {
     const employee = asObjectId(req.query.employee || getActorId(req));
@@ -678,51 +887,7 @@ exports.getOrCreateForDay = async (req, res) => {
   }
 };
 
-// -----------------------------
-// Export (CSV-ish JSON array)
-// -----------------------------
-exports.export = async (req, res) => {
-  try {
-    const q = buildQuery(req.query);
-    const rows = await Attendance.find(q)
-      .select(SAFE_SELECT)
-      .sort({ date: 1 })
-      .populate("employee", "name email")
-      .populate("project", "project_name");
-
-    const out = rows.map((r) => ({
-      id: String(r._id),
-      employee: r.employee ? r.employee.name : "",
-      employeeEmail: r.employee ? r.employee.email : "",
-      project: r.project ? r.project.project_name : "",
-      date: r.date ? r.date.toISOString() : "",
-      dayKey: r.dayKey || "",
-      status: r.status,
-      hoursWorked: r.hoursWorked,
-      taskDescription: r.taskDescription || "",
-      remarks: r.remarks || "",
-      isBillable: r.isBillable,
-      location: r.location,
-      shift: r.shift,
-      submittedAt: r.submittedAt ? r.submittedAt.toISOString() : "",
-      reviewedAt: r.reviewedAt ? r.reviewedAt.toISOString() : "",
-      reviewedBy: r.reviewedBy ? String(r.reviewedBy) : "",
-      createdAt: r.createdAt ? r.createdAt.toISOString() : "",
-      updatedAt: r.updatedAt ? r.updatedAt.toISOString() : "",
-    }));
-
-    return res.json({ count: out.length, rows: out });
-  } catch (e) {
-    return res.status(400).json({ message: e.message || "Export failed" });
-  }
-};
-
-// Alias with the same data shape; referenced by routes
-exports.exportData = exports.export;
-
-// -----------------------------
-// NEW: attendance count for an employee
-// -----------------------------
+/* --------------------- Count by employee (convenience) --------------------- */
 exports.countAttendanceByEmployee = async (req, res) => {
   try {
     const { userId } = req.params;

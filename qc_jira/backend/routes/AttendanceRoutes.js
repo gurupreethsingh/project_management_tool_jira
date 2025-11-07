@@ -17,7 +17,22 @@ const attendance = express.Router();
 /* CRUD & lists */
 attendance.post("/create", A.create);
 attendance.get("/view-all-attendance", A.list);
-attendance.get("/export", protect, A.exportData);
+
+// === XLSX EXPORTS ===
+// 1) minimal health-check workbook (no DB) — must always download & open
+attendance.get("/export.test.xlsx", /*protect,*/ A.exportTestXlsx);
+
+// 2) full DB export (with filters)
+attendance.get("/export.xlsx", protect, A.exportData);
+
+attendance.get(
+  "/export",
+  protect,
+  A.exportDataJSON ||
+    ((_req, res) =>
+      res.status(404).json({ message: "Use /attendance/export.xlsx" }))
+);
+
 attendance.get("/counts", A.counts);
 attendance.get("/hours-summary", A.hoursSummary);
 attendance.get("/calendar", A.calendarView);
