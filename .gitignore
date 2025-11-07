@@ -4,22 +4,22 @@
 
 /.metadata/
 
-# Eclipse files and folders
-selenium_learning/.classpath
-Core_java/.classpath
-Core_java/.gitignore
-Core_java/.project
-Core_java/.settings/
+# Eclipse / IDE (all modules)
+########################################
 
-selenium_learning/.classpath
-selenium_learning/.gitignore
-selenium_learning/.project
-selenium_learning/.settings/
+.classpath
+.project
+.settings/
 
-corejava_project_sunil/.classpath
-corejava_project_sunil/.gitignore
-corejava_project_sunil/.project
-corejava_project_sunil/test-output/
+########################################
+# Test outputs (all modules)
+########################################
+
+test-output/
+surefire-reports/
+failsafe-reports/
+test-results/
+
 
 ########################################
 # 2. GENERAL FILES TO IGNORE
@@ -121,3 +121,21 @@ target/
 
 
 # Temporary screenshots
+
+
+########################################
+# 6. TESTNG & TEST REPORT OUTPUT
+########################################
+
+# TestNG default output folder
+**/test-output/
+
+# Maven / Gradle test reports
+**/surefire-reports/
+**/failsafe-reports/
+**/test-results/
+
+# Common generated TestNG artifacts (in case they appear outside folders)
+**/testng-results.xml
+**/testng-failed.xml
+**/emailable-report.html
