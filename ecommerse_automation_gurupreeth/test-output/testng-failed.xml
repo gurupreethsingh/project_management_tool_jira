@@ -3,16 +3,13 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="scripts.contactus_scripts.regression_scenarios.ContactUsRegressionScenarios">
+      <class name="scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page">
         <methods>
-          <include name="toastMessageDisplayedInFirstNameField"/>
-          <include name="toastMessageDisplayedInEmailField"/>
           <include name="closeApplication"/>
-          <include name="fillAllFields_toastMessageDisplayed"/>
-          <include name="reloadContactpageClickContactLink"/>
           <include name="openApplication"/>
+          <include name="openShoppageUsingUrl"/>
         </methods>
-      </class> <!-- scripts.contactus_scripts.regression_scenarios.ContactUsRegressionScenarios -->
+      </class> <!-- scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->
