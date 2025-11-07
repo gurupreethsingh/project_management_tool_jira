@@ -103,6 +103,8 @@ import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
 
 import TopArrow from "./components/common_components/TopArrow";
+import SingleUser from "./pages/user_pages/SingleUser";
+import UpdateBlog from "./pages/blog_pages/UpdateBlog";
 
 /** Match the “PageTitle” pattern from your sample */
 const PageTitle = ({ title, children }) => {
@@ -112,12 +114,17 @@ const PageTitle = ({ title, children }) => {
   return children;
 };
 
+function HeaderSpacer() {
+  return <div className="h-16 md:h-20" />;
+}
+
 function App() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
 
   return (
     <Router>
       <Header />
+      <HeaderSpacer />
       <Routes>
         <Route
           path="/"
@@ -186,14 +193,14 @@ function App() {
           }
         />
 
-          <Route
-            path="/careers"
-            element={
-              <PageTitle title="Careers">
-                <Careers />
-              </PageTitle>
-            }
-          />
+        <Route
+          path="/careers"
+          element={
+            <PageTitle title="Careers">
+              <Careers />
+            </PageTitle>
+          }
+        />
 
         <Route
           path="/all-blogs"
@@ -219,6 +226,15 @@ function App() {
                 <AddBlog />
               </PageTitle>
             </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/update-blog/:slug/:id"
+          element={
+            <PageTitle title="Update Blog">
+              <UpdateBlog />
+            </PageTitle>
           }
         />
 
@@ -259,6 +275,17 @@ function App() {
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
               <PageTitle title="All Users">
                 <AllUsers />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-user/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="Single User">
+                <SingleUser />
               </PageTitle>
             </PrivateRoute>
           }

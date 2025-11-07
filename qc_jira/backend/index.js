@@ -29,7 +29,12 @@ dotenv.config();
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174","http://localhost:5175" , "http://localhost:5176"], // Replace with your frontend's URL
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+    ], // Replace with your frontend's URL
     credentials: true, // Enable credentials
   })
 );
@@ -52,6 +57,31 @@ app.use((req, res, next) => {
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
 });
+
+// index.js (near the top, after app = express() and before route mounts)
+const nocache = (_req, res, next) => {
+  res.set("Cache-Control", "no-store");
+  next();
+};
+const skipCompression = (req, _res, next) => {
+  // tell any compression middleware/proxy to skip this response
+  req.headers["x-no-compression"] = "1";
+  next();
+};
+
+// Important: register these BEFORE app.use("/api", attendanceRoutes)
+app.get(
+  "/api/attendance/export.xlsx",
+  skipCompression,
+  nocache,
+  (req, res, next) => next()
+);
+app.get(
+  "/api/attendance/export.test.xlsx",
+  skipCompression,
+  nocache,
+  (req, res, next) => next()
+);
 
 // ===== ROUTE MOUNTS =====
 app.use("/api/developers", developerRoutes);

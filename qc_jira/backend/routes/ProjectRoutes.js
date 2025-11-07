@@ -21,6 +21,9 @@ try {
 // ===== Project names for datalist (NEW)
 router.get("/projects/names", projectController.getAllProjectNames);
 
+// ===== NEW: Global Projects Export (must be BEFORE '/projects/:id')
+router.get("/projects/export.xlsx", projectController.exportProjectsXlsx);
+
 // existing
 router.get("/projects/:id", projectController.getProjectById);
 

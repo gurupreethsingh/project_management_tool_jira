@@ -6,15 +6,16 @@ import {
   FaPhone,
   FaMapMarkerAlt,
   FaUserShield,
+  FaUserCircle, // ← avatar icon
 } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
 import { motion } from "framer-motion";
-import { useNavigate } from "react-router-dom";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import globalBackendRoute from "../../config/Config";
 
 export default function Profile() {
   const [userData, setUserData] = useState(null);
+  const [imgError, setImgError] = useState(false); // ← track broken image
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -51,8 +52,11 @@ export default function Profile() {
       const normalizedPath = avatar.replace(/\\/g, "/").split("uploads/").pop();
       return `${globalBackendRoute}/uploads/${normalizedPath}`;
     }
-    return "https://via.placeholder.com/150";
+    return null; // ← return null so we can show the icon instead
   };
+
+  const imageUrl = getImageUrl(userData.avatar);
+  const showImage = Boolean(imageUrl) && !imgError;
 
   return (
     <motion.div
@@ -62,16 +66,29 @@ export default function Profile() {
       className="max-w-4xl mx-auto p-6 bg-white rounded-lg"
     >
       <div className="flex flex-col sm:flex-row items-center sm:items-start">
-        {/* User Image */}
-        <motion.img
-          initial={{ x: -50, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          transition={{ delay: 0.2, duration: 0.5 }}
-          src={getImageUrl(userData.avatar)}
-          alt={userData.name}
-          className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-lg sm:rounded-xl mb-4 sm:mb-0 sm:mr-6"
-          style={{ maxWidth: "100%", height: "auto" }}
-        />
+        {/* User Image or Fallback Icon */}
+        {showImage ? (
+          <motion.img
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            src={imageUrl}
+            alt={userData.name || "User avatar"}
+            onError={() => setImgError(true)} // ← fall back to icon if broken
+            className="w-32 h-32 sm:w-48 sm:h-48 object-cover rounded-lg sm:rounded-xl mb-4 sm:mb-0 sm:mr-6"
+            style={{ maxWidth: "100%", height: "auto" }}
+          />
+        ) : (
+          <motion.div
+            initial={{ x: -50, opacity: 0 }}
+            animate={{ x: 0, opacity: 1 }}
+            transition={{ delay: 0.2, duration: 0.5 }}
+            className="w-32 h-32 sm:w-48 sm:h-48 mb-4 sm:mb-0 sm:mr-6 flex items-center justify-center rounded-lg sm:rounded-xl bg-slate-100"
+            aria-label="Default user avatar"
+          >
+            <FaUserCircle className="w-24 h-24 sm:w-32 sm:h-32 text-slate-400" />
+          </motion.div>
+        )}
 
         <div className="w-full">
           <motion.h3
@@ -98,6 +115,7 @@ export default function Profile() {
                   {userData.name}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -111,6 +129,7 @@ export default function Profile() {
                   {userData.email}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -124,6 +143,7 @@ export default function Profile() {
                   {userData.role}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -137,6 +157,7 @@ export default function Profile() {
                   {userData.phone || "N/A"}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -150,6 +171,7 @@ export default function Profile() {
                   {userData.address?.street || "N/A"}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -163,6 +185,7 @@ export default function Profile() {
                   {userData.address?.city || "N/A"}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -176,6 +199,7 @@ export default function Profile() {
                   {userData.address?.state || "N/A"}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -189,6 +213,7 @@ export default function Profile() {
                   {userData.address?.postalCode || "N/A"}
                 </dd>
               </motion.div>
+
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -204,6 +229,7 @@ export default function Profile() {
               </motion.div>
             </dl>
           </div>
+
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
