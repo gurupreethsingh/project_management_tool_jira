@@ -106,12 +106,28 @@ import TopArrow from "./components/common_components/TopArrow";
 import SingleUser from "./pages/user_pages/SingleUser";
 import UpdateBlog from "./pages/blog_pages/UpdateBlog";
 
+import Breadcrumb from "./components/common_components/Breadcrumb";
+
 /** Match the “PageTitle” pattern from your sample */
+/** Layout wrapper: sets <title> and shows Breadcrumb for this page */
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     document.title = title ? `${title} | ECODERS` : "ECODERS";
   }, [title]);
-  return children;
+
+  return (
+    <>
+      {/* Breadcrumb bar (shared across all routes that use PageTitle) */}
+      <div className="bg-slate-50/60">
+        <div className="mx-auto container px-4 sm:px-6 lg:px-8">
+          <Breadcrumb pageTitle={title} />
+        </div>
+      </div>
+
+      {/* Actual page content */}
+      {children}
+    </>
+  );
 };
 
 function HeaderSpacer() {

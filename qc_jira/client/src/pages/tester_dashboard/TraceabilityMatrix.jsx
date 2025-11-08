@@ -42,11 +42,19 @@ export default function TraceabilityMatrix() {
     (async () => {
       try {
         const token = localStorage.getItem("token");
-        const auth = token ? { headers: { Authorization: `Bearer ${token}` } } : undefined;
+        const auth = token
+          ? { headers: { Authorization: `Bearer ${token}` } }
+          : undefined;
 
         const [matrixRes, scenariosRes] = await Promise.all([
-          axios.get(`${globalBackendRoute}/api/projects/${projectId}/traceability-matrix`, auth),
-          axios.get(`${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`, auth),
+          axios.get(
+            `${globalBackendRoute}/api/projects/${projectId}/traceability-matrix`,
+            auth
+          ),
+          axios.get(
+            `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`,
+            auth
+          ),
         ]);
 
         const m = Array.isArray(matrixRes.data) ? matrixRes.data : [];
@@ -60,9 +68,12 @@ export default function TraceabilityMatrix() {
         setTotalTestCases(m.filter((i) => i.testCaseNumber).length);
         setPassCount(m.filter((i) => i.testCaseStatus === "Pass").length);
         setFailCount(m.filter((i) => i.testCaseStatus === "Fail").length);
-        setDefectReportCount(m.filter((i) => i.defectReportStatus === "Present").length);
+        setDefectReportCount(
+          m.filter((i) => i.defectReportStatus === "Present").length
+        );
         setMissingTestCasesCount(
-          m.filter((i) => !i.testCaseNumber || i.testCaseNumber === "Missing").length
+          m.filter((i) => !i.testCaseNumber || i.testCaseNumber === "Missing")
+            .length
         );
 
         setCurrentPage(1);
@@ -115,8 +126,12 @@ export default function TraceabilityMatrix() {
     // count by module id from scenario lookup
     for (const row of matrix) {
       const sn = row?.scenarioNumber?.toString();
-      const m = scenarioNumToModule.get(sn) || { _id: "__unassigned__", name: "Unassigned" };
-      if (!counts.has(m._id)) counts.set(m._id, { _id: m._id, name: m.name, count: 0 });
+      const m = scenarioNumToModule.get(sn) || {
+        _id: "__unassigned__",
+        name: "Unassigned",
+      };
+      if (!counts.has(m._id))
+        counts.set(m._id, { _id: m._id, name: m.name, count: 0 });
       counts.get(m._id).count += 1;
     }
     return Array.from(counts.values()).sort((a, b) =>
@@ -142,7 +157,8 @@ export default function TraceabilityMatrix() {
         row.defectNumber,
         row.testCaseStatus,
         row.defectReportStatus,
-        (scenarioNumToModule.get(row?.scenarioNumber?.toString()) || {}).name || "Unassigned",
+        (scenarioNumToModule.get(row?.scenarioNumber?.toString()) || {}).name ||
+          "Unassigned",
       ].map(norm);
       return q ? fields.some((f) => f.includes(q)) : true;
     });
@@ -178,12 +194,17 @@ export default function TraceabilityMatrix() {
 
   const getRowModule = (row) => {
     const sn = row?.scenarioNumber?.toString();
-    return scenarioNumToModule.get(sn) || { _id: "__unassigned__", name: "Unassigned" };
+    return (
+      scenarioNumToModule.get(sn) || {
+        _id: "__unassigned__",
+        name: "Unassigned",
+      }
+    );
   };
 
   return (
     <div className="bg-white py-10 sm:py-12">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto container px-4 sm:px-6 lg:px-8">
         {/* Header / Controls (matches AllScenarios) */}
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
@@ -191,11 +212,16 @@ export default function TraceabilityMatrix() {
               Traceability Matrix for Project: {projectId}
             </h2>
             <p className="text-xs text-gray-600 mt-1">
-              Total Scenarios: {totalScenarios} | Expected TestCases: {totalTestCases} |{" "}
-              <span className="text-rose-600">Missing Test Cases: {missingTestCasesCount}</span> |{" "}
-              <span className="text-emerald-600">Pass: {passCount}</span> |{" "}
+              Total Scenarios: {totalScenarios} | Expected TestCases:{" "}
+              {totalTestCases} |{" "}
+              <span className="text-rose-600">
+                Missing Test Cases: {missingTestCasesCount}
+              </span>{" "}
+              | <span className="text-emerald-600">Pass: {passCount}</span> |{" "}
               <span className="text-rose-600">Fail: {failCount}</span> |{" "}
-              <span className="text-rose-600">Missing Defect Reports: {defectReportCount}</span>
+              <span className="text-rose-600">
+                Missing Defect Reports: {defectReportCount}
+              </span>
             </p>
             {searchQuery && (
               <p className="text-xs text-gray-600">
@@ -206,17 +232,23 @@ export default function TraceabilityMatrix() {
 
           <div className="flex items-center gap-3 flex-wrap">
             <FaThList
-              className={`text-lg cursor-pointer ${view === "list" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "list" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("list")}
               title="List view"
             />
             <FaThLarge
-              className={`text-lg cursor-pointer ${view === "card" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "card" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("card")}
               title="Card view"
             />
             <FaTh
-              className={`text-lg cursor-pointer ${view === "grid" ? "text-blue-500" : "text-gray-500"}`}
+              className={`text-lg cursor-pointer ${
+                view === "grid" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setView("grid")}
               title="Grid view"
             />
@@ -244,7 +276,9 @@ export default function TraceabilityMatrix() {
         {/* Module chips row — identical behavior to AllScenarios */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-semibold text-slate-700">Filter by Module</h3>
+            <h3 className="text-xs font-semibold text-slate-700">
+              Filter by Module
+            </h3>
             <button
               onClick={clearModuleSelection}
               className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
@@ -300,7 +334,9 @@ export default function TraceabilityMatrix() {
                     key={`${it.scenarioNumber}-${idx}`}
                     className="grid grid-cols-[56px,120px,1fr,160px,140px,120px,120px,120px] items-center text-[12px] px-3 py-2"
                   >
-                    <div className="text-slate-700">{indexOfFirst + idx + 1}</div>
+                    <div className="text-slate-700">
+                      {indexOfFirst + idx + 1}
+                    </div>
 
                     <div className="text-slate-900 font-medium truncate">
                       {it.scenarioNumber}
@@ -328,7 +364,9 @@ export default function TraceabilityMatrix() {
 
                     <div
                       className={`font-semibold ${
-                        it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
+                        it.testCaseStatus === "Fail"
+                          ? "text-rose-600"
+                          : "text-emerald-600"
                       }`}
                     >
                       {it.testCaseStatus || "N/A"}
@@ -370,14 +408,18 @@ export default function TraceabilityMatrix() {
                       {m.name}
                     </span>
                   </div>
-                  <div className="text-sm text-slate-700 mt-1">{it.scenarioText}</div>
+                  <div className="text-sm text-slate-700 mt-1">
+                    {it.scenarioText}
+                  </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
                     <div className="border rounded-md p-2">
                       <div className="text-slate-500">Test Case #</div>
                       <div
                         className={`font-medium ${
-                          it.testCaseNumber === "Missing" ? "text-rose-600" : "text-slate-800"
+                          it.testCaseNumber === "Missing"
+                            ? "text-rose-600"
+                            : "text-slate-800"
                         }`}
                       >
                         {it.testCaseNumber || "N/A"}
@@ -387,7 +429,9 @@ export default function TraceabilityMatrix() {
                       <div className="text-slate-500">Status</div>
                       <div
                         className={`font-semibold ${
-                          it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
+                          it.testCaseStatus === "Fail"
+                            ? "text-rose-600"
+                            : "text-emerald-600"
                         }`}
                       >
                         {it.testCaseStatus || "N/A"}
@@ -403,7 +447,9 @@ export default function TraceabilityMatrix() {
                       <div className="text-slate-500">Defect Report</div>
                       <div
                         className={`font-semibold ${
-                          it.defectReportStatus === "Present" ? "text-emerald-600" : "text-rose-600"
+                          it.defectReportStatus === "Present"
+                            ? "text-emerald-600"
+                            : "text-rose-600"
                         }`}
                       >
                         {it.defectReportStatus || "N/A"}
@@ -432,14 +478,18 @@ export default function TraceabilityMatrix() {
                       {m.name}
                     </span>
                   </div>
-                  <div className="text-sm text-slate-700 mt-1">{it.scenarioText}</div>
+                  <div className="text-sm text-slate-700 mt-1">
+                    {it.scenarioText}
+                  </div>
 
                   <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
                     <div className="border rounded-md p-2">
                       <div className="text-slate-500">Test Case #</div>
                       <div
                         className={`font-medium ${
-                          it.testCaseNumber === "Missing" ? "text-rose-600" : "text-slate-800"
+                          it.testCaseNumber === "Missing"
+                            ? "text-rose-600"
+                            : "text-slate-800"
                         }`}
                       >
                         {it.testCaseNumber || "N/A"}
@@ -449,7 +499,9 @@ export default function TraceabilityMatrix() {
                       <div className="text-slate-500">Status</div>
                       <div
                         className={`font-semibold ${
-                          it.testCaseStatus === "Fail" ? "text-rose-600" : "text-emerald-600"
+                          it.testCaseStatus === "Fail"
+                            ? "text-rose-600"
+                            : "text-emerald-600"
                         }`}
                       >
                         {it.testCaseStatus || "N/A"}
@@ -465,7 +517,9 @@ export default function TraceabilityMatrix() {
                       <div className="text-slate-500">Defect Report</div>
                       <div
                         className={`font-semibold ${
-                          it.defectReportStatus === "Present" ? "text-emerald-600" : "text-rose-600"
+                          it.defectReportStatus === "Present"
+                            ? "text-emerald-600"
+                            : "text-rose-600"
                         }`}
                       >
                         {it.defectReportStatus || "N/A"}

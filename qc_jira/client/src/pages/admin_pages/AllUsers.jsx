@@ -160,7 +160,7 @@ export default function AllUsers() {
 
   return (
     <div className="bg-white py-10 sm:py-16">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto container px-6 lg:px-8">
         {/* Header / Controls */}
         <div className="flex justify-between items-center flex-wrap gap-4">
           <h2 className="text-3xl font-bold text-gray-900">All Users</h2>

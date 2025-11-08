@@ -6,7 +6,6 @@ const SingleBlog = () => {
   return (
     <div>
       <div className="singleblog_header_section">
-        <Breadcrumb pageTitle="Single Blog" />
         <Blog />
       </div>
     </div>
