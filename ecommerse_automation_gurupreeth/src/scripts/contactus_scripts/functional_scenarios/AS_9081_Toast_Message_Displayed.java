@@ -31,7 +31,8 @@ public class AS_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 
 		String messageFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 6);
 		cp.enterValueInMessageAreaField(messageFromExcel);
-
+		
+		cp.clickOnIagreeTerms();
 		cp.clickOnSubmitForm();
 
 		TakingScreenshot.captureScreenshot(driver);
