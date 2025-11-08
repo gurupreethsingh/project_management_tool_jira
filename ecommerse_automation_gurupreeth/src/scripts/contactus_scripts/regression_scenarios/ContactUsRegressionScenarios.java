@@ -90,7 +90,7 @@ ContactUspage cp = new ContactUspage(driver);
 	public void reloadContactpageClickContactLink() throws InterruptedException {
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
-//		ContactUspage cp = new ContactUspage(driver);
+		ContactUspage cp = new ContactUspage(driver);
 
 		cp.clickOnFooterContactUsLink();
 		
