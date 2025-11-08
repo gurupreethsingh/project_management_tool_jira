@@ -3,14 +3,13 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="scripts.contactus_scripts.functional_scenarios.AddProductToCart">
+      <class name="scripts.contactus_scripts.system_scenarios.As_1111_LoginAddTowishistConfirmLogoutLoginAgainConfirmWishlist">
         <methods>
-          <include name="openShoppageUsingUrl"/>
           <include name="closeApplication"/>
           <include name="openApplication"/>
-          <include name="openShoppageUsingUrl"/>
+          <include name="loginAddProductToWishlist"/>
         </methods>
-      </class> <!-- scripts.contactus_scripts.functional_scenarios.AddProductToCart -->
+      </class> <!-- scripts.contactus_scripts.system_scenarios.As_1111_LoginAddTowishistConfirmLogoutLoginAgainConfirmWishlist -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->
