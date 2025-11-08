@@ -107,7 +107,7 @@ public class ShopPage extends AllVerifications
 	
 	public void verifyProductNameInSearchProductPage(String expectedText)
 	{
-		AllVerifications.textIsPresentOrNotIgnoreCase(expectedText, driver,By.cssSelector("h1.text-3xl"), sa);
+		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
 	}
 	
 	
