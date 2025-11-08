@@ -117,7 +117,7 @@ public class ContactUspage extends AllVerifications {
 	// class.
 	public ContactUspage(WebDriver driver) {
 		super(driver);
-		this.driver = driver;
+		
 		PageFactory.initElements(driver, this);
 	}
 
@@ -126,10 +126,12 @@ public class ContactUspage extends AllVerifications {
 		AllVerifications.clickIfVisibleAndEnabled(logo, driver, sa);
 	}
 
-	public void enterValueInFirstNameField(String firstNamekeys) {
+	public void enterValueInFirstNameField(String firstNamekeys) throws InterruptedException {
 
 		AllVerifications.clickIfVisibleAndEnabled(firstNameField, driver, sa);
+		Thread.sleep(1000);
 		firstNameField.clear();
+		Thread.sleep(1000);
 		firstNameField.sendKeys(firstNamekeys);
 
 	}

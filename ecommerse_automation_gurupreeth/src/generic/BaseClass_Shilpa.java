@@ -154,10 +154,10 @@ interface AutomationConstants_Shilpa {
 }
 
 class OpenClose_Contact_shilpa implements AutomationConstants_Shilpa {
-    public static WebDriver driver = null;
+    public  WebDriver driver = null;
 
     @BeforeMethod
-    public static void openApplication() {
+    public  void openApplication() {
         driver = new ChromeDriver();
         driver.manage().window().maximize();
         driver.manage().timeouts().implicitlyWait(Duration.ofSeconds(20));
@@ -166,7 +166,7 @@ class OpenClose_Contact_shilpa implements AutomationConstants_Shilpa {
     }
 
     @AfterMethod
-    public static void closeApplication() {
+    public  void closeApplication() {
         if (driver != null) {
             driver.quit();
         }
