@@ -14,7 +14,7 @@
 ########################################
 # Test outputs (all modules)
 ########################################
-
+**/test-output/
 test-output/
 surefire-reports/
 failsafe-reports/

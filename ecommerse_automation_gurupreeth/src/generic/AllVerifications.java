@@ -11,7 +11,7 @@ import org.testng.asserts.SoftAssert;
 
 public class AllVerifications 
 {
-	protected static WebDriver driver = null;
+	protected WebDriver driver;
 	
 	protected AllVerifications(WebDriver driver)
 	{
@@ -75,6 +75,7 @@ public class AllVerifications
 		{
 			 wait.until(ExpectedConditions.textToBePresentInElement(element, expectedText));
 			System.out.println("Text verification passed , expected text was : "+expectedText +" , Actal text found : "+ element.getText());
+			textVerified = true;
 		}
 		catch(Exception ex)
 		{
@@ -95,9 +96,7 @@ public class AllVerifications
 
 	        try 
 	        {
-	            // Wait for *any* text to be present in the element (not case-sensitive)
 	            wait.until(ExpectedConditions.not(ExpectedConditions.textToBe(locator, expectedText)));
-// textToBe -->is an inbuilt function which donot take document,instead it will take the locator of that element
 	            String actualText = driver.findElement(locator).getText().trim();
 
 	            if (actualText.equalsIgnoreCase(expectedText.trim())) 

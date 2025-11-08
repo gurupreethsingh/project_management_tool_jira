@@ -85,7 +85,6 @@ import AllEvents from "./pages/event_pages/AllEvents";
 import SingleEvent from "./pages/event_pages/SingleEvent";
 import SingleUserEvent from "./pages/event_pages/SingleUserEvent";
 import UpdateEvent from "./pages/event_pages/UpdateEvent";
-
 // attendance pages
 import GetAllAttendance from "./pages/attendence_pages/GetAllAttendance";
 import CreateAttendance from "./pages/attendence_pages/CreateAttendance";
@@ -101,11 +100,9 @@ import AllRequirements from "./pages/requirement_pages/AllRequirements";
 import SingleModuleRequirements from "./pages/requirement_pages/SingleModuleRequirements";
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
-
 import TopArrow from "./components/common_components/TopArrow";
 import SingleUser from "./pages/user_pages/SingleUser";
 import UpdateBlog from "./pages/blog_pages/UpdateBlog";
-
 import Breadcrumb from "./components/common_components/Breadcrumb";
 
 /** Match the “PageTitle” pattern from your sample */

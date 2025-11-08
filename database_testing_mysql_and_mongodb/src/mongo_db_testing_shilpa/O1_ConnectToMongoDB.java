@@ -8,6 +8,7 @@ public class O1_ConnectToMongoDB {
 	{
 		 MongoClient connection = null;
 	        try {
+				//this will connect to mongoDB
 	            connection = MongoClients.create("mongodb://localhost:27017");        // connect
 
 	            if (connection != null) {
