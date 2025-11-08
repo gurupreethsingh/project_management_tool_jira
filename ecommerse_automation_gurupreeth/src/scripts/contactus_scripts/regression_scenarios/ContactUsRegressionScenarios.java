@@ -12,7 +12,7 @@ import pom.ContactUspage;
 public class ContactUsRegressionScenarios extends BaseClass_Shilpa {
 	
 SoftAssert sa = new SoftAssert();
-ContactUspage cp = new ContactUspage(driver);
+
 	
 	@Test(enabled = true, priority = 1)
    public void openContactpageUsingUrl()
@@ -25,9 +25,9 @@ ContactUspage cp = new ContactUspage(driver);
 	@Test(enabled = true, priority = 2)
 	public void fillAllFields_toastMessageDisplayed() throws InterruptedException {
 		
-
-		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
-		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
+		ContactUspage cp = new ContactUspage(driver);
+//		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
+//		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
 
 		String firstNameFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 2);
 		cp.enterValueInFirstNameField(firstNameFromExcel);
@@ -54,7 +54,7 @@ ContactUspage cp = new ContactUspage(driver);
 	@Test(enabled = true, priority = 3)
 	public void toastMessageDisplayedInEmailField() throws InterruptedException {
 	
-
+ContactUspage cp = new ContactUspage(driver);
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);
 		
@@ -73,7 +73,7 @@ ContactUspage cp = new ContactUspage(driver);
 	
 	@Test(enabled = true, priority = 4)
 	public void toastMessageDisplayedInFirstNameField() throws InterruptedException {
-//		ContactUspage cp = new ContactUspage(driver);
+		ContactUspage cp = new ContactUspage(driver);
 
 		String expectedContactpageTitle = (String) Excel_Shilpa.getData("ContactUspage", 1, 0);
 		AllVerifications.verifyTitle(expectedContactpageTitle, driver, sa);

@@ -27,7 +27,7 @@ interface AutomationConstants_Anusha {
     String URL_SHOP                 = URL_OF_APPLICATION + PATH_SHOP;
 }
 
-class OpenClose_Contact_Anusha implements AutomationConstants_Anusha {
+class OpenClose_Anusha implements AutomationConstants_Anusha {
     public static WebDriver driver = null;
 
     @BeforeMethod
@@ -47,7 +47,7 @@ class OpenClose_Contact_Anusha implements AutomationConstants_Anusha {
     }
 }
 
-public class BaseClass_Anusha extends OpenClose_Contact_Anusha implements AutomationConstants_Anusha {
+public class BaseClass_Anusha extends OpenClose_Anusha implements AutomationConstants_Anusha {
 
     /** Nested & importable as generic.BaseClass_Anusha.Excel_Anusha */
     public static class Excel_Anusha implements AutomationConstants_Anusha {

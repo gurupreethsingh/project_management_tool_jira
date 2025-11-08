@@ -11,7 +11,7 @@ import org.testng.asserts.SoftAssert;
 
 public class AllVerifications 
 {
-	protected static WebDriver driver = null;
+	protected WebDriver driver;
 	
 	protected AllVerifications(WebDriver driver)
 	{
