@@ -2,24 +2,24 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-07T16:39:37 IST" name="Default suite" finished-at="2025-11-07T16:39:42 IST" duration-ms="5066">
+  <suite started-at="2025-11-08T14:00:22 IST" name="Default suite" finished-at="2025-11-08T14:00:38 IST" duration-ms="16469">
     <groups>
     </groups>
-    <test started-at="2025-11-07T16:39:37 IST" name="Default test" finished-at="2025-11-07T16:39:42 IST" duration-ms="5066">
-      <class name="scripts.contactus_scripts.functional_scenarios.AddProductToCart">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AddProductToCart@196a42c3]" started-at="2025-11-07T16:39:37 IST" name="openApplication" finished-at="2025-11-07T16:39:40 IST" duration-ms="2556" status="PASS">
+    <test started-at="2025-11-08T14:00:22 IST" name="Default test" finished-at="2025-11-08T14:00:38 IST" duration-ms="16469">
+      <class name="scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T14:00:22 IST" name="openApplication" finished-at="2025-11-08T14:00:26 IST" duration-ms="3901" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="openShoppageUsingUrl()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.AddProductToCart@196a42c3]" started-at="2025-11-07T16:39:40 IST" name="openShoppageUsingUrl" finished-at="2025-11-07T16:39:42 IST" duration-ms="2254" status="PASS">
+        <test-method signature="openShoppageUsingUrl()[pri:1, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T14:00:26 IST" name="openShoppageUsingUrl" finished-at="2025-11-08T14:00:38 IST" duration-ms="12362" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openShoppageUsingUrl -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AddProductToCart@196a42c3]" started-at="2025-11-07T16:39:42 IST" name="closeApplication" finished-at="2025-11-07T16:39:42 IST" duration-ms="215" status="PASS">
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T14:00:38 IST" name="closeApplication" finished-at="2025-11-08T14:00:38 IST" duration-ms="159" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
-      </class> <!-- scripts.contactus_scripts.functional_scenarios.AddProductToCart -->
+      </class> <!-- scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>
