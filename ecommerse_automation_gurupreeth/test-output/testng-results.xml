@@ -3,6 +3,22 @@
   <reporter-output>
   </reporter-output>
 <<<<<<< HEAD
+<<<<<<< HEAD
+  <suite started-at="2025-11-08T13:19:36 IST" name="Default suite" finished-at="2025-11-08T13:19:56 IST" duration-ms="20526">
+    <groups>
+    </groups>
+    <test started-at="2025-11-08T13:19:36 IST" name="Default test" finished-at="2025-11-08T13:19:56 IST" duration-ms="20526">
+      <class name="scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T13:19:36 IST" name="openApplication" finished-at="2025-11-08T13:19:41 IST" duration-ms="4827" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- openApplication -->
+        <test-method signature="openShoppageUsingUrl()[pri:1, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T13:19:41 IST" name="openShoppageUsingUrl" finished-at="2025-11-08T13:19:56 IST" duration-ms="15215" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- openShoppageUsingUrl -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T13:19:56 IST" name="closeApplication" finished-at="2025-11-08T13:19:56 IST" duration-ms="370" status="PASS">
+=======
   <suite started-at="2025-11-08T14:00:22 IST" name="Default suite" finished-at="2025-11-08T14:00:38 IST" duration-ms="16469">
     <groups>
     </groups>
@@ -17,6 +33,7 @@
           </reporter-output>
         </test-method> <!-- openShoppageUsingUrl -->
         <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_5246_Add_product_to_cart_fromShop_page@48075da3]" started-at="2025-11-08T14:00:38 IST" name="closeApplication" finished-at="2025-11-08T14:00:38 IST" duration-ms="159" status="PASS">
+>>>>>>> a990d66a45613ad80a02fd66c5a6c7960bddea9a
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
