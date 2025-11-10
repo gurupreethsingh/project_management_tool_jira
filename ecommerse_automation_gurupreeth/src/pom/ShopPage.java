@@ -19,11 +19,8 @@ public class ShopPage extends AllVerifications
 	SoftAssert sa = new SoftAssert();
 	
 	// finding your weblements 
-	
-	
 	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>div.pt-3>button")
 	private WebElement addToCartButton;
-	
 	
 	@FindBy(css = "div.hidden.items-center.gap-6>div.relative>button")
 	private WebElement cartIcon;
@@ -31,14 +28,17 @@ public class ShopPage extends AllVerifications
 	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>h3")
 	private WebElement productNameInProductCard;
 	
-	
 	@FindBy(css = "div.overflow-y-auto>div:nth-of-type(1)>div.flex-grow>h3")
 	private WebElement productNameInMiniCart;
-	
 	
 	@FindBy(css = "div.mt-4.border-t>a")
 	private WebElement viewCartButtonInMiniCart;
 	
+	@FindBy(css = "div.mt-4.border-t>button.w-full")
+	private WebElement checkoutButtonInMiniCart;
+	
+	@FindBy(css = "div.mt-4.border-t>div.flex")
+	private WebElement totalPriceInMinicart;
 	
 	@FindBy(css="input.flex-grow")
 	private WebElement searchField;
@@ -46,9 +46,253 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.hidden.justify-center>form>button")
 	private WebElement searchIcon;
 	
+	@FindBy(css="h1.text-3xl")
+	private WebElement headingOfProductInSearchProductPage;
+	
+	@FindBy(css="div.hidden>div.relative:nth-of-type(1)>button>svg")
+	private WebElement wishlistIconFromShopPage;
+	
+	@FindBy(css="div.bg-gradient-to-r")
+	private WebElement avatarTabFromShopPage;
+	
+	@FindBy(css="a.flex:last-child>span")
+	private WebElement SignInLinkText;
+	
+	@FindBy(css="svg.text-cyan-500")
+	private WebElement logoFromShopPage;
+		
+	@FindBy(css="div.space-y-6>div.flex>button")
+	private WebElement clearFilterButton;
+	
+	
+	// there are 12 main category
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+"i"+")>div>span:first-child")
+	private WebElement mainCategories;
+	
+	// there are 12 main category drop down 
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+"i"+")>div>span:last-child")
+	private WebElement mainCategoriesDropDown;
+	
+	//there is 4 sub category in first main category 
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfFirstMainCategory;
+	
+	//there is 3 sub category in second main category 
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfsecondMainCategory;
+	
+	//there is 2 sub category in second main category 
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfThirdMainCategory;
+	
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfFourthMainCategory;
+	
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfFivthMainCategory;
+	
+//	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+//	private WebElement SubCategoriesOfSixthMainCategory;
+
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfSeventhMainCategory;
+	
+//	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+//	private WebElement SubCategoriesOfEightMainCategory;
+//	
+//	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+//	private WebElement SubCategoriesOfNingthMainCategory;
+	
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfTenthMainCategory;
+	
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfEleventhMainCategory;
+	
+	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
+	private WebElement SubCategoriesOfTwelthMainCategory;
+	//div.space-y-6>div:nth-of-type(3)>div:last-child>div>span
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div.flex")
+	private WebElement brandsHeading;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div>span")
+	private WebElement allBrandsLink;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div>svg")
+	private WebElement allBrandsDropDown;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+"i"+")>span")
+	private WebElement brandsNameInAllBrands;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+"i"+")>input")
+	private WebElement checkBoxesOfbrandsName;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:first-child")
+	private WebElement priceRangeHeading;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span>span:nth-of-type(2)")
+	private WebElement leftPriceRangeButton;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span>span:nth-of-type(3)")
+	private WebElement rightPriceRangeButton;
+	
+	@FindBy(css="div.px-2>div.text-sm")
+	private WebElement realPriceBelowPriceRange;
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(2)>div.flex")
+	private WebElement categoriesHeading;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:first-child")
+	private WebElement sortByHeading;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(1)")
+	private WebElement defaultButton;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(2)")
+	private WebElement priceIncrease;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(3)")
+	private WebElement priceDecrease;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(4)")
+	private WebElement newestButton;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(5)")
+	private WebElement oldestButton;
+
+	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(6)")
+	private WebElement popularButton;
+	
+	@FindBy(css="div.mb-6>h1")
+	private WebElement ourProductsHeadingOnShopPage;
+	
+	@FindBy(css="div.grid:last-child>div.relative:nth-of-type("+"i"+")")
+	private WebElement eachProductCards;
+	//div.grid:last-child>div.relative:nth-of-type(1)>button
+	
+	@FindBy(css="div.grid:last-child>div.relative:nth-of-type("+"i"+")>button")
+	private WebElement wishlistIconOnEachProductCards;
+	
+	@FindBy(css="div.grid>div.relative:nth-of-type(1)>div.p-4>div.flex>span:first-child")
+	private WebElement priceOnProductCardsInShopPage;
+	
+	@FindBy(css="div.mb-6>div>div>button:nth-of-type(1)")
+	private WebElement firstCardView;
+	
+	@FindBy(css="div.mb-6>div>div>button:nth-of-type(2)")
+	private WebElement secondCardView;
+	
+	@FindBy(css="div.mb-6>div>div>button:nth-of-type(3)")
+	private WebElement thirdCardView;
+	
+	@FindBy(css="div.mb-6>div>span")
+	private WebElement productCount;
+	
+	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(1)")
+	private WebElement firstPagination;
+	
+	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(2)")
+	private WebElement secondPagination;
+	
+	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(3)")
+	private WebElement thirdPagination;
 	
 	@FindBy(css="h1.text-3xl")
-	private WebElement headingInSearchField;
+	private WebElement aboutUs;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement contactUs;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement careers;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement blogs;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement helpCenter;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement privacyPolicy;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement termsOfService;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement faceBook;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement twitter;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement linkedIn;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement gitHub;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement enterEmailField;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement subscribe;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement companyHeading;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement supportHeading;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement followUs;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement subscribeHeading;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement topUpArrowInFooter;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement copyWriteTextLeftSide;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement copyWriteTextRightSide;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement productHeadingInSingleProductPage;
+	
+	@FindBy(css="header>nav>div:nth-child(3)>a>div>span")
+	private WebElement wishlistBadge;
+	
+	@FindBy(css="header>nav>div:nth-child(3)>div:nth-of-type(1)>button>span")
+	private WebElement miniCartBadge;
+	
+	@FindBy(css=" ")
+	private WebElement checkOutButtonOnMinicart;
+	
+	@FindBy(css="h1.text-3xl")
+	private WebElement removeButtonFromWishlistPage;
+	
+	@FindBy(css="div.transition:nth-of-type(1)>div.mt-4:nth-of-type(1)>h2")
+	private WebElement productNameInWishlistPage;
+	
+	@FindBy(css="div.transition:nth-of-type(1)>div.mt-4:nth-of-type(1)>p:nth-of-type(1)")
+	private WebElement productPriceInWishlistPage;
+	
+	
+		
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
 	
 	
 	
