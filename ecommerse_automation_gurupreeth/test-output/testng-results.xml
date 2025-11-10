@@ -2,20 +2,20 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-08T18:56:01 IST" name="Default suite" finished-at="2025-11-08T18:56:11 IST" duration-ms="9100">
+  <suite started-at="2025-11-08T19:09:59 IST" name="Default suite" finished-at="2025-11-08T19:10:03 IST" duration-ms="4583">
     <groups>
     </groups>
-    <test started-at="2025-11-08T18:56:01 IST" name="Default test" finished-at="2025-11-08T18:56:11 IST" duration-ms="9100">
+    <test started-at="2025-11-08T19:09:59 IST" name="Default test" finished-at="2025-11-08T19:10:03 IST" duration-ms="4583">
       <class name="scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T18:56:02 IST" name="openApplication" finished-at="2025-11-08T18:56:06 IST" duration-ms="4456" status="PASS">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T19:09:59 IST" name="openApplication" finished-at="2025-11-08T19:10:01 IST" duration-ms="2373" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="openShoppageUsingUrl()[pri:1, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T18:56:06 IST" name="openShoppageUsingUrl" finished-at="2025-11-08T18:56:10 IST" duration-ms="4196" status="PASS">
+        <test-method signature="openShoppageUsingUrl()[pri:1, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T19:10:01 IST" name="openShoppageUsingUrl" finished-at="2025-11-08T19:10:03 IST" duration-ms="1999" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openShoppageUsingUrl -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T18:56:10 IST" name="closeApplication" finished-at="2025-11-08T18:56:11 IST" duration-ms="345" status="PASS">
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.integration_scenarios.AS_8281_EnterProductInSearchFieldNavigateToSearchProductPage@8458f04]" started-at="2025-11-08T19:10:03 IST" name="closeApplication" finished-at="2025-11-08T19:10:03 IST" duration-ms="165" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
