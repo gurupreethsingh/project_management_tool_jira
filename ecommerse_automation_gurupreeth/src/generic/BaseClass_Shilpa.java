@@ -129,6 +129,8 @@ package generic;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.time.Duration;
 
 import org.apache.poi.ss.usermodel.Cell;
@@ -186,93 +188,64 @@ public class BaseClass_Shilpa extends OpenClose_Contact_shilpa implements Automa
          * - DATE => returns String (cell.getDateCellValue().toString())
          * - BOOLEAN => returns boolean
          */
-        public static Object getData(String sheetName, int rowNumber, int cellNumber) {
-            Object value = null;
-            try (FileInputStream fis = new FileInputStream(new File(excelSheetPath))) {
-                Workbook wb = WorkbookFactory.create(fis);
-                Sheet sh = wb.getSheet(sheetName);
-                if (sh == null) throw new IllegalArgumentException("Sheet not found: " + sheetName);
+    	public static Object getData(String sheetName, int rowNumber, int cellNumber) {
+            Object value = "";
 
-                Row row = sh.getRow(rowNumber);
-                if (row == null) return "";  // treat missing row as blank
+            try (FileInputStream fis = new FileInputStream(new File(excelSheetPath));
+                 Workbook wb = WorkbookFactory.create(fis)) {
 
-                // Create null as blank to normalize missing cells
-                Cell cell = row.getCell(cellNumber, Row.MissingCellPolicy.CREATE_NULL_AS_BLANK);
+                Sheet sheet = wb.getSheet(sheetName);
+                if (sheet == null) {
+                    return "";
+                }
+
+                Row row = sheet.getRow(rowNumber);
+                if (row == null) {
+                    return "";
+                }
+
+                Cell cell = row.getCell(cellNumber);
+                if (cell == null) {
+                    return "";
+                }
 
                 CellType ct = cell.getCellType();
-                switch (ct) {
-                    case STRING: {
-                        String s = cell.getStringCellValue();
-                        value = (s == null) ? "" : s.trim();
-                        break;
-                    }
 
-                    case NUMERIC: {
+                switch (ct) {
+                    case STRING:
+                        value = cell.getStringCellValue().trim();
+                        break;
+
+                    case NUMERIC:
                         if (DateUtil.isCellDateFormatted(cell)) {
-                            value = cell.getDateCellValue().toString();
+                            // Simple date formatting (change pattern if needed)
+                            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                            value = sdf.format(cell.getDateCellValue());
                         } else {
-                            value = cell.getNumericCellValue(); // Double
+                            // Avoid scientific notation / .0 issues
+                            BigDecimal bd = BigDecimal.valueOf(cell.getNumericCellValue());
+                            bd = bd.stripTrailingZeros();
+                            value = bd.toPlainString();
                         }
                         break;
-                    }
 
-                    case BOOLEAN: {
-                        value = cell.getBooleanCellValue();
+                    case BOOLEAN:
+                        value = String.valueOf(cell.getBooleanCellValue());
                         break;
-                    }
 
-                    case BLANK: {
+                    case BLANK:
                         value = "";
                         break;
-                    }
 
-                    case ERROR: {
-                        value = "ERROR: " + cell.getErrorCellValue();
+                    default:
+                        value = "";
                         break;
-                    }
-
-                    case FORMULA: {
-                        switch (cell.getCachedFormulaResultType()) {
-                            case STRING: {
-                                String s = cell.getStringCellValue();
-                                value = (s == null) ? "" : s.trim();
-                                break;
-                            }
-                            case NUMERIC: {
-                                if (DateUtil.isCellDateFormatted(cell)) {
-                                    value = cell.getDateCellValue().toString();
-                                } else {
-                                    value = String.valueOf(cell.getNumericCellValue());
-                                }
-                                break;
-                            }
-                            case BOOLEAN: {
-                                value = String.valueOf(cell.getBooleanCellValue());
-                                break;
-                            }
-                            case BLANK: {
-                                value = "";
-                                break;
-                            }
-                            default: {
-                                value = "Unsupported formula result type";
-                            }
-                        }
-                        break;
-                    }
-
-                    default: {
-                        // Fallback: treat other types as text-like & trim
-                        String s = cell.toString();
-                        value = (s == null) ? "" : s.trim();
-                    }
                 }
+
             } catch (Exception ex) {
-                throw new RuntimeException(
-                    "Excel read failed: " + excelSheetPath +
-                    " [sheet=" + sheetName + ", row=" + rowNumber + ", col=" + cellNumber + "]", ex
-                );
+                ex.printStackTrace();
             }
+
             return value;
         }
     }

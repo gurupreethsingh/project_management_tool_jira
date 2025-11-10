@@ -26,7 +26,7 @@ public class AS_9081_Toast_Message_Displayed extends BaseClass_Shilpa {
 		String emailFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 4);
 		cp.enterValueInEmailField(emailFromExcel);
 
-		String phoneNumFromExcel = cp.toPlainString(Excel_Shilpa.getData("ContactUspage", 1, 5)); // <- String now
+		String phoneNumFromExcel       = (String) Excel_Shilpa.getData("ContactUspage", 1, 5); // <- String now
 		cp.enterValueInPhoneField(phoneNumFromExcel);
 
 		String messageFromExcel = (String) Excel_Shilpa.getData("ContactUspage", 1, 6);

@@ -2,97 +2,79 @@ package generic;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 
-public class Excel implements AutomationConstants
-{
-	public static Object getData(String sheetName, int rowNumber, int cellNumber)
-	{
-		Object value = null; 
-		try
-		{
-			File f = new File(excelSheetPath);
-			FileInputStream fis = new FileInputStream(f);
-			Workbook wb = WorkbookFactory.create(fis);
-			
-			Cell cell = wb.getSheet(sheetName).getRow(rowNumber).getCell(cellNumber);
-			CellType ct = cell.getCellType();
-			
-			switch(ct)
-			{
-			case STRING : 
-			{
-				value = cell.getStringCellValue();
-				break; 
-			}
-			case NUMERIC : 
-			{
-				if(DateUtil.isCellDateFormatted(cell))
-				{
-					value = cell.getDateCellValue().toString();
-				}
-				else
-				{
-					value = cell.getNumericCellValue();
-					break; 
-				}
-				
-			}
-            case BOOLEAN:
-            {
-            	 value = cell.getBooleanCellValue();
-                 break;
+public class Excel implements AutomationConstants {
+
+    public static Object getData(String sheetName, int rowNumber, int cellNumber) {
+        Object value = "";
+
+        try (FileInputStream fis = new FileInputStream(new File(excelSheetPath));
+             Workbook wb = WorkbookFactory.create(fis)) {
+
+            Sheet sheet = wb.getSheet(sheetName);
+            if (sheet == null) {
+                return "";
             }
-            case BLANK:
-            {
-            	 value = "BLANK";
-                 break;
+
+            Row row = sheet.getRow(rowNumber);
+            if (row == null) {
+                return "";
             }
-            
-            case ERROR:
-            {
-            	 value = "ERROR: " + cell.getErrorCellValue();
-                 break;
+
+            Cell cell = row.getCell(cellNumber);
+            if (cell == null) {
+                return "";
             }
-            
-            case FORMULA:
-            {
-                // Get the formula result type
-                switch (cell.getCachedFormulaResultType()) {
-                    case STRING:
-                        value = cell.getStringCellValue();
-                        break;
-                    case NUMERIC:
-                        value = String.valueOf(cell.getNumericCellValue());
-                        break;
-                    case BOOLEAN:
-                        value = String.valueOf(cell.getBooleanCellValue());
-                        break;
-                    default:
-                        value = "Unsupported formula result type";
-                }
-                break;
+
+            CellType ct = cell.getCellType();
+
+            switch (ct) {
+                case STRING:
+                    value = cell.getStringCellValue().trim();
+                    break;
+
+                case NUMERIC:
+                    if (DateUtil.isCellDateFormatted(cell)) {
+                        // Simple date formatting (change pattern if needed)
+                        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+                        value = sdf.format(cell.getDateCellValue());
+                    } else {
+                        // Avoid scientific notation / .0 issues
+                        BigDecimal bd = BigDecimal.valueOf(cell.getNumericCellValue());
+                        bd = bd.stripTrailingZeros();
+                        value = bd.toPlainString();
+                    }
+                    break;
+
+                case BOOLEAN:
+                    value = String.valueOf(cell.getBooleanCellValue());
+                    break;
+
+                case BLANK:
+                    value = "";
+                    break;
+
+                default:
+                    value = "";
+                    break;
             }
-               
-            default:
-            {
-            	 value = "Unknown Cell Type";
-            }
-        
- 			}
-		}
-		catch(Exception ex)
-		{
-			ex.printStackTrace();
-		}
-		
-		return value;
-	}
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+
+        return value;
+    }
 }
 
 
