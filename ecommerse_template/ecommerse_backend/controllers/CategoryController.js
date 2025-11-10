@@ -26,26 +26,71 @@ const categoryStorage = multer.diskStorage({
 const categoryUpload = multer({ storage: categoryStorage });
 
 // Add new category
+// const addCategory = async (req, res) => {
+//   try {
+//     const { category_name } = req.body;
+//     const category_image = req.file
+//       ? path.join(uploadDir, req.file.filename).replace(/\\/g, "/")
+//       : "";
+
+//     const newCategory = new Category({ category_name, category_image });
+//     await newCategory.save();
+
+//     res.status(201).json({
+//       message: "Category added successfully",
+//       category: newCategory,
+//     });
+//   } catch (error) {
+//     console.error("Error adding category:", error);
+//     res.status(500).json({ message: "Error adding category" });
+//   }
+// };
+
 const addCategory = async (req, res) => {
   try {
     const { category_name } = req.body;
+
+    if (!category_name || !category_name.trim()) {
+      return res.status(400).json({ message: "category_name is required" });
+    }
+
+    // prevent duplicate categories
+    const existing = await Category.findOne({
+      category_name: category_name.trim(),
+    });
+    if (existing) {
+      return res
+        .status(400)
+        .json({ message: "Category already exists with this name" });
+    }
+
     const category_image = req.file
       ? path.join(uploadDir, req.file.filename).replace(/\\/g, "/")
       : "";
 
-    const newCategory = new Category({ category_name, category_image });
+    const newCategory = new Category({
+      category_name: category_name.trim(),
+      category_image,
+    });
+
     await newCategory.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Category added successfully",
       category: newCategory,
     });
   } catch (error) {
     console.error("Error adding category:", error);
-    res.status(500).json({ message: "Error adding category" });
+
+    if (error.code === 11000) {
+      return res
+        .status(400)
+        .json({ message: "Category already exists with this name" });
+    }
+
+    return res.status(500).json({ message: "Error adding category" });
   }
 };
-
 
 // Get all categories
 // ✅ FINAL getAllCategories
@@ -66,8 +111,6 @@ const getAllCategories = async (req, res) => {
     res.status(500).json({ message: "Error fetching categories" });
   }
 };
-
-
 
 // Get category by ID
 const getCategoryById = async (req, res) => {
