@@ -54,7 +54,6 @@ import AITutor from "./pages/chatbot_pages/AITutor";
 import CodeGenerator from "./pages/chatbot_pages/CodeGenerator";
 import CodeSummary from "./pages/chatbot_pages/CodeSummary";
 import RoadmapGenerator from "./pages/chatbot_pages/RoadmapGenerator";
-import DashboardGenerator from "./pages/chatbot_pages/DashboardGenerator";
 
 // cart pages.
 import CartPage from "./pages/cart_pages/CartPage";
@@ -67,6 +66,7 @@ import { CartProvider } from "./components/cart_components/CartContext";
 import { WishlistProvider } from "./components/wishlist_components/WishlistContext";
 
 import UiGen from "./pages/chatbot_pages/UiGen";
+import DashboardGenerator from "./pages/chatbot_pages/DashboardGenerator";
 
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
@@ -503,6 +503,14 @@ function App() {
                   element={
                     <PageTitle title="Ui-Gen">
                       <UiGen />
+                    </PageTitle>
+                  }
+                />
+                <Route
+                  path="/dashboard-gen-ai"
+                  element={
+                    <PageTitle title="Dashboard-Gen-Ai">
+                      <DashboardGenerator />
                     </PageTitle>
                   }
                 />

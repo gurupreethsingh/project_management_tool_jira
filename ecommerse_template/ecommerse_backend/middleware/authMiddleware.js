@@ -45,3 +45,13 @@ exports.verifyTokenOptional = (req, res, next) => {
     next();
   }
 };
+
+// in your existing auth middleware file
+
+exports.isSuperAdmin = (req, res, next) => {
+  // verifyToken must have already run and set req.user
+  if (!req.user || req.user.role !== "superadmin") {
+    return res.status(403).json({ message: "Access denied. Superadmin only." });
+  }
+  next();
+};
