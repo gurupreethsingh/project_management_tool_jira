@@ -39,20 +39,20 @@ public class ContactUspage extends AllVerifications {
 
 	// LABELS
 
-	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:first-child>input")
-	private WebElement firstNameLabel;
-
-	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:nth-of-type(2)>label")
-	private WebElement lastNameLabel;
-
-	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:nth-of-type(2)>label")
-	private WebElement emailLabel;
-
-	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:nth-of-type(3)>label")
-	private WebElement phoneLabel;
-
-	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:nth-of-type(4)>label")
-	private WebElement yourMessageLabel;
+//	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:first-child>input")
+//	private WebElement firstNameLabel;
+//
+//	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:nth-of-type(2)>label")
+//	private WebElement lastNameLabel;
+//
+//	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:first-child>div:nth-of-type(2)>label")
+//	private WebElement emailLabel;
+//
+//	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:nth-of-type(3)>label")
+//	private WebElement phoneLabel;
+//
+//	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:nth-of-type(4)>label")
+//	private WebElement yourMessageLabel;
 
 	// FIELDS
 
@@ -70,6 +70,10 @@ public class ContactUspage extends AllVerifications {
 
 	@FindBy(css = "form:nth-of-type(1):nth-child(3)>div:nth-of-type(4)>textarea")
 	private WebElement yourMessageArea;
+	
+	
+	@FindBy(css = "input.mt-1")
+	private WebElement iAgreeTerms;
 
 	@FindBy(css = "button.bg-red-500")
 	private WebElement submitForm;
@@ -117,7 +121,7 @@ public class ContactUspage extends AllVerifications {
 	// class.
 	public ContactUspage(WebDriver driver) {
 		super(driver);
-		this.driver = driver;
+		
 		PageFactory.initElements(driver, this);
 	}
 
@@ -126,10 +130,12 @@ public class ContactUspage extends AllVerifications {
 		AllVerifications.clickIfVisibleAndEnabled(logo, driver, sa);
 	}
 
-	public void enterValueInFirstNameField(String firstNamekeys) {
+	public void enterValueInFirstNameField(String firstNamekeys) throws InterruptedException {
 
 		AllVerifications.clickIfVisibleAndEnabled(firstNameField, driver, sa);
+		Thread.sleep(1000);
 		firstNameField.clear();
+		Thread.sleep(1000);
 		firstNameField.sendKeys(firstNamekeys);
 
 	}
@@ -189,6 +195,13 @@ public class ContactUspage extends AllVerifications {
 
 	public void clickOnSubmitForm() throws InterruptedException {
 		AllVerifications.clickIfVisibleAndEnabled(submitForm, driver, sa);
+
+		Thread.sleep(1000);
+
+	}
+	
+	public void clickOnIagreeTerms() throws InterruptedException {
+		AllVerifications.clickIfVisibleAndEnabled(iAgreeTerms, driver, sa);
 
 		Thread.sleep(1000);
 

@@ -20,6 +20,7 @@ public class AS_2219_Reload_ContactUspage_click_Contact_Us_link extends BaseClas
 		ContactUspage cp = new ContactUspage(driver);
 
 		cp.clickOnFooterContactUsLink();
+		Thread.sleep(1000);
 		
 		String expectedContactpageUrl = (String) Excel_Shilpa.getData("ContactUspage", 1, 1);
 		AllVerifications.verifyUrl(expectedContactpageUrl, driver, sa);

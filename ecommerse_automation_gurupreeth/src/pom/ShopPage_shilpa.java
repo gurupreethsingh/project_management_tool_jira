@@ -13,7 +13,7 @@ import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
 
-public class ShopPage extends AllVerifications
+public class ShopPage_shilpa extends AllVerifications
 {
 	public WebDriver driver =null; 
 	SoftAssert sa = new SoftAssert();
@@ -40,22 +40,8 @@ public class ShopPage extends AllVerifications
 	private WebElement viewCartButtonInMiniCart;
 	
 	
-	@FindBy(css="input.flex-grow")
-	private WebElement searchField;
-	
-	@FindBy(css="div.hidden.justify-center>form>button")
-	private WebElement searchIcon;
-	
-	
-	@FindBy(css="h1.text-3xl")
-	private WebElement headingInSearchField;
-	
-	
-	
-	
-	
 	// initializing all the elements in this page. using the constructor of this class. 
-	public ShopPage(WebDriver driver)
+	public ShopPage_shilpa(WebDriver driver)
 	{
 		super(driver);
 		this.driver = driver; 
@@ -91,27 +77,6 @@ public class ShopPage extends AllVerifications
 	{
 		AllVerifications.clickIfVisibleAndEnabled(viewCartButtonInMiniCart, driver, sa);
 	}
-	
-	public void enterValueInSearchField1(String keys)
-	{
-		AllVerifications.clickIfVisibleAndEnabled(searchField, driver, sa);
-		searchField.clear();
-		searchField.sendKeys(keys);
-	}
-	
-	
-	public void clickOnSearchButton1()
-	{
-		AllVerifications.clickIfVisibleAndEnabled(searchIcon, driver, sa);
-	}
-	
-	public void verifyProductNameInSearchProductPage(String expectedText)
-	{
-		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
-	}
-	
-	
-	
 	
 	 
 	
