@@ -58,10 +58,10 @@ export default function ContactUs() {
   };
 
   return (
-    <div className="isolate bg-white px-6 py-12 sm:py-24 lg:px-8 animate__animated animate__fadeIn">
-      <div className="mx-auto max-w-7xl">
-        <div className="text-center mb-12">
-          <h3 className="text-3xl font-bold tracking-tight text-gray-600 sm:text-4xl">
+    <div className="isolate bg-white px-6  sm:py-8 lg:px-8 animate__animated animate__fadeIn">
+      <div className="mx-auto container">
+        <div className="mb-12">
+          <h3 className="text-2xl font-bold tracking-tight text-gray-600 sm:text-4xl">
             Contact Us
           </h3>
         </div>

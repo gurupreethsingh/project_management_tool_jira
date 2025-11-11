@@ -6,13 +6,13 @@ import {
   FaAlignRight,
   FaArrowLeft,
   FaArrowRight,
+  FaBlog, // ← blog icon as fallback
 } from "react-icons/fa";
 import { motion } from "framer-motion";
 import axios from "axios";
 import globalBackendRoute from "../../config/Config";
-import dogImage from "../../assets/images/dog.jpg"; // fallback
 
-// Safe client-side slug fallback (in case server didn't send blog.slug)
+// slug helper
 const makeSlug = (title, serverSlug) => {
   if (serverSlug && typeof serverSlug === "string" && serverSlug.length > 0) {
     return serverSlug;
@@ -26,8 +26,53 @@ const makeSlug = (title, serverSlug) => {
     .replace(/-+/g, "-");
 };
 
+// Turn a stored path into an absolute URL, or return null if missing
+const toImageUrl = (imagePath) => {
+  if (!imagePath) return null;
+  try {
+    const pathStr = String(imagePath);
+    if (/^https?:\/\//i.test(pathStr)) return pathStr; // already absolute
+    const normalized = pathStr.replace(/\\/g, "/");
+    const tail = normalized.split("uploads/").pop();
+    if (!tail) return null;
+    return `${globalBackendRoute}/uploads/${tail}`;
+  } catch {
+    return null;
+  }
+};
+
+// Reusable: image that falls back to an icon if src is missing/broken
+function ImgOrIcon({
+  src,
+  alt,
+  className = "",
+  iconClassName = "",
+  rounded = true,
+}) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return (
+      <div
+        className={`bg-slate-50 flex items-center justify-center ${className} ${
+          rounded ? "rounded-xl" : ""
+        }`}
+      >
+        <FaBlog className={`text-slate-400 ${iconClassName}`} />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt || "blog"}
+      className={`${className} ${rounded ? "rounded-xl" : ""} object-cover`}
+      loading="lazy"
+      onError={() => setBroken(true)}
+    />
+  );
+}
+
 const Blog = () => {
-  // route: /single-blog/:slug/:id
   const { slug, id } = useParams();
   const navigate = useNavigate();
 
@@ -40,21 +85,6 @@ const Blog = () => {
   const [loading, setLoading] = useState(true);
   const [fetchErr, setFetchErr] = useState("");
 
-  // --- helpers ---
-  const getImageUrl = (imagePath) => {
-    if (!imagePath) return dogImage;
-    try {
-      const pathStr = String(imagePath);
-      if (/^https?:\/\//i.test(pathStr)) return pathStr; // already absolute (from API)
-      const normalized = pathStr.replace(/\\/g, "/");
-      const tail = normalized.split("uploads/").pop();
-      if (!tail) return dogImage;
-      return `${globalBackendRoute}/uploads/${tail}`;
-    } catch {
-      return dogImage;
-    }
-  };
-
   const toTagArray = (tags) => {
     if (!tags) return [];
     if (Array.isArray(tags)) return tags;
@@ -64,7 +94,7 @@ const Blog = () => {
       .filter(Boolean);
   };
 
-  // Extract ```fenced code``` blocks (optional, in case body still includes code)
+  // Extract fenced code blocks from body (optional)
   const extractCodeBlocks = (bodyText) => {
     if (!bodyText) return { cleanedBody: "", codeBlocks: [] };
     const text = String(bodyText);
@@ -79,7 +109,7 @@ const Blog = () => {
     return { cleanedBody: cleaned, codeBlocks };
   };
 
-  // Turn remaining body into Q/A sections (your original UX)
+  // Convert remaining body into Q/A-ish sections
   const preprocessBody = (text) => {
     if (!text) return [];
     const paragraphs = String(text).split("\n");
@@ -102,7 +132,7 @@ const Blog = () => {
     return sections;
   };
 
-  // --- fetch single blog (by id; slug is just for the URL) ---
+  // fetch single blog
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -120,9 +150,9 @@ const Blog = () => {
         setBlog({
           ...data,
           processedBody: processed,
-          codeBlocks, // from body fences (optional)
+          codeBlocks,
           tags: toTagArray(data?.tags),
-          code: data?.code || "", // structured fields
+          code: data?.code || "",
           explanation: data?.explanation || "",
         });
       } catch (err) {
@@ -137,7 +167,7 @@ const Blog = () => {
     };
   }, [id]);
 
-  // --- fetch all blogs for sidebar + prev/next ---
+  // fetch all blogs for sidebar
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -158,7 +188,7 @@ const Blog = () => {
     };
   }, []);
 
-  // --- filter sidebar by title ---
+  // filter sidebar by title
   useEffect(() => {
     if (!searchTerm) {
       setFilteredBlogs(allBlogs);
@@ -170,7 +200,7 @@ const Blog = () => {
     );
   }, [searchTerm, allBlogs]);
 
-  // --- prev/next ---
+  // prev/next
   const prevNext = useMemo(() => {
     if (!blog || allBlogs.length === 0) return { prev: null, next: null };
     const idx = allBlogs.findIndex((b) => b._id === blog._id);
@@ -185,7 +215,10 @@ const Blog = () => {
       <div key={idx} className="mb-8">
         {section.map((item, i) =>
           item.type === "question" ? (
-            <p key={i} className="font-bold text-lg mb-4 mt-6 break-words">
+            <p
+              key={i}
+              className="font-thin font-semibold text-lg mb-4 mt-6 break-words"
+            >
               {item.text}
             </p>
           ) : item.type === "answer" ? (
@@ -204,23 +237,22 @@ const Blog = () => {
       </div>
     ));
 
-  // DIV-based code block (gray, bulletproof & wraps — no horizontal scroll)
   const CodeBlock = ({ code }) => (
     <div
-      className="rounded-md mb-4"
+      className="mb-4 border-top border-bottom"
       style={{
-        background: "#e5e7eb", // gray-200
-        color: "#111827", // gray-900
+        background: "#ffffff",
+        color: "#111827",
         fontFamily:
           'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
         fontSize: "0.875rem",
         lineHeight: 1.5,
         padding: "1rem",
-        whiteSpace: "pre-wrap", // wrap lines
-        overflowWrap: "anywhere", // break long tokens
-        wordBreak: "break-word", // safety
-        maxWidth: "100%", // never exceed container
-        overflowX: "hidden", // never show horizontal scrollbar
+        whiteSpace: "pre-wrap",
+        overflowWrap: "anywhere",
+        wordBreak: "break-word",
+        maxWidth: "100%",
+        overflowX: "hidden",
       }}
     >
       {code}
@@ -236,10 +268,7 @@ const Blog = () => {
     if (!hasSeparateCode && !hasFencedCode && !hasExplanation) return null;
 
     return (
-      <div
-        className="mt-10 p-6 rounded-xl shadow-md border border-gray-200"
-        style={{ background: "#f3f4f6" }} // gray-100 container
-      >
+      <div className="mt-10 p-6 rounded-xl shadow-md">
         <h3 className="text-2xl font-bold mb-4 text-gray-900">Code Example:</h3>
 
         {hasSeparateCode && <CodeBlock code={blog.code} />}
@@ -261,7 +290,6 @@ const Blog = () => {
     );
   };
 
-  // Build the correct URL with slug + id
   const blogPath = (b) =>
     `/single-blog/${makeSlug(b?.title, b?.slug)}/${b?._id}`;
 
@@ -280,23 +308,27 @@ const Blog = () => {
       <ul className="mb-4">
         {filteredBlogs
           .filter((b) => b._id !== blog?._id)
-          .map((b) => (
-            <li
-              key={b._id}
-              className="flex items-center mb-4 cursor-pointer border-b"
-              onClick={() => navigate(blogPath(b))}
-            >
-              <img
-                src={getImageUrl(b.featuredImage)}
-                alt={b.title}
-                className="w-12 h-12 mr-2 rounded-md object-cover"
-                onError={(e) => (e.currentTarget.src = dogImage)}
-              />
-              <div className="text-sm break-words">
-                <Link to={blogPath(b)}>{b.title}</Link>
-              </div>
-            </li>
-          ))}
+          .map((b) => {
+            const thumb = toImageUrl(b.featuredImage);
+            return (
+              <li
+                key={b._id}
+                className="flex items-center mb-4 cursor-pointer border-b"
+                onClick={() => navigate(blogPath(b))}
+              >
+                <ImgOrIcon
+                  src={thumb}
+                  alt={b.title}
+                  className="w-12 h-12 mr-2 rounded-md object-cover"
+                  iconClassName="w-6 h-6"
+                  rounded
+                />
+                <div className="text-sm break-words">
+                  <Link to={blogPath(b)}>{b.title}</Link>
+                </div>
+              </li>
+            );
+          })}
       </ul>
       <h3 className="text-lg font-bold mb-2 border-b text-left">Category</h3>
       <p className="mb-4 break-words">{blog?.category}</p>
@@ -330,9 +362,11 @@ const Blog = () => {
     );
   }
 
+  const heroSrc = toImageUrl(blog.featuredImage);
+
   return (
     <motion.div
-      className="max-w-7xl mx-auto p-4 border-b overflow-x-hidden" // ⬅️ no horizontal scroll
+      className="container mx-auto p-4 border-b overflow-x-hidden"
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
@@ -345,18 +379,21 @@ const Blog = () => {
             className={`cursor-pointer ${
               view === "wide" ? "text-blue-500" : "text-gray-500"
             }`}
+            title="Wide"
           />
           <FaAlignLeft
             onClick={() => setView("left-sidebar")}
             className={`cursor-pointer ${
               view === "left-sidebar" ? "text-blue-500" : "text-gray-500"
             }`}
+            title="Left sidebar"
           />
           <FaAlignRight
             onClick={() => setView("right-sidebar")}
             className={`cursor-pointer ${
               view === "right-sidebar" ? "text-blue-500" : "text-gray-500"
             }`}
+            title="Right sidebar"
           />
         </div>
       </div>
@@ -374,17 +411,19 @@ const Blog = () => {
         )}
 
         <div className="flex-1 p-3 overflow-x-hidden">
+          {/* Hero image or icon fallback */}
           <motion.div
             initial={{ scale: 0.95, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.4 }}
             className="w-full mb-8"
           >
-            <img
-              src={getImageUrl(blog.featuredImage)}
+            <ImgOrIcon
+              src={heroSrc}
               alt={blog.title}
-              className="w-full max-h-[500px] object-cover rounded-xl shadow-md max-w-full"
-              onError={(e) => (e.currentTarget.src = dogImage)}
+              className="w-full max-h-[500px]"
+              iconClassName="w-20 h-20 sm:w-24 sm:h-24"
+              rounded
             />
           </motion.div>
 
@@ -396,7 +435,7 @@ const Blog = () => {
           <div className="flex flex-col sm:flex-row justify-center items-center gap-4 mt-10">
             <button
               onClick={() => prevNext.prev && navigate(blogPath(prevNext.prev))}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg flex items-center shadow disabled:opacity-50"
+              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg flex items-center shadow-md disabled:opacity-50"
               disabled={!prevNext.prev}
             >
               <FaArrowLeft className="mr-2" />
@@ -407,7 +446,7 @@ const Blog = () => {
 
             <button
               onClick={() => prevNext.next && navigate(blogPath(prevNext.next))}
-              className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-lg flex items-center shadow disabled:opacity-50"
+              className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg flex items-center shadow-md disabled:opacity-50"
               disabled={!prevNext.next}
             >
               <span className="text-sm font-medium text-right break-words">

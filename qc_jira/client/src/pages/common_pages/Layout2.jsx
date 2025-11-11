@@ -1,148 +1,180 @@
 import React from "react";
-import "animate.css"; // Include animate.css for animations
+import {
+  FaMobileAlt,
+  FaPlug,
+  FaCheckDouble,
+  FaCloud,
+  FaChartLine,
+  FaLifeRing,
+  FaShieldAlt,
+  FaCogs,
+  FaSyncAlt,
+  FaPalette,
+  FaServer,
+  FaTools,
+  FaBug,
+  FaBrain,
+  FaBuilding,
+  FaMoneyBillAlt,
+  FaGraduationCap,
+  FaLock,
+} from "react-icons/fa";
 
-const Layout2 = () => {
-  const whoWeAreImages = [
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-    { src: "https://via.placeholder.com/300", size: "w-64 h-64" },
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-    { src: "https://via.placeholder.com/250", size: "w-56 h-56" },
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-  ];
+const whoTiles = [
+  {
+    icon: FaMobileAlt,
+    caption: "Modern web & mobile",
+    color: "text-indigo-500",
+  },
+  {
+    icon: FaPlug,
+    caption: "API-first architectures",
+    color: "text-emerald-500",
+  },
+  {
+    icon: FaCheckDouble,
+    caption: "Automated testing",
+    color: "text-amber-500",
+  },
+  { icon: FaCloud, caption: "Cloud platforms", color: "text-sky-500" },
+  {
+    icon: FaChartLine,
+    caption: "Observability & SRE",
+    color: "text-violet-500",
+  },
+];
 
-  const ourValuesImages = [
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-    { src: "https://via.placeholder.com/400", size: "w-80 h-80" },
-    { src: "https://via.placeholder.com/400", size: "w-80 h-80" },
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-  ];
+const valuesTiles = [
+  {
+    icon: FaLifeRing,
+    caption: "Design for reliability",
+    color: "text-slate-500",
+  },
+  { icon: FaShieldAlt, caption: "Security in depth", color: "text-rose-500" },
+  { icon: FaCogs, caption: "Automation everywhere", color: "text-fuchsia-500" },
+  {
+    icon: FaSyncAlt,
+    caption: "Lean, iterative delivery",
+    color: "text-teal-500",
+  },
+];
 
-  const ourTeamImages = [
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-    { src: "https://via.placeholder.com/300", size: "w-64 h-64" },
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-    { src: "https://via.placeholder.com/250", size: "w-56 h-56" },
-    { src: "https://via.placeholder.com/350", size: "w-72 h-72" },
-  ];
+const teamTiles = [
+  { icon: FaPalette, caption: "Frontend & UX", color: "text-pink-500" },
+  { icon: FaServer, caption: "Backend & APIs", color: "text-indigo-500" },
+  { icon: FaTools, caption: "DevOps & SRE", color: "text-sky-500" },
+  { icon: FaBug, caption: "QA automation", color: "text-rose-500" },
+  { icon: FaBrain, caption: "Data/AI", color: "text-violet-500" },
+];
 
-  const ourClientImages = [
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-    { src: "https://via.placeholder.com/200", size: "w-40 h-40" },
-  ];
+const clientTiles = [
+  { icon: FaBuilding, caption: "SaaS & ISVs", color: "text-slate-500" },
+  {
+    icon: FaMoneyBillAlt,
+    caption: "Fintech & retail",
+    color: "text-emerald-500",
+  },
+  {
+    icon: FaGraduationCap,
+    caption: "Healthcare & edtech",
+    color: "text-indigo-500",
+  },
+  { icon: FaCloud, caption: "Cloud partners", color: "text-sky-500" },
+  { icon: FaLock, caption: "Security ecosystem", color: "text-amber-500" },
+];
 
-  const renderImages = (images) => (
-    <div className="flex flex-wrap justify-center space-x-2">
-      {images.map((image, index) => (
-        <div
-          key={index}
-          className="flex flex-col items-center justify-center mb-2"
-        >
-          <img
-            src={image.src}
-            alt="About Us"
-            className={`object-cover rounded-lg shadow-lg ${image.size}`}
-          />
-          <p className="text-gray-600 text-sm text-center w-full">
-            Sample text related to the image.
+const Tiles = ({
+  items,
+  cols = "grid-cols-2 sm:grid-cols-3 md:grid-cols-5",
+}) => (
+  <div className={`grid ${cols} gap-3`}>
+    {items.map((t, i) => {
+      const Icon = t.icon;
+      return (
+        <div key={i} className="flex flex-col items-center">
+          <div className="bg-slate-50 rounded-xl shadow-sm aspect-square w-24 sm:w-32 md:w-36 lg:w-40 flex items-center justify-center">
+            <Icon className={`w-2/3 h-2/3 ${t.color}`} />
+          </div>
+          <p className="text-gray-600 text-xs sm:text-sm text-center mt-2">
+            {t.caption}
           </p>
         </div>
-      ))}
-    </div>
-  );
+      );
+    })}
+  </div>
+);
 
+export default function Layout2() {
   return (
-    <div className="w-full min-h-screen bg-white">
-      <h2 className="text-center fw-bold text-gray-600 p-5 text-4xl">
-        About Us
-      </h2>
-      <section className="flex flex-col items-center px-4 sm:px-8 lg:px-12 py-4 space-y-8">
-        {/* First Section */}
-        <div className="w-full flex flex-col space-y-4">
-          {renderImages(whoWeAreImages)}
-          <div className="flex flex-col p-5">
-            <h2 className="text-2xl font-bold text-gray-600 text-center">
-              Who We Are
-            </h2>
-            <p className="text-gray-600 text-sm text-center">
-              At the core of our company lies a passion for innovation and a
-              commitment to excellence. We specialize in building cutting-edge
-              AI solutions, pioneering blockchain technology, and developing
-              both web and mobile applications that push the boundaries of
-              what’s possible. Our team is a blend of creative thinkers,
-              technical experts, and problem-solvers who are dedicated to
-              delivering impactful software solutions. Whether it’s constructing
-              robust client applications using MERN, Next.js, or WordPress, or
-              ensuring the highest standards in software testing, we strive to
-              exceed expectations and drive success for our clients.
-            </p>
+    <section className="px-4 sm:px-6 lg:px-10 pb-10 space-y-10">
+      <div className="space-y-4">
+        <Tiles items={whoTiles} />
+        <div className="text-center px-2">
+          <h3 className="text-xl sm:text-2xl font-semibold text-gray-800">
+            Who We Are
+          </h3>
+          <p className="text-gray-600 text-sm sm:text-base leading-6 mt-2">
+            We build <b>scalable software</b> that lasts—composable
+            architectures, robust APIs, and delightful UX. Our approach blends{" "}
+            <b>product thinking</b> with <b>engineering rigor</b>.
+          </p>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-gray-600 text-sm">
+            <span>• Product & Platform Engineering</span>
+            <span>• Cloud/Kubernetes & IaC</span>
+            <span>• DevOps, CI/CD, GitOps</span>
+            <span>• SRE, Observability, Incident Mgmt</span>
+            <span>• Test Automation, Performance</span>
+            <span>• AppSec, Compliance, SBOM</span>
+            <span>• Data Eng, Analytics & MLOps</span>
+            <span>• UX Research & Design Systems</span>
           </div>
         </div>
+      </div>
 
-        {/* Second Section */}
-        <div className="w-full flex flex-col space-y-4">
-          <div className="flex flex-col p-5">
-            {renderImages(ourValuesImages)}
-            <h2 className="text-2xl font-bold text-gray-600 text-center">
-              Our Values
-            </h2>
-            <p className="text-gray-600 text-sm text-center">
-              We believe in a set of core values that guide everything we do.
-              Integrity, innovation, and excellence are the pillars of our work.
-              Our dedication to these principles ensures that every project we
-              undertake not only meets but exceeds the expectations of our
-              clients. We are committed to delivering quality solutions with a
-              focus on sustainability and scalability. Our emphasis on
-              continuous learning and adaptation enables us to stay ahead in a
-              rapidly evolving industry, while our client-centric approach
-              ensures that the solutions we build are tailored to meet the
-              unique needs of those we serve.
-            </p>
-          </div>
-        </div>
+      <div className="space-y-4">
+        <Tiles items={valuesTiles} cols="grid-cols-2 sm:grid-cols-4" />
+        <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+          Our Values
+        </h3>
+        <ul className="text-gray-600 text-sm sm:text-base text-center leading-6 space-y-2 mt-1 px-2">
+          <li>
+            <b>Clarity:</b> ADRs/RFCs & design reviews.
+          </li>
+          <li>
+            <b>Automation:</b> pipelines, tests, policies as code.
+          </li>
+          <li>
+            <b>Reliability:</b> SLIs/SLOs, chaos drills.
+          </li>
+          <li>
+            <b>Security:</b> shift-left, least privilege, hygiene.
+          </li>
+        </ul>
+      </div>
 
-        {/* Third Section */}
-        <div className="w-full flex flex-col space-y-4">
-          {renderImages(ourTeamImages)}
-          <div className="flex flex-col p-5">
-            <h2 className="text-2xl font-bold text-gray-600 text-center">
-              Our Team
-            </h2>
-            <p className="text-gray-600 text-sm text-center">
-              Our team is our greatest asset. Comprised of seasoned
-              professionals and bright minds, we bring together a diverse range
-              of skills and expertise to create a powerhouse of innovation. From
-              AI architects and blockchain developers to web and mobile app
-              specialists, our team excels in delivering top-tier solutions
-              across various platforms. We also pride ourselves on being the
-              best in the industry when it comes to software testing, ensuring
-              that every application we build is robust, secure, and ready for
-              deployment. Beyond development, we are committed to fostering the
-              next generation of tech leaders through our comprehensive training
-              programs, offering real hands-on projects and unparalleled
-              placement opportunities in the industry.
-            </p>
-          </div>
+      <div className="space-y-4">
+        <Tiles items={teamTiles} />
+        <div className="text-center px-2">
+          <h3 className="text-xl sm:text-2xl font-semibold text-gray-800">
+            Our Team
+          </h3>
+          <p className="text-gray-600 text-sm sm:text-base leading-6 mt-2">
+            Multi-disciplinary squads anchored by <b>PM/EM/Tech Leads</b>,
+            supported by Architecture, Security, QA and SRE guilds.
+          </p>
         </div>
+      </div>
 
-        {/* Fourth Section */}
-        <div className="w-full flex flex-col space-y-4">
-          <div className="flex flex-col p-5">
-            {renderImages(ourClientImages)}
-            <h2 className="text-2xl font-bold text-gray-600 text-center">
-              Our Clients
-            </h2>
-            <p className="text-gray-600 text-sm text-center">
-              We are proud to partner with some of the most innovative and
-              respected companies across various industries.
-            </p>
-          </div>
-        </div>
-      </section>
-    </div>
+      <div className="space-y-4">
+        <Tiles items={clientTiles} />
+        <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 text-center">
+          Clients & Partners
+        </h3>
+        <p className="text-gray-600 text-sm sm:text-base text-center leading-6 mt-1 px-2">
+          We partner with cloud providers, observability stacks, security
+          vendors, and CI/CD platforms to deliver faster with guardrails.
+        </p>
+      </div>
+    </section>
   );
-};
-
-export default Layout2;
+}

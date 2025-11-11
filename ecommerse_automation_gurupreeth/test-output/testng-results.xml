@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
+  <reporter-output>
+  </reporter-output>
+  <suite started-at="2025-11-11T03:41:49 IST" name="Default suite" finished-at="2025-11-11T03:42:07 IST" duration-ms="17371">
+    <groups>
+    </groups>
+    <test started-at="2025-11-11T03:41:49 IST" name="Default test" finished-at="2025-11-11T03:42:07 IST" duration-ms="17371">
+      <class name="scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@48075da3]" started-at="2025-11-11T03:41:49 IST" name="openApplication" finished-at="2025-11-11T03:41:52 IST" duration-ms="3113" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- openApplication -->
+        <test-method signature="enterAllFieldstoastMessageDisplayed()[pri:1, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@48075da3]" started-at="2025-11-11T03:41:52 IST" name="enterAllFieldstoastMessageDisplayed" finished-at="2025-11-11T03:42:06 IST" duration-ms="13941" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- enterAllFieldstoastMessageDisplayed -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed@48075da3]" started-at="2025-11-11T03:42:06 IST" name="closeApplication" finished-at="2025-11-11T03:42:07 IST" duration-ms="274" status="PASS">
+          <reporter-output>
+          </reporter-output>
+        </test-method> <!-- closeApplication -->
+      </class> <!-- scripts.contactus_scripts.functional_scenarios.AS_9081_Toast_Message_Displayed -->
+    </test> <!-- Default test -->
+  </suite> <!-- Default suite -->
+</testng-results>

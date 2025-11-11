@@ -954,41 +954,41 @@ export default function StudentDashboard() {
       className="container mx-auto w-full px-3 sm:px-4 md:px-6 py-4 md:py-6"
     >
       {/* Header */}
-<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
-  <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
-    Student Dashboard
-  </h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900">
+          Student Dashboard
+        </h1>
 
-  <nav className="ai_links -mr-1">
-    <ul className="flex items-center gap-2 overflow-x-auto">
-      {[
-        { to: "/ai-tutor", label: "AI Tutor" },
-        { to: "/ai-tutor", label: "Code Generator" },
-        { to: "/ai-tutor", label: "Code Summary" }, // fixed spelling
-        { to: "/ai-tutor", label: "Roadmap Generator" },
-        { to: "/ai-tutor", label: "Dashboard Generator" },
-      ].map(({ to, label }) => (
-        <li key={label} className="shrink-0">
-          <NavLink
-            to={to}
-            className={({ isActive }) =>
-              [
-                "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs sm:text-sm transition-all",
-                "focus:outline-none focus:ring-2 focus:ring-indigo-300",
-                isActive
-                  ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
-                  : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200",
-              ].join(" ")
-            }
-          >
-            {label}
-          </NavLink>
-        </li>
-      ))}
-    </ul>
-  </nav>
-</div>
-
+        <nav className="ai_links -mr-1">
+          <ul className="flex items-center gap-2 overflow-x-auto">
+            {[
+              { to: "/ai-tutor", label: "AI Tutor" },
+              { to: "/ai-tutor", label: "Code Generator" },
+              { to: "/ai-tutor", label: "Code Summary" }, // fixed spelling
+              { to: "/ai-tutor", label: "Roadmap Generator" },
+              { to: "/dashboard-gen-ai", label: "Dashboard Generator" },
+              { to: "/ui-gen", label: "Ui Generator Ai" },
+            ].map(({ to, label }) => (
+              <li key={label} className="shrink-0">
+                <NavLink
+                  to={to}
+                  className={({ isActive }) =>
+                    [
+                      "inline-flex items-center whitespace-nowrap rounded-full border px-3 py-1.5 text-xs sm:text-sm transition-all",
+                      "focus:outline-none focus:ring-2 focus:ring-indigo-300",
+                      isActive
+                        ? "bg-indigo-600 text-white border-indigo-600 shadow-sm"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-indigo-50 hover:border-indigo-200",
+                    ].join(" ")
+                  }
+                >
+                  {label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      </div>
 
       {/* Sticky toolbar */}
       <div

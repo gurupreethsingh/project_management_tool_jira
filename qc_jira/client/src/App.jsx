@@ -20,6 +20,7 @@ import ReplyMessage from "./pages/contact_pages/ReplyMessage";
 // common pages
 import PrivacyPolicy from "./pages/common_pages/PrivacyPolicy";
 import AboutUs from "./pages/common_pages/AboutUs";
+import Careers from "./pages/common_pages/Careers";
 import NewsLetter from "./components/NewsLetter";
 import WorkWithUs from "./components/WorkWithUs";
 import Footer from "./components/Footer";
@@ -84,7 +85,6 @@ import AllEvents from "./pages/event_pages/AllEvents";
 import SingleEvent from "./pages/event_pages/SingleEvent";
 import SingleUserEvent from "./pages/event_pages/SingleUserEvent";
 import UpdateEvent from "./pages/event_pages/UpdateEvent";
-
 // attendance pages
 import GetAllAttendance from "./pages/attendence_pages/GetAllAttendance";
 import CreateAttendance from "./pages/attendence_pages/CreateAttendance";
@@ -100,15 +100,36 @@ import AllRequirements from "./pages/requirement_pages/AllRequirements";
 import SingleModuleRequirements from "./pages/requirement_pages/SingleModuleRequirements";
 import SingleRequirement from "./pages/requirement_pages/SingleRequirement";
 import UpdateRequirement from "./pages/requirement_pages/UpdateRequirement";
-
+import TopArrow from "./components/common_components/TopArrow";
+import SingleUser from "./pages/user_pages/SingleUser";
+import UpdateBlog from "./pages/blog_pages/UpdateBlog";
+import Breadcrumb from "./components/common_components/Breadcrumb";
 
 /** Match the “PageTitle” pattern from your sample */
+/** Layout wrapper: sets <title> and shows Breadcrumb for this page */
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     document.title = title ? `${title} | ECODERS` : "ECODERS";
   }, [title]);
-  return children;
+
+  return (
+    <>
+      {/* Breadcrumb bar (shared across all routes that use PageTitle) */}
+      <div className="bg-slate-50/60">
+        <div className="mx-auto container px-4 sm:px-6 lg:px-8">
+          <Breadcrumb pageTitle={title} />
+        </div>
+      </div>
+
+      {/* Actual page content */}
+      {children}
+    </>
+  );
 };
+
+function HeaderSpacer() {
+  return <div className="h-16 md:h-20" />;
+}
 
 function App() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
@@ -116,6 +137,7 @@ function App() {
   return (
     <Router>
       <Header />
+      <HeaderSpacer />
       <Routes>
         <Route
           path="/"
@@ -185,6 +207,15 @@ function App() {
         />
 
         <Route
+          path="/careers"
+          element={
+            <PageTitle title="Careers">
+              <Careers />
+            </PageTitle>
+          }
+        />
+
+        <Route
           path="/all-blogs"
           element={
             <PageTitle title="All Blogs">
@@ -208,6 +239,15 @@ function App() {
                 <AddBlog />
               </PageTitle>
             </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/update-blog/:slug/:id"
+          element={
+            <PageTitle title="Update Blog">
+              <UpdateBlog />
+            </PageTitle>
           }
         />
 
@@ -248,6 +288,17 @@ function App() {
             <PrivateRoute allowedRoles={["admin", "superadmin"]}>
               <PageTitle title="All Users">
                 <AllUsers />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-user/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="Single User">
+                <SingleUser />
               </PageTitle>
             </PrivateRoute>
           }
@@ -796,6 +847,7 @@ function App() {
                 "admin",
                 "project_manager",
                 "qa_lead",
+                "test_lead",
               ]}
             >
               <PageTitle title="Task History">
@@ -875,18 +927,16 @@ function App() {
           }
         />
 
-
-          <Route
-    path="/module-requirements/:projectId/:moduleName"
-    element={<PrivateRoute>
+        <Route
+          path="/module-requirements/:projectId/:moduleName"
+          element={
+            <PrivateRoute>
               <PageTitle title="Single Requirement">
-                    <SingleModuleRequirements />
-                  </PageTitle>
+                <SingleModuleRequirements />
+              </PageTitle>
             </PrivateRoute>
-    }
-  />
-
-
+          }
+        />
 
         <Route
           path="/single-requirement/:id"
@@ -1135,6 +1185,7 @@ function App() {
       <WorkWithUs />
       <NewsLetter />
       <Footer />
+      <TopArrow scrollTargetId="app-scroll" />
     </Router>
   );
 }

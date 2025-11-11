@@ -1,3 +1,4 @@
+// src/pages/tasks/ViewAssignedTasks.jsx
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import moment from "moment";
@@ -11,30 +12,36 @@ import {
   FaArrowRight,
   FaSortAmountDownAlt,
   FaSortAmountUpAlt,
+  FaSync,
+  FaDownload,
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
+const cls = (...a) => a.filter(Boolean).join(" ");
+
+// ===== Status badge (visual only) =====
 const badge = (status) => {
-  switch (status) {
+  switch ((status || "").toLowerCase()) {
     case "new":
-      return "bg-blue-100 rounded text-center";
+      return "bg-blue-100 text-blue-700";
     case "assigned":
-      return "bg-blue-900 rounded text-center text-white";
+      return "bg-blue-900 text-white";
     case "re-assigned":
-      return "bg-orange-500 rounded text-center text-white";
+      return "bg-orange-500 text-white";
     case "in-progress":
-      return "bg-orange-100 rounded text-center";
+      return "bg-amber-100 text-amber-700";
     case "finished":
-      return "bg-green-100 rounded text-center";
+      return "bg-green-100 text-green-700";
     case "closed":
-      return "bg-gray-300 rounded text-center";
+      return "bg-gray-300 text-gray-700";
     case "pending":
-      return "bg-red-500 rounded text-center text-white";
+      return "bg-rose-500 text-white";
     default:
-      return "rounded text-center";
+      return "bg-slate-100 text-slate-700";
   }
 };
 
+// ===== Role-based allowed transitions (UI) =====
 const roleOptionsMap = {
   superadmin: ["re-assigned", "in-progress", "finished", "closed", "pending"],
   qa_lead: ["re-assigned", "in-progress", "finished", "closed"],
@@ -42,13 +49,52 @@ const roleOptionsMap = {
   test_engineer: ["in-progress", "finished"],
 };
 
-const ViewAssignedTasks = () => {
+// ===== Deadline reminder helpers =====
+const NEAR_THRESHOLD_DAYS = 3;
+
+const isDoneStatus = (s) => {
+  const v = (s || "").toLowerCase();
+  return v === "finished" || v === "closed";
+};
+
+const daysLeftTo = (deadline) => {
+  if (!deadline) return null;
+  const end = new Date(deadline);
+  if (isNaN(end.getTime())) return null;
+  const today = new Date();
+  const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const b = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
+  return Math.ceil((b - a) / (1000 * 60 * 60 * 24));
+};
+
+const reminderFor = (task) => {
+  if (!task?.deadline || isDoneStatus(task?.status)) return null;
+  const dl = daysLeftTo(task.deadline);
+  if (dl === null) return null;
+  if (dl < 0)
+    return {
+      kind: "overdue",
+      text: `Overdue by ${Math.abs(dl)} day${Math.abs(dl) === 1 ? "" : "s"}`,
+    };
+  if (dl === 0) return { kind: "today", text: "Due today" };
+  if (dl <= NEAR_THRESHOLD_DAYS)
+    return { kind: "near", text: `Due in ${dl} day${dl === 1 ? "" : "s"}` };
+  return null;
+};
+
+const reminderChipClass =
+  "inline-flex items-center gap-2 px-2 py-0.5 rounded text-[12px] bg-rose-50 text-rose-700 border border-rose-200";
+const redDot = (
+  <span className="inline-block w-2 h-2 rounded-full bg-rose-600" />
+);
+
+// ===== Component =====
+export default function ViewAssignedTasks() {
   const { projectId } = useParams();
 
   const token =
     localStorage.getItem("userToken") || localStorage.getItem("token") || "";
   const authHeader = token ? { Authorization: `Bearer ${token}` } : undefined;
-
   const api = `${globalBackendRoute}/api`;
 
   const user = (() => {
@@ -61,17 +107,27 @@ const ViewAssignedTasks = () => {
   const userRole = user?.role || "developer";
   const userId = user?.id || user?._id;
 
+  // ---------- state ----------
   const [tasks, setTasks] = useState([]);
-  const [viewMode, setViewMode] = useState("list");
-  const [search, setSearch] = useState("");
-  const [sortOrder, setSortOrder] = useState("desc");
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-
   const [loading, setLoading] = useState(true);
   const [loadErr, setLoadErr] = useState("");
   const [busyId, setBusyId] = useState(null);
 
+  // View + paging
+  const [viewMode, setViewMode] = useState(
+    localStorage.getItem("assigned:viewMode") || "list"
+  );
+  const [sortOrder, setSortOrder] = useState("desc");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(
+    Number(localStorage.getItem("assigned:pageSize")) || 10
+  );
+
+  // Filters
+  const [search, setSearch] = useState("");
+  const [quick, setQuick] = useState(""); // "", "overdue", "due7", "high", "open"
+
+  // ---------- fetch ----------
   const fetchAssigned = async () => {
     if (!userId) {
       setLoading(false);
@@ -81,7 +137,8 @@ const ViewAssignedTasks = () => {
     try {
       setLoading(true);
       setLoadErr("");
-      // ✅ Use Tasks-for-User API (optionally filter by project client-side)
+
+      // All tasks for this user; client-side filter to project if present
       const res = await axios.get(`${api}/users/${userId}/tasks`, {
         headers: authHeader,
       });
@@ -89,6 +146,7 @@ const ViewAssignedTasks = () => {
       const arr = projectId
         ? all.filter((t) => String(t.project?._id || t.project) === projectId)
         : all;
+
       setTasks(arr);
     } catch (e) {
       console.error("ViewAssignedTasks load error:", e?.response || e);
@@ -104,37 +162,87 @@ const ViewAssignedTasks = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, userId]);
 
-  const filtered = useMemo(() => {
-    let rows = [...tasks];
-    const q = search.trim().toLowerCase();
-    if (q) {
-      rows = rows.filter((t) =>
-        [
-          t.title,
-          t.description,
-          t.priority,
-          t.status,
-          t.startDate ? moment(t.startDate).format("YYYY-MM-DD") : "",
-          t.deadline ? moment(t.deadline).format("YYYY-MM-DD") : "",
-        ]
-          .join(" ")
-          .toLowerCase()
-          .includes(q)
+  useEffect(() => {
+    localStorage.setItem("assigned:viewMode", viewMode);
+  }, [viewMode]);
+
+  useEffect(() => {
+    localStorage.setItem("assigned:pageSize", String(pageSize));
+  }, [pageSize]);
+
+  // ---------- search / quick filters / sort ----------
+  const matchAny = (task, q) => {
+    if (!q) return true;
+    const lc = q.toLowerCase();
+    const fields = [
+      task.task_title || task.title || "",
+      task.description || "",
+      task.priority || "",
+      task.status || "",
+      task._id || "",
+      task.startDate ? moment(task.startDate).format("YYYY-MM-DD") : "",
+      task.startDate ? moment(task.startDate).format("DD/MM/YYYY") : "",
+      task.startDate ? moment(task.startDate).format("MMM D, YYYY") : "",
+      task.deadline ? moment(task.deadline).format("YYYY-MM-DD") : "",
+      task.deadline ? moment(task.deadline).format("DD/MM/YYYY") : "",
+      task.deadline ? moment(task.deadline).format("MMM D, YYYY") : "",
+      (task.assignedUsers || []).map((u) => u?.name || "").join(" "),
+      (task.module_names || []).join(" "),
+      (task.modules || []).map((m) => m?.name || "").join(" "),
+    ]
+      .join(" ")
+      .toLowerCase();
+    const terms = lc.split(/\s+/).filter(Boolean);
+    return terms.every((t) => fields.includes(t));
+  };
+
+  const applyQuick = (rows) => {
+    if (quick === "overdue") {
+      const now = new Date();
+      return rows.filter(
+        (t) =>
+          t.deadline && new Date(t.deadline) < now && !isDoneStatus(t.status)
       );
     }
+    if (quick === "due7") {
+      const now = new Date();
+      const soon = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      return rows.filter((t) => {
+        const d = t.deadline ? new Date(t.deadline) : null;
+        return d && d >= now && d <= soon && !isDoneStatus(t.status);
+      });
+    }
+    if (quick === "high") {
+      return rows.filter((t) => (t.priority || "").toLowerCase() === "high");
+    }
+    if (quick === "open") {
+      return rows.filter((t) => !isDoneStatus(t.status));
+    }
+    return rows;
+  };
+
+  const filtered = useMemo(() => {
+    let rows = [...tasks];
+    rows = applyQuick(rows);
+    if (search.trim()) rows = rows.filter((t) => matchAny(t, search));
     rows.sort((a, b) =>
       sortOrder === "desc"
         ? new Date(b.createdAt) - new Date(a.createdAt)
         : new Date(a.createdAt) - new Date(b.createdAt)
     );
     return rows;
-  }, [tasks, search, sortOrder]);
+  }, [tasks, search, sortOrder, quick]);
 
+  // ---------- paging ----------
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  useEffect(() => {
+    setPage((p) => Math.min(p, totalPages));
+  }, [totalPages]);
 
+  // ---------- update ----------
   const renderStatusOptions = (currentStatus) => {
-    if (currentStatus === "closed")
+    if (String(currentStatus).toLowerCase() === "closed")
       return [
         <option key="closed" value="closed">
           Closed
@@ -152,15 +260,12 @@ const ViewAssignedTasks = () => {
 
   const updateTask = async (taskId, partial) => {
     if (!userId) return;
-
     try {
       setBusyId(taskId);
-      // optimistic
+      // optimistic UI
       setTasks((prev) =>
         prev.map((t) => (t._id === taskId ? { ...t, ...partial } : t))
       );
-
-      // ✅ Use Task update endpoint
       await axios.put(`${api}/tasks/${taskId}`, partial, {
         headers: authHeader,
       });
@@ -176,27 +281,62 @@ const ViewAssignedTasks = () => {
     }
   };
 
+  // ---------- CSV export ----------
+  const exportCSV = () => {
+    const rows = filtered.map((t) => ({
+      id: t._id,
+      title: t.task_title || t.title || "",
+      description: (t.description || "").replace(/\n/g, " "),
+      status: t.status,
+      priority: t.priority,
+      assignees: (t.assignedUsers || []).map((u) => u?.name).join("; "),
+      startDate: t.startDate ? moment(t.startDate).format("YYYY-MM-DD") : "",
+      deadline: t.deadline ? moment(t.deadline).format("YYYY-MM-DD") : "",
+      createdAt: t.createdAt
+        ? moment(t.createdAt).format("YYYY-MM-DD HH:mm")
+        : "",
+    }));
+    const header = Object.keys(rows[0] || {}).join(",");
+    const body = rows
+      .map((r) =>
+        Object.values(r)
+          .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
+          .join(",")
+      )
+      .join("\n");
+    const blob = new Blob([header + "\n" + body], {
+      type: "text/csv;charset=utf-8;",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `assigned_tasks_project_${projectId || "all"}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // ---------- UI ----------
   return (
-    <div className="bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex justify-between items-center flex-wrap">
-          <div>
-            <h2 className="text-left font-semibold tracking-tight text-indigo-600">
-              View Assigned Tasks — Project: {projectId}
+    <div className="bg-white py-6 sm:py-8 text-[13px]">
+      <div className="mx-auto container px-2 sm:px-3 lg:px-4">
+        {/* Top bar */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="min-w-[220px]">
+            <h2 className="font-semibold tracking-tight text-indigo-600 text-[16px]">
+              Assigned Tasks — Project: {projectId || "All"}
             </h2>
-            <p className="text-sm text-gray-600 mt-2">
-              {loading ? "Loading…" : `Total Tasks: ${tasks.length}`}
-            </p>
-            {search && !loading && (
-              <p className="text-sm text-gray-600">
-                Showing {filtered.length} result(s) for “{search}”
-              </p>
-            )}
+            <div className="text-[11px] text-gray-600">
+              {loading
+                ? "Loading…"
+                : `Total: ${tasks.length} | Showing: ${filtered.length}`}
+            </div>
           </div>
-          <div className="flex items-center space-x-3 flex-wrap">
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Sort */}
             {sortOrder === "desc" ? (
               <FaSortAmountDownAlt
-                className="text-xl cursor-pointer text-gray-500"
+                className="text-lg cursor-pointer text-gray-500"
                 onClick={() =>
                   setSortOrder((s) => (s === "desc" ? "asc" : "desc"))
                 }
@@ -204,36 +344,46 @@ const ViewAssignedTasks = () => {
               />
             ) : (
               <FaSortAmountUpAlt
-                className="text-xl cursor-pointer text-gray-500"
+                className="text-lg cursor-pointer text-gray-500"
                 onClick={() =>
                   setSortOrder((s) => (s === "desc" ? "asc" : "desc"))
                 }
                 title="Sort by oldest"
               />
             )}
+
+            {/* View toggles */}
             <FaThList
-              className={`text-xl cursor-pointer ${
+              className={cls(
+                "text-lg cursor-pointer",
                 viewMode === "list" ? "text-indigo-600" : "text-gray-500"
-              }`}
+              )}
               onClick={() => setViewMode("list")}
+              title="List"
             />
             <FaThLarge
-              className={`text-xl cursor-pointer ${
+              className={cls(
+                "text-lg cursor-pointer",
                 viewMode === "card" ? "text-indigo-600" : "text-gray-500"
-              }`}
+              )}
               onClick={() => setViewMode("card")}
+              title="Card"
             />
             <FaTh
-              className={`text-xl cursor-pointer ${
+              className={cls(
+                "text-lg cursor-pointer",
                 viewMode === "grid" ? "text-indigo-600" : "text-gray-500"
-              }`}
+              )}
               onClick={() => setViewMode("grid")}
+              title="Grid"
             />
+
+            {/* Search */}
             <div className="relative">
-              <FaSearch className="absolute left-3 top-3 text-gray-400" />
+              <FaSearch className="absolute left-2 top-2.5 text-gray-400" />
               <input
-                className="pl-10 pr-4 py-2 border rounded-md"
-                placeholder="Search…"
+                className="pl-7 pr-2 py-1.5 border rounded-md w-[220px]"
+                placeholder="Search title, user, module, date…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
@@ -241,13 +391,126 @@ const ViewAssignedTasks = () => {
                 }}
               />
             </div>
+
+            {/* Page size */}
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-slate-600">Rows</span>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="px-2 py-1.5 border rounded-md"
+                title="Rows per page"
+              >
+                {[5, 10, 20, 40, 60, 100].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Export + refresh */}
+            <button
+              onClick={exportCSV}
+              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              title="Export CSV (filtered)"
+            >
+              <FaDownload /> <span className="hidden sm:inline">Export</span>
+            </button>
+            <button
+              onClick={fetchAssigned}
+              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              title="Refresh"
+            >
+              <FaSync /> <span className="hidden sm:inline">Refresh</span>
+            </button>
+
             <Link
               to={`/single-project/${projectId}`}
-              className="bg-indigo-700 text-white px-3 py-2 rounded-md hover:bg-indigo-900"
+              className="bg-indigo-700 text-white px-3 py-1.5 rounded-md hover:bg-indigo-900"
             >
-              Project Dashboard
+              Project
             </Link>
           </div>
+        </div>
+
+        {/* Quick filters */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex gap-2 flex-wrap">
+            <button
+              className={cls(
+                "text-[11px] leading-none rounded-full px-2 py-1 border transition",
+                quick === "open"
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+              )}
+              onClick={() => {
+                setQuick((q) => (q === "open" ? "" : "open"));
+                setPage(1);
+              }}
+              title="Not finished/closed"
+            >
+              Open
+            </button>
+            <button
+              className={cls(
+                "text-[11px] leading-none rounded-full px-2 py-1 border transition",
+                quick === "overdue"
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+              )}
+              onClick={() => {
+                setQuick((q) => (q === "overdue" ? "" : "overdue"));
+                setPage(1);
+              }}
+              title="Not finished/closed and deadline passed"
+            >
+              Overdue
+            </button>
+            <button
+              className={cls(
+                "text-[11px] leading-none rounded-full px-2 py-1 border transition",
+                quick === "due7"
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+              )}
+              onClick={() => {
+                setQuick((q) => (q === "due7" ? "" : "due7"));
+                setPage(1);
+              }}
+              title="Due in next 7 days"
+            >
+              Due in 7d
+            </button>
+            <button
+              className={cls(
+                "text-[11px] leading-none rounded-full px-2 py-1 border transition",
+                quick === "high"
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+              )}
+              onClick={() => {
+                setQuick((q) => (q === "high" ? "" : "high"));
+                setPage(1);
+              }}
+              title="Priority: High"
+            >
+              High Priority
+            </button>
+          </div>
+          <button
+            className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
+            onClick={() => {
+              setQuick("");
+              setSearch("");
+              setPage(1);
+            }}
+          >
+            Clear Filters
+          </button>
         </div>
 
         {/* Content */}
@@ -256,121 +519,332 @@ const ViewAssignedTasks = () => {
         ) : loadErr ? (
           <div className="mt-6 text-sm text-red-600">{loadErr}</div>
         ) : viewMode === "list" ? (
-          <div className="mt-10 space-y-6">
-            {pageRows.map((task) => (
-              <div
-                key={task._id}
-                className="flex items-center justify-between bg-white rounded-lg shadow p-4"
-              >
-                <div className="flex flex-1 flex-wrap gap-4">
-                  <div className="min-w-[12rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      Title
-                    </span>
-                    <span className="text-sm text-gray-900">{task.title}</span>
-                  </div>
-                  <div className="min-w-[16rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      Description
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {task.description}
-                    </span>
-                  </div>
-                  <div className="min-w-[8rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      Priority
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {task.priority}
-                    </span>
-                  </div>
-                  <div className="min-w-[8rem]">
-                    <span className="block text-sm font-semibold text-gray-600 text-center">
-                      Status
-                    </span>
-                    <span
-                      className={`text-sm font-bold px-2 ${badge(task.status)}`}
-                    >
-                      {task.status}
-                    </span>
-                  </div>
-                  <div className="min-w-[8rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      Start Date
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {task.startDate
-                        ? moment(task.startDate).format("DD/MM/YYYY")
-                        : "N/A"}
-                    </span>
-                  </div>
-                  <div className="min-w-[8rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      End Date
-                    </span>
-                    <span className="text-sm text-gray-900">
-                      {task.deadline
-                        ? moment(task.deadline).format("DD/MM/YYYY")
-                        : "No deadline"}
-                    </span>
-                  </div>
+          <div className="mt-4 space-y-2">
+            {/* header */}
+            <div className="w-full grid grid-cols-[1.4fr,1.8fr,0.9fr,0.9fr,0.9fr,0.9fr] items-center text-[12px] font-semibold text-slate-600 px-2 py-2 border-b border-slate-200">
+              <div>Title</div>
+              <div>Description</div>
+              <div>Priority</div>
+              <div>Status</div>
+              <div>Start</div>
+              <div>Deadline</div>
+            </div>
 
-                  {/* Status editor */}
-                  <div className="min-w-[12rem]">
-                    <span className="block text-sm font-semibold text-gray-600">
-                      Change Status
+            {/* rows */}
+            <div className="divide-y divide-slate-100">
+              {pageRows.map((t) => {
+                const rem = reminderFor(t);
+                return (
+                  <div
+                    key={t._id}
+                    className="w-full grid grid-cols-[1.4fr,1.8fr,0.9fr,0.9fr,0.9fr,0.9fr] items-center text-[12px] px-2 py-2"
+                  >
+                    {/* Title (single line, no duplicate reminder chip here) */}
+                    <div className="text-slate-900 font-medium truncate">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{t.task_title || t.title}</span>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    <div className="text-slate-700 line-clamp-2">
+                      {t.description}
+                    </div>
+
+                    {/* Priority */}
+                    <div className="capitalize">
+                      <span
+                        className={cls(
+                          "px-2 py-0.5 rounded text-[11px] border",
+                          (t.priority || "") === "high"
+                            ? "bg-rose-50 text-rose-700 border-rose-200"
+                            : (t.priority || "") === "medium"
+                            ? "bg-amber-50 text-amber-700 border-amber-200"
+                            : "bg-slate-50 text-slate-700 border-slate-200"
+                        )}
+                      >
+                        {t.priority}
+                      </span>
+                    </div>
+
+                    {/* Status (editable) */}
+                    <div>
+                      <select
+                        className={cls(
+                          "px-2 py-1 rounded border",
+                          badge(t.status)
+                        )}
+                        defaultValue={t.status}
+                        onChange={(e) =>
+                          updateTask(t._id, { status: e.target.value })
+                        }
+                        disabled={
+                          busyId === t._id ||
+                          String(t.status).toLowerCase() === "closed"
+                        }
+                        title="Change status"
+                      >
+                        {/* render limited options for role */}
+                        <option value={t.status}>{t.status}</option>
+                        {renderStatusOptions(t.status)}
+                      </select>
+                    </div>
+
+                    {/* Start */}
+                    <div className="text-slate-700">
+                      {t.startDate
+                        ? moment(t.startDate).format("DD/MM/YYYY")
+                        : "—"}
+                    </div>
+
+                    {/* Deadline (single place for both date + reminder chip) */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-slate-700">
+                        {t.deadline
+                          ? moment(t.deadline).format("DD/MM/YYYY")
+                          : "—"}
+                      </span>
+                      {rem && (
+                        <span
+                          className={reminderChipClass}
+                          title="Deadline reminder"
+                        >
+                          {redDot}
+                          {rem.text}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {!pageRows.length && (
+                <div className="text-center text-[12px] text-slate-500 py-6">
+                  No tasks match your filters.
+                </div>
+              )}
+            </div>
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">
+            {pageRows.map((t) => {
+              const rem = reminderFor(t);
+              return (
+                <div key={t._id} className="border rounded-lg p-3 shadow-sm">
+                  <div className="font-semibold text-slate-900 truncate">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span>{t.task_title || t.title}</span>
+                      {/* Show reminder chip here OR in the deadline field below?
+                          We'll show it only in the detailed "Deadline" field below to avoid duplication. */}
+                    </div>
+                  </div>
+                  <div className="mt-1 text-[12px] text-slate-700 line-clamp-2">
+                    {t.description}
+                  </div>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span
+                      className={cls(
+                        "px-2 py-0.5 rounded text-[11px]",
+                        badge(t.status)
+                      )}
+                    >
+                      {t.status}
                     </span>
+                    {/* Removed the top-right mini deadline to avoid duplicates */}
+                  </div>
+                  <div className="mt-2 text-[12px] text-slate-700 truncate">
+                    {(t.assignedUsers || []).map((u) => u?.name).join(", ") ||
+                      "—"}
+                  </div>
+                  <div className="mt-2">
                     <select
-                      className="bg-white border border-gray-300 px-2 py-1 rounded-lg"
+                      className="w-full bg-white border border-gray-300 px-2 py-1 rounded-lg text-[12px]"
                       defaultValue=""
                       onChange={(e) =>
-                        updateTask(task._id, { status: e.target.value })
+                        updateTask(t._id, { status: e.target.value })
                       }
-                      disabled={busyId === task._id || task.status === "closed"}
+                      disabled={
+                        busyId === t._id ||
+                        String(t.status).toLowerCase() === "closed"
+                      }
                     >
                       <option value="" disabled hidden>
-                        Select…
+                        Change status…
                       </option>
-                      {renderStatusOptions(task.status)}
+                      {renderStatusOptions(t.status)}
+                    </select>
+                  </div>
+                  <div className="mt-2 text-[11px] text-slate-600 grid grid-cols-2 gap-2">
+                    <div>
+                      <div className="text-slate-500">Start</div>
+                      <div>
+                        {t.startDate
+                          ? moment(t.startDate).format("DD/MM/YYYY")
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500">Deadline</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>
+                          {t.deadline
+                            ? moment(t.deadline).format("DD/MM/YYYY")
+                            : "—"}
+                        </span>
+                        {rem && (
+                          <span className={reminderChipClass}>
+                            {redDot}
+                            {rem.text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <Link
+                      to={`/single-project/${projectId}/single-task/${t._id}`}
+                      className="text-indigo-600 hover:underline text-[12px]"
+                    >
+                      History
+                    </Link>
+                  </div>
+                </div>
+              );
+            })}
+            {!pageRows.length && (
+              <div className="text-center text-[12px] text-slate-500 py-6 col-span-full">
+                No tasks match your filters.
+              </div>
+            )}
+          </div>
+        ) : (
+          // Card mode (simple)
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+            {pageRows.map((t) => {
+              const rem = reminderFor(t);
+              return (
+                <div key={t._id} className="border rounded-lg p-3 shadow-sm">
+                  <div className="flex items-start justify-between">
+                    <div className="font-semibold truncate">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>{t.task_title || t.title}</span>
+                        {/* Keep chip here? To keep consistency with “single place”, we’ll
+                            show chip near the Deadline field below only. */}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-[12px] text-slate-700 mt-1 line-clamp-3">
+                    {t.description}
+                  </div>
+                  <div className="mt-2 flex items-center gap-2 text-[11px]">
+                    <span
+                      className={cls(
+                        "px-2 py-0.5 rounded border capitalize",
+                        (t.priority || "") === "high"
+                          ? "bg-rose-50 text-rose-700 border-rose-200"
+                          : (t.priority || "") === "medium"
+                          ? "bg-amber-50 text-amber-700 border-amber-200"
+                          : "bg-slate-50 text-slate-700 border-slate-200"
+                      )}
+                    >
+                      {t.priority}
+                    </span>
+                    <span
+                      className={cls("px-2 py-0.5 rounded", badge(t.status))}
+                    >
+                      {t.status}
+                    </span>
+                  </div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                    <div>
+                      <div className="text-slate-500">Start</div>
+                      <div>
+                        {t.startDate
+                          ? moment(t.startDate).format("DD/MM/YYYY")
+                          : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500">Deadline</div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span>
+                          {t.deadline
+                            ? moment(t.deadline).format("DD/MM/YYYY")
+                            : "—"}
+                        </span>
+                        {rem && (
+                          <span className={reminderChipClass}>
+                            {redDot}
+                            {rem.text}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 text-[12px] text-slate-700 truncate">
+                    {(t.assignedUsers || []).map((u) => u?.name).join(", ") ||
+                      "—"}
+                  </div>
+                  <div className="mt-2 flex justify-between">
+                    <Link
+                      to={`/single-project/${projectId}/single-task/${t._id}`}
+                      className="text-indigo-600 hover:underline text-[12px]"
+                    >
+                      History
+                    </Link>
+                    <select
+                      className="bg-white border border-gray-300 px-2 py-1 rounded-lg text-[12px]"
+                      defaultValue=""
+                      onChange={(e) =>
+                        updateTask(t._id, { status: e.target.value })
+                      }
+                      disabled={
+                        busyId === t._id ||
+                        String(t.status).toLowerCase() === "closed"
+                      }
+                    >
+                      <option value="" disabled hidden>
+                        Change status…
+                      </option>
+                      {renderStatusOptions(t.status)}
                     </select>
                   </div>
                 </div>
+              );
+            })}
+            {!pageRows.length && (
+              <div className="text-center text-[12px] text-slate-500 py-6 col-span-full">
+                No tasks match your filters.
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-6 text-sm text-gray-500">
-            Card/Grid view not implemented here. (List view provides full
-            editing.)
+            )}
           </div>
         )}
 
         {/* Pagination */}
         {!loading && !loadErr && (
-          <div className="flex justify-center items-center space-x-2 mt-10">
+          <div className="flex justify-center items-center gap-2 mt-6">
             <button
-              className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
+              className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
               disabled={page === 1}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
+              title="Previous"
             >
-              <FaArrowLeft className="text-xl" />
+              <FaArrowLeft className="text-lg" />
             </button>
-            <span>
+            <span className="text-[12px]">
               Page {page} of {totalPages}
             </span>
             <button
-              className="px-4 py-2 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
+              className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
               disabled={page === totalPages}
               onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              title="Next"
             >
-              <FaArrowRight className="text-xl" />
+              <FaArrowRight className="text-lg" />
             </button>
           </div>
         )}
       </div>
     </div>
   );
-};
-
-export default ViewAssignedTasks;
+}

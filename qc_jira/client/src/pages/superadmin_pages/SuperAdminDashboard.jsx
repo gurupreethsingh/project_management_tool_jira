@@ -194,7 +194,7 @@ const SuperAdminDashboard = () => {
 
   return (
     <div className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto container px-6 lg:px-8">
         {/* Header */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
           <h3 className="text-2xl font-bold text-start text-indigo-600">

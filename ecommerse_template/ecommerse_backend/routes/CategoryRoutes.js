@@ -11,6 +11,8 @@ const {
   getCategoryProductCounts,
 } = require("../controllers/CategoryController");
 
+const { verifyToken, isSuperAdmin } = require("../middleware/authMiddleware");
+
 // -----------------------------------
 // ROUTES
 // -----------------------------------
@@ -19,6 +21,8 @@ const {
 // @desc    Add a new category with image
 router.post(
   "/add-category",
+  verifyToken,
+  isSuperAdmin,
   categoryUpload.single("category_image"),
   addCategory
 );
@@ -41,15 +45,20 @@ router.get("/category-product-counts", getCategoryProductCounts);
 router.get("/single-category/:id", getCategoryById);
 
 // @route   PUT /api/categories/:id
-// @desc    Update category (with optional image)
+// (optional) also protect these:
 router.put(
   "/update-category/:id",
+  verifyToken,
+  isSuperAdmin,
   categoryUpload.single("category_image"),
   updateCategory
 );
 
-// @route   DELETE /api/categories/:id
-// @desc    Delete category and its image
-router.delete("/delete-category/:id", deleteCategory);
+router.delete(
+  "/delete-category/:id",
+  verifyToken,
+  isSuperAdmin,
+  deleteCategory
+);
 
 module.exports = router;

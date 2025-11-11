@@ -55,4 +55,13 @@ router.post("/events/bulk/status", C.bulkStatus);
 router.post("/events/bulk/reschedule", C.bulkReschedule);
 router.post("/events/bulk/transfer-owner", C.bulkTransferOwnership);
 
+// === Minimal endpoints your SingleUserEvent.jsx calls ===
+// Use .all to accept POST (your code) and any other method (defensive).
+router.all("/events/:id/seen", C.markSeen);
+router.all("/events/:id/rsvp", C.rsvp);
+
+// === No-op notification endpoints to silence 404s from the UI ===
+router.all("/notifications/:id/read", C.markNotificationReadById);
+router.all("/notifications/mark-read", C.markNotificationReadLegacy);
+
 module.exports = router;
