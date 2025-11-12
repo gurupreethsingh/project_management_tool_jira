@@ -198,67 +198,67 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(3)")
 	private WebElement thirdPagination;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(1)>a")
 	private WebElement aboutUs;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="hdiv.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(2)>a")
 	private WebElement contactUs;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(3)>a")
 	private WebElement careers;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(4)>a")
 	private WebElement blogs;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(2)>ul>li:nth-of-type(1)>a")
 	private WebElement helpCenter;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(2)>ul>li:nth-of-type(2)>a")
 	private WebElement privacyPolicy;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(2)>ul>li:nth-of-type(3)>a")
 	private WebElement termsOfService;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(3)>div>a:nth-of-type(1)>svg")
 	private WebElement faceBook;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(3)>div>a:nth-of-type(2)>svg")
 	private WebElement twitter;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(3)>div>a:nth-of-type(4)>svg")
 	private WebElement linkedIn;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(3)>div>a:nth-of-type(3)>svg")
 	private WebElement gitHub;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(4)>form>input")
 	private WebElement enterEmailField;
 	
-	@FindBy(css="h1.text-3xl")
-	private WebElement subscribe;
+	@FindBy(css="div.mb-12>div:nth-of-type(4)>form>button")
+	private WebElement subscribeButton;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(1)>h3")
 	private WebElement companyHeading;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(2)>h3")
 	private WebElement supportHeading;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(3)>h3")
 	private WebElement followUs;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.mb-12>div:nth-of-type(4)>h3")
 	private WebElement subscribeHeading;
 	
-	@FindBy(css="h1.text-3xl")
-	private WebElement topUpArrowInFooter;
+	@FindBy(css="button.fixed")
+	private WebElement topUpArrowButtonInFooter;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.border-t>p.text-sm:first-child")
 	private WebElement copyWriteTextLeftSide;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div.border-t>p.text-sm:last-child")
 	private WebElement copyWriteTextRightSide;
 	
-	@FindBy(css="h1.text-3xl")
+	@FindBy(css="div>h1")
 	private WebElement productHeadingInSingleProductPage;
 	
 	@FindBy(css="header>nav>div:nth-child(3)>a>div>span")
@@ -267,7 +267,7 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="header>nav>div:nth-child(3)>div:nth-of-type(1)>button>span")
 	private WebElement miniCartBadge;
 	
-	@FindBy(css=" ")
+	@FindBy(css="div.mt-4>button ")
 	private WebElement checkOutButtonOnMinicart;
 	
 	@FindBy(css="h1.text-3xl")
@@ -349,10 +349,10 @@ public class ShopPage extends AllVerifications
 		AllVerifications.clickIfVisibleAndEnabled(searchIcon, driver, sa);
 	}
 	
-	public void verifyProductNameInSearchProductPage(String expectedText)
-	{
-		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
-	}
+//	public void verifyProductNameInSearchProductPage(String expectedText)
+//	{
+//		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
+//	}
 	
 	
 	
