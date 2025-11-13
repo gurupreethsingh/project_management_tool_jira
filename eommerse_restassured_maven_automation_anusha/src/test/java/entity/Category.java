@@ -18,4 +18,8 @@ public class Category
 	public void setCategory_image(String category_image) {
 		this.category_image = category_image;
 	}
+	
+	
+	
+	
 }
