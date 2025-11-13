@@ -11,7 +11,7 @@ import routes.ContactUs_Routes;
 
 public class ContactUs_Endpoints {
 	
-	 public static Response  addCategory(ContactUs  c)
+	 public static Response  addContact(ContactUs  c)
 	   {
 		 ContactUs_Routes routes =   new ContactUs_Routes();
 		   

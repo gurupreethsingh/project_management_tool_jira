@@ -9,6 +9,8 @@ public class ContactUs {
 	private String phone;
 
 	private String message_text;
+	
+	private boolean agreeToLicense;
 
 	public String getFirstName() {
 		return firstName;
@@ -50,6 +52,15 @@ public class ContactUs {
 		this.message_text = message_text;
 	}
 
+	public boolean isAgreeToLicense() {
+		return agreeToLicense;
+	}
+
+	public void setAgreeToLicense(boolean agreeToLicense) {
+		this.agreeToLicense = agreeToLicense;
+	}
+
+	
 }
 
 class Reply {
