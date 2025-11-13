@@ -5,12 +5,14 @@ import java.util.List;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.testng.annotations.Test;
 import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
+import generic.DriverManager;
 import generic.Excel;
 import generic.OpenClose;
 import pom.Homepage;
@@ -18,6 +20,7 @@ import pom.Homepage;
 public class HomepageRegressionScenarios extends OpenClose
 {
 	SoftAssert sa = new SoftAssert();
+	WebDriver driver=DriverManager.getdriver();
 	
 	@Test(enabled = true, priority = 1)
    public void openHomepageUsingUrl()

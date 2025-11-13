@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"cc6e2dd915194fcf8e7cfc586615783f","collectionName":"defectassignments","type":"collection"}
