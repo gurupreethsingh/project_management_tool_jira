@@ -1,8 +1,10 @@
 package routes;
 
-public class CategoryRoutes 
+import generic.AutomationConstants;
+
+public class CategoryRoutes implements AutomationConstants
 {
-	public String globalBackendRoute = "http://localhost:3010";
+
 	public String post_add_category_route = globalBackendRoute+ "/api/add-category";
 	public String get_all_categories_route = globalBackendRoute+ "/api/all-categories";
 	public String get_category_by_id_route = globalBackendRoute+ "/api/single-category/"; // + {id}
