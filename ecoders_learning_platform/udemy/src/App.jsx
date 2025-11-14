@@ -68,6 +68,8 @@ import { WishlistProvider } from "./components/wishlist_components/WishlistConte
 import UiGen from "./pages/chatbot_pages/UiGen";
 import DashboardGenerator from "./pages/chatbot_pages/DashboardGenerator";
 
+import RoadmapGen from "./pages/chatbot_pages/RoadmapGen";
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     document.title = title ? `${title} | ECODERS` : "ECODERS";
@@ -503,6 +505,14 @@ function App() {
                   element={
                     <PageTitle title="Ui-Gen">
                       <UiGen />
+                    </PageTitle>
+                  }
+                />
+                <Route
+                  path="/roadmap-gen"
+                  element={
+                    <PageTitle title="Roadmap-Gen">
+                      <RoadmapGen />
                     </PageTitle>
                   }
                 />

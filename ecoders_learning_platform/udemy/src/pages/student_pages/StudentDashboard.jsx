@@ -965,7 +965,7 @@ export default function StudentDashboard() {
               { to: "/ai-tutor", label: "AI Tutor" },
               { to: "/ai-tutor", label: "Code Generator" },
               { to: "/ai-tutor", label: "Code Summary" }, // fixed spelling
-              { to: "/ai-tutor", label: "Roadmap Generator" },
+              { to: "/roadmap-gen", label: "Roadmap Generator" },
               { to: "/dashboard-gen-ai", label: "Dashboard Generator" },
               { to: "/ui-gen", label: "Ui Generator Ai" },
             ].map(({ to, label }) => (
