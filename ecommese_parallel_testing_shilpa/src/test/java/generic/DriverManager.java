@@ -2,22 +2,23 @@ package generic;
 
 import org.openqa.selenium.WebDriver;
 
-public class DriverManager {
+public final class DriverManager {
 
-	private static final ThreadLocal<WebDriver> t1Driver = new ThreadLocal<>();
+    private DriverManager() {
+        // prevent instantiation
+    }
 
-	public static WebDriver getdriver() {
-		return t1Driver.get();
-	}
+    private static final ThreadLocal<WebDriver> t1Driver = new ThreadLocal<>();
 
-	public static void setDriver(WebDriver driver) {
+    public static WebDriver getDriver() {
+        return t1Driver.get();
+    }
 
-		t1Driver.set(driver);
+    public static void setDriver(WebDriver driver) {
+        t1Driver.set(driver);
+    }
 
-	}
-
-	public static void unload() {
-		t1Driver.remove();
-	}
-
+    public static void unload() {
+        t1Driver.remove();
+    }
 }
