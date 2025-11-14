@@ -96,7 +96,7 @@ app.use("/api", cartRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", contactRoutes);
 app.use("/api", courseRoutes);
-app.use("/api", chatRoutes);
+app.use("/api/chat-interactions", chatRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", degreeRoutes);
 app.use("/api", examRoutes);
