@@ -1,1 +1,0 @@
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"test_case_id":{"$numberInt":"1"}},"name":"test_case_id_1","background":true}],"uuid":"8376a831258a43da80b86e79d823da7c","collectionName":"testcasechanges","type":"collection"}
