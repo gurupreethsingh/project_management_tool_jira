@@ -962,9 +962,10 @@ export default function StudentDashboard() {
         <nav className="ai_links -mr-1">
           <ul className="flex items-center gap-2 overflow-x-auto">
             {[
+              { to: "/exam-gen-ai", label: "Quiz/Question Generator Ai" },
               { to: "/ai-tutor", label: "AI Tutor" },
-              { to: "/ai-tutor", label: "Code Generator" },
-              { to: "/ai-tutor", label: "Code Summary" }, // fixed spelling
+              { to: "/text-to-code", label: "Text To Code Generator" },
+              { to: "/code-summary", label: "Code Summary" }, // fixed spelling
               { to: "/roadmap-gen", label: "Roadmap Generator" },
               { to: "/dashboard-gen-ai", label: "Dashboard Generator" },
               { to: "/ui-gen", label: "Ui Generator Ai" },
