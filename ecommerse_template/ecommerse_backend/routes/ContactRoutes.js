@@ -27,3 +27,4 @@ router.post("/messages/mark-as-read", ContactController.markMessageAsRead);
 router.get("/messages/get-messages-count", ContactController.getMessagesCount);
 
 module.exports = router;
+ 
