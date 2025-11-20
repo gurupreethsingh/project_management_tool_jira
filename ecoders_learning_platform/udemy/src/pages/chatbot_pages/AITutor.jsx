@@ -1,18 +1,21 @@
-// src/pages/ai_pages/AITutor.jsx
-import React from "react";
-import AIAssistantShell from "../../components/chatbot_component/AIAssistantShell";
+// src/pages/ai_pages/AiTutor.jsx
 
-export default function AITutor() {
+import React from "react";
+import AiTutorAssistantShell from "../chatbot_pages/AiTutorAssistantShell";
+
+export default function AiTutor() {
   return (
-    <AIAssistantShell
+    <AiTutorAssistantShell
       title="AI Tutor"
-      scope="tutor"
-      placeholder="Ask the tutor about concepts, problems, and explanations…"
+      scope="ai-tutor"
+      placeholder="Ask your AI Tutor anything (e.g., 'Explain Python decorators with examples', 'Help me understand SQL joins with diagrams')…"
       starterPrompts={[
-        "Explain dynamic programming with a simple example.",
-        "Help me understand closures in JavaScript.",
-        "Create 5 practice questions on binary trees.",
-        "Why use normalization in databases?"
+        "Explain Python lists, tuples, sets and dictionaries with simple examples.",
+        "Teach me object-oriented programming in Python with classes, objects, inheritance and polymorphism.",
+        "Help me understand SQL joins (INNER, LEFT, RIGHT, FULL) with small tables and clear diagrams.",
+        "Explain time complexity of common data structures and algorithms in a simple way.",
+        "Guide me step-by-step to build a small Flask API project as a beginner.",
+        "Explain multithreading vs multiprocessing in Python with real-world examples.",
       ]}
     />
   );

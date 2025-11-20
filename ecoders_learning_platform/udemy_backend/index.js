@@ -35,6 +35,9 @@ const simpleChatBotRoutes = require("./routes/SimpleChatBotRoutes");
 const uiGenRoutes = require("./routes/UiGenRoutes");
 const dashboardGenRoutes = require("./routes/DashboardGenRoutes");
 const roadmapGenRoutes = require("./routes/RoadmapGenRoutes");
+const examGenRoutes = require("./routes/ExamGenRoutes");
+const aiTutorRoutes = require("./routes/AiTutorRoutes");
+const textCodeRoutes = require("./routes/TextCodeRoutes");
 
 const app = express();
 
@@ -96,7 +99,7 @@ app.use("/api", cartRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", contactRoutes);
 app.use("/api", courseRoutes);
-app.use("/api", chatRoutes);
+app.use("/api/chat-interactions", chatRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api", degreeRoutes);
 app.use("/api", examRoutes);
@@ -116,6 +119,9 @@ app.use("/api", uiGenRoutes);
 app.use("/api", simpleChatBotRoutes);
 app.use("/api", dashboardGenRoutes);
 app.use("/api/roadmap-gen", roadmapGenRoutes);
+app.use("/api/exam-gen", examGenRoutes);
+app.use("/api/ai-tutor", aiTutorRoutes);
+app.use("/api/text-code", textCodeRoutes);
 
 // ---- Mongo ----
 const DATABASE_URI = process.env.DATABASE;

@@ -69,6 +69,8 @@ import UiGen from "./pages/chatbot_pages/UiGen";
 import DashboardGenerator from "./pages/chatbot_pages/DashboardGenerator";
 
 import RoadmapGen from "./pages/chatbot_pages/RoadmapGen";
+import ExamGenerator from "./pages/chatbot_pages/ExamGenerator";
+import TextCodeGenerator from "./pages/chatbot_pages/TextCodeGenerator";
 
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
@@ -521,6 +523,22 @@ function App() {
                   element={
                     <PageTitle title="Dashboard-Gen-Ai">
                       <DashboardGenerator />
+                    </PageTitle>
+                  }
+                />
+                <Route
+                  path="/exam-gen-ai"
+                  element={
+                    <PageTitle title="Exam-Gen-Ai">
+                      <ExamGenerator />
+                    </PageTitle>
+                  }
+                />
+                <Route
+                  path="/text-to-code"
+                  element={
+                    <PageTitle title="Text To Code">
+                      <TextCodeGenerator />
                     </PageTitle>
                   }
                 />
