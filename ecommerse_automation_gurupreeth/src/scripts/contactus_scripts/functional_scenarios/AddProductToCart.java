@@ -18,7 +18,7 @@ SoftAssert sa = new SoftAssert();
 	@Test(enabled = true, priority = 1)
    public void openShoppageUsingUrl() throws InterruptedException
    {
-		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",1,0);
+		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
 		

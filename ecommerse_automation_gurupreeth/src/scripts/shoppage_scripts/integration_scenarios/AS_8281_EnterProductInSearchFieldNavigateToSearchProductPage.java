@@ -17,7 +17,7 @@ SoftAssert sa = new SoftAssert();
 	@Test(enabled = true, priority = 1)
    public void openShoppageUsingUrl()
    {
-		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",1,0);
+		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		
 		// enter product name in  search field and click on  search icon

@@ -22,7 +22,17 @@ public class ShopPage extends AllVerifications
 	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>div.pt-3>button")
 	private WebElement addToCartButton;
 	
-	@FindBy(css = "div.hidden.items-center.gap-6>div.relative>button")
+	@FindBy(css = "h1.text-3xl")
+	private WebElement headingInSearchField;
+	//
+	
+	@FindBy(css = "div.space-y-6>div:nth-of-type(2)>div.flex")
+	private WebElement CategoriesHeadingBelowClearFilterButton;
+	
+	@FindBy(css = "nav.containerWidth>div.flex:first-child>a.linkText")
+	private WebElement shopAllLinkText;
+	
+	@FindBy(css = "div.hidden>div.relative:nth-of-type(1)>button>svg")
 	private WebElement cartIcon;
 	
 	@FindBy(css = "div.grid>div.relative:nth-of-type(2)>div.p-4>h3")
@@ -49,7 +59,7 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="h1.text-3xl")
 	private WebElement headingOfProductInSearchProductPage;
 	
-	@FindBy(css="div.hidden>div.relative:nth-of-type(1)>button>svg")
+	@FindBy(css="nav.containerWidth>div:nth-of-type(3)>a.relative")
 	private WebElement wishlistIconFromShopPage;
 	
 	@FindBy(css="div.bg-gradient-to-r")
@@ -65,12 +75,15 @@ public class ShopPage extends AllVerifications
 	private WebElement clearFilterButton;
 	
 	
-	// there are 12 main category
-	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+"i"+")>div>span:first-child")
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div")
+	private List<WebElement> allCategoriesCount;
+
+	
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:first-child")
 	private WebElement mainCategories;
 	
 	// there are 12 main category drop down 
-	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+"i"+")>div>span:last-child")
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:last-child")
 	private WebElement mainCategoriesDropDown;
 	
 	//there is 4 sub category in first main category 
@@ -308,6 +321,22 @@ public class ShopPage extends AllVerifications
 	
 	
 	// utilization (create fucntions to perform operations on elements ) 
+	//
+	public void clickOnlogoFromShopPage() throws InterruptedException
+	{
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(logoFromShopPage, driver, sa);
+		Thread.sleep(2000);
+	}
+	public void clickOnShopAllLinkTextFromShopPage() throws InterruptedException
+	{
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(shopAllLinkText, driver, sa);
+		Thread.sleep(2000);
+	}
+	
+	
+	
 	public void clickOnAddToCartButton()
 	{
 		AllVerifications.clickIfVisibleAndEnabled(addToCartButton, driver, sa);
@@ -348,15 +377,136 @@ public class ShopPage extends AllVerifications
 	{
 		AllVerifications.clickIfVisibleAndEnabled(searchIcon, driver, sa);
 	}
+
+
+	public void clickOnwishlistFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(wishlistIconFromShopPage, driver, sa);
+		Thread.sleep(2000);
+		
+	}
+
+
+	public void clickOnCartFromShopPage() throws InterruptedException 
+	{
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(cartIcon, driver, sa);
+		Thread.sleep(2000);		
+		
+	}
+
+
+	public void clickOnAvatarFromShopPage() throws InterruptedException 
+	{
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(avatarTabFromShopPage, driver, sa);
+		Thread.sleep(2000);		
+		
+	}
+
+
+	public void clickOnSignInFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(SignInLinkText, driver, sa);
+		Thread.sleep(2000);		
+		
+	}
+
+
+	public void EnterValueInSearchField(String keys) {
+		AllVerifications.clickIfVisibleAndEnabled(searchField, driver, sa);
+		searchField.clear();
+		searchField.sendKeys(keys);
+	}
 	
-//	public void verifyProductNameInSearchProductPage(String expectedText)
-//	{
-//		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
-//	}
+	public void clickOnSearchButton()
+	{
+		AllVerifications.clickIfVisibleAndEnabled(searchIcon, driver, sa);
+	}
+	public void verifyProductNameInSearchProductPage(String expectedText)
+	{
+		
+		AllVerifications.textIsPresentOrNot(expectedText, driver,headingInSearchField, sa);
+	}
+
+
+	public void clickOnCardViewFromShopPage() throws InterruptedException 
+	{
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled( firstCardView, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+
+
+	public void clickOnGridViewFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled( secondCardView, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+	public void clickOnListViewFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled( thirdCardView, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+	public void verifyProductCategoryHeadingInShopPage(String expectedText)
+	{
+		
+		
+		AllVerifications.textIsPresentOrNot(expectedText, driver,CategoriesHeadingBelowClearFilterButton, sa);
+	}
+	
+	public int verifyNumberOfMainCategories() throws InterruptedException
+{
+		Thread.sleep(2000);
+		 int allMainCategoryCount  = allCategoriesCount.size();
+		return  allMainCategoryCount;
+		
+		
+	}
 	
 	
 	
 	
+	public void clickOnMainCategoryFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(  mainCategories, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+//
+	public void clickOnMainCategoryDropDownFromShopPage() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled(  mainCategoriesDropDown, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+	
+
+	public void clickONClearFilterButton() throws InterruptedException {
+		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled( clearFilterButton, driver, sa);
+		Thread.sleep(2000);	
+		
+	}
+
+
+	public String verifyMainCategoryName() {
+		String actualMainCategoryText  =  mainCategories.getText();
+		return  actualMainCategoryText;
+		
+	}
+
+
+	
+
+
+	
+
+	
+	//
 	 
 	
 }
