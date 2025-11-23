@@ -115,7 +115,7 @@ const PageTitle = ({ title, children }) => {
   return (
     <>
       {/* Breadcrumb bar (shared across all routes that use PageTitle) */}
-      <div className="bg-slate-50/60">
+      <div className="bg-slate-100">
         <div className="mx-auto container px-4 sm:px-6 lg:px-8">
           <Breadcrumb pageTitle={title} />
         </div>
