@@ -976,7 +976,7 @@ export default function Homepage() {
       </section>
 
       {/* FEATURE GRID — LIGHT VERSION */}
-      <section className="bg-gradient-to-br from-white via-indigo-50 to-purple-50">
+      <section className="bg-white">
         <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20">
           {/* Section Header */}
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
