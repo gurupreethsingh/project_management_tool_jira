@@ -866,7 +866,7 @@ export default function Homepage() {
       {/* HERO SECTION — LIGHT GRADIENT */}
       <section className="relative overflow-hidden">
         {/* Soft gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-400 via-purple-400 to-pink-400" />
+        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-pink-600" />
 
         {/* soft blurred color blobs */}
         <div className="pointer-events-none absolute -top-10 -right-16 h-56 w-56 rounded-full bg-pink-200/50 blur-3xl" />
