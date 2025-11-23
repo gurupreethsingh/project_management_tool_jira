@@ -915,7 +915,7 @@ export default function Homepage() {
 
             {/* RIGHT — MODERN CARDS WITH BIG ICONS */}
             <div className="flex flex-col gap-5 sm:gap-6">
-              <div className="rounded-2xl border border-indigo-100 bg-white/80 backdrop-blur-sm px-6 py-5 shadow-md">
+              <div className="rounded-2xl border border-indigo-100 bg-white/80 backdrop-blur-sm px-6 py-3 shadow-md">
                 <p className="text-[12px] sm:text-sm uppercase tracking-[0.2em] text-indigo-500">
                   What we deliver
                 </p>
@@ -928,7 +928,7 @@ export default function Homepage() {
 
               <div className="grid grid-cols-2 gap-4 sm:gap-5">
                 {/* CARD 1 */}
-                <div className="rounded-2xl border border-purple-200 bg-purple-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm">
+                <div className="rounded-2xl border border-purple-200 bg-purple-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm text-center items-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-purple-300 to-pink-300 text-slate-800 shadow-md">
                     <FaBrain className="text-3xl" />
                   </div>
@@ -938,7 +938,7 @@ export default function Homepage() {
                 </div>
 
                 {/* CARD 2 */}
-                <div className="rounded-2xl border border-pink-200 bg-pink-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm">
+                <div className="rounded-2xl border border-pink-200 bg-pink-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-300 via-purple-300 to-indigo-300 text-slate-800 shadow-md">
                     <FaNetworkWired className="text-3xl" />
                   </div>
@@ -948,7 +948,7 @@ export default function Homepage() {
                 </div>
 
                 {/* CARD 3 */}
-                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm">
+                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-pink-300 to-purple-300 text-slate-800 shadow-md">
                     <FaMobileAlt className="text-3xl" />
                   </div>
@@ -958,7 +958,7 @@ export default function Homepage() {
                 </div>
 
                 {/* CARD 4 */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 flex flex-col gap-4 shadow-sm">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-300 via-indigo-300 to-pink-300 text-slate-800 shadow-md">
                     <FaCheckCircle className="text-3xl" />
                   </div>
