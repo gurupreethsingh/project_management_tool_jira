@@ -76,15 +76,19 @@ public class ShopPage extends AllVerifications
 	
 	
 	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div")
-	private List<WebElement> allCategoriesCount;
+	private List<WebElement> mainCategoryName;
+	
+	@FindBy(css="div.grid-cols-1.gap-6>div.relative")
+	private List<WebElement> allProductContainer;
+
 
 	
-	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:first-child")
-	private WebElement mainCategories;
+//	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:first-child")
+//	private WebElement mainCategories;
 	
 	// there are 12 main category drop down 
-	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:last-child")
-	private WebElement mainCategoriesDropDown;
+//	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:last-child")
+//	private WebElement mainCategoriesDropDown;
 	
 	//there is 4 sub category in first main category 
 	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
@@ -461,7 +465,7 @@ public class ShopPage extends AllVerifications
 	public int verifyNumberOfMainCategories() throws InterruptedException
 {
 		Thread.sleep(2000);
-		 int allMainCategoryCount  = allCategoriesCount.size();
+		 int allMainCategoryCount  = mainCategoryName.size();
 		return  allMainCategoryCount;
 		
 		
@@ -469,20 +473,20 @@ public class ShopPage extends AllVerifications
 	
 	
 	
-	
-	public void clickOnMainCategoryFromShopPage() throws InterruptedException {
-		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled(  mainCategories, driver, sa);
-		Thread.sleep(2000);	
-		
-	}
+//	
+//	public void clickOnMainCategoryFromShopPage() throws InterruptedException {
+//		Thread.sleep(2000);
+//		AllVerifications.clickIfVisibleAndEnabled(  mainCategories, driver, sa);
+//		Thread.sleep(2000);	
+//		
+//	}
 //
-	public void clickOnMainCategoryDropDownFromShopPage() throws InterruptedException {
-		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled(  mainCategoriesDropDown, driver, sa);
-		Thread.sleep(2000);	
-		
-	}
+//	public void clickOnMainCategoryDropDownFromShopPage() throws InterruptedException {
+//		Thread.sleep(2000);
+//		AllVerifications.clickIfVisibleAndEnabled(  mainCategoriesDropDown, driver, sa);
+//		Thread.sleep(2000);	
+//		
+//	}
 	
 
 	public void clickONClearFilterButton() throws InterruptedException {
@@ -493,14 +497,83 @@ public class ShopPage extends AllVerifications
 	}
 
 
-	public String verifyMainCategoryName() {
-		String actualMainCategoryText  =  mainCategories.getText();
-		return  actualMainCategoryText;
-		
-	}
+//	public String verifyMainCategoryName() {
+//		String actualMainCategoryText  =  mainCategories.getText();
+//		return  actualMainCategoryText;
+//		
+//	}
+	public int findTotalCategoryCount()
+    {
+    	int mainCategoryCount=mainCategoryName.size();
+    	System.out.println("Total main categories are  "+ mainCategoryCount);
+    	
+    	return mainCategoryCount;
+    	
+    
+    
+    }
 
-
-	
+    public void clickOnMainCategory(int i)
+    {
+    	int mainCategoryCount=mainCategoryName.size();
+    	System.out.println("Total main categories are  "+ mainCategoryCount);
+    	
+    	//now find the electronics category 
+    	
+    WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+i+")>div>span:first-child"));
+    System.out.println("Clicking on main category "+mainCategoryName.getText());
+    
+    mainCategoryName.click();
+    
+    }
+    //
+    public void fetchAllProducts()
+    {
+    	int allProductsCount=allProductContainer.size();
+    	System.out.println("Total products are  "+ allProductsCount);
+    	
+    	//now find all the products name, sp,dp
+    	for(int i=1;i<=allProductsCount;i++)
+    	{
+    		// fetching products names
+    		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+    	    System.out.println("Products names "+eachProductName.getText());
+    	    
+    	    //fetching products selling price
+    	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
+    	    System.out.println("Selling Price "+eachProductSellingPrice.getText());
+    	    
+    	    //fetching products display price
+    	    WebElement	eachProductDisplayPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:last-child"));
+    	    System.out.println("Display Price "+eachProductDisplayPrice.getText());
+    	    
+    	    
+    	}    
+    	}
+    	
+    	public void clickOnEachProduct()
+        {
+        	int allProductsCount=allProductContainer.size();
+        	System.out.println("Total products are  "+ allProductsCount);
+        	
+        	//now find all the products name, sp,dp
+        	for(int i=1;i<=allProductsCount;i++)
+        	{
+        		// fetching products names
+        		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+        	    System.out.println("Clicking on Products names "+eachProductName.getText());
+        	    eachProductName.click();
+        	    
+        	    
+        	    
+        	    
+        	}
+    	
+    
+    
+   
+    
+    }
 
 
 	
