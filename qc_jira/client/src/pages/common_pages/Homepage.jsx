@@ -804,6 +804,238 @@
 
 //
 
+// import React from "react";
+// import {
+//   FaArrowRight,
+//   FaBrain,
+//   FaNetworkWired,
+//   FaMobileAlt,
+//   FaCheckCircle,
+//   FaCogs,
+//   FaChalkboardTeacher,
+// } from "react-icons/fa";
+
+// const features = [
+//   {
+//     name: "AI and Machine Learning Solutions",
+//     description:
+//       "Use AI and machine learning to automate repetitive work: smart project insights, test-case generation, defect triage, and intelligent dashboards that keep your teams aligned.",
+//     link: "/ai-ml-solutions",
+//     icon: FaBrain,
+//   },
+//   {
+//     name: "Blockchain Development",
+//     description:
+//       "Implement secure, tamper-proof audit trails for your projects using blockchain — from approvals and releases to contract and asset tracking across distributed teams.",
+//     link: "/blockchain-development",
+//     icon: FaNetworkWired,
+//   },
+//   {
+//     name: "Web and Mobile Applications",
+//     description:
+//       "Build responsive project management portals, admin panels, and mobile apps that give real-time visibility into tasks, timelines, sprints, and delivery status.",
+//     link: "/web-mobile-apps",
+//     icon: FaMobileAlt,
+//   },
+//   {
+//     name: "Software Testing and QA",
+//     description:
+//       "Design automation-first QA frameworks: regression suites, API testing, CI/CD integration, and detailed defect reporting that keeps your releases stable and predictable.",
+//     link: "/software-testing",
+//     icon: FaCheckCircle,
+//   },
+//   {
+//     name: "Custom Client Solutions",
+//     description:
+//       "Create tailored project management tools, workflow automation, and integration layers that match your exact business processes and team structure.",
+//     link: "/custom-client-solutions",
+//     icon: FaCogs,
+//   },
+//   {
+//     name: "Training and Placement Services",
+//     description:
+//       "Upskill teams in QA automation, project management tools, and modern software development practices — with real projects and strong placement support.",
+//     link: "/training-placement",
+//     icon: FaChalkboardTeacher,
+//   },
+// ];
+
+// export default function Homepage() {
+//   return (
+//     <div className="bg-white min-h-screen text-slate-700">
+//       {/* HERO SECTION — LIGHT GRADIENT */}
+//       <section className="relative overflow-hidden">
+//         {/* Soft gradient background */}
+//         <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-pink-600" />
+
+//         {/* soft blurred color blobs */}
+//         <div className="pointer-events-none absolute -top-10 -right-16 h-56 w-56 rounded-full bg-pink-200/50 blur-3xl" />
+//         <div className="pointer-events-none absolute bottom-0 -left-10 h-64 w-64 rounded-full bg-indigo-200/50 blur-3xl" />
+
+//         <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
+//           <div className="mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] gap-10 lg:gap-16 items-center">
+//             {/* LEFT — TEXT */}
+//             <div>
+//               <p className="text-[11px] sm:text-xs md:text-sm font-bold uppercase tracking-[0.35em] text-pink-100 mb-4">
+//                 SOFTWARE · AI · BLOCKCHAIN · CLOUD · PROJECT MANAGEMENT ·
+//                 AUTOMATION
+//               </p>
+
+//               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white drop-shadow-sm leading-snug lg:leading-tight">
+//                 Empowering Businesses with Innovative Project &amp; Automation
+//                 Solutions
+//               </h1>
+
+//               <p className="mt-5 text-sm sm:text-base lg:text-lg text-slate-50/90 leading-relaxed max-w-2xl">
+//                 We design and build modern project management platforms,
+//                 automation-first workflows, and intelligent dashboards — backed
+//                 by software development, AI, blockchain, cloud, and strong QA
+//                 practices. From planning and execution to testing and release,
+//                 we help your teams work smarter, faster, and with complete
+//                 visibility.
+//               </p>
+
+//               {/* Modern chips */}
+//               <div className="mt-7 flex flex-wrap gap-3 text-xs sm:text-sm">
+//                 <button className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2 font-semibold tracking-tight text-slate-800 shadow-sm backdrop-blur-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition">
+//                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-400 via-purple-400 to-pink-400 text-white text-xs">
+//                     <FaBrain />
+//                   </span>
+//                   <span>AI · Automation · Project Dashboards</span>
+//                 </button>
+
+//                 <button className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-5 py-2 font-semibold text-slate-800 shadow-sm backdrop-blur-sm hover:bg-pink-500 hover:text-white hover:border-pink-500 transition">
+//                   <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-pink-400 via-purple-400 to-indigo-400 text-white text-xs">
+//                     <FaCheckCircle />
+//                   </span>
+//                   <span>Testing · QA Automation · Training</span>
+//                 </button>
+//               </div>
+//             </div>
+
+//             {/* RIGHT — MODERN CARDS WITH BIG ICONS */}
+//             <div className="flex flex-col gap-5 sm:gap-6">
+//               <div className="rounded-2xl border border-indigo-100 bg-white/80 backdrop-blur-sm px-6 py-3 shadow-md">
+//                 <p className="text-[12px] sm:text-sm uppercase tracking-[0.2em] text-indigo-500">
+//                   What we deliver
+//                 </p>
+//                 <p className="mt-3 text-sm sm:text-base lg:text-lg font-semibold text-slate-800">
+//                   End-to-end project management tools, automation pipelines, and
+//                   QA platforms that connect your teams and keep every release on
+//                   track.
+//                 </p>
+//               </div>
+
+//               <div className="grid grid-cols-2 gap-4 sm:gap-5">
+//                 {/* CARD 1 */}
+//                 <div className="rounded-2xl border border-purple-200 bg-purple-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm text-center items-center">
+//                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-purple-300 to-pink-300 text-slate-800 shadow-md">
+//                     <FaBrain className="text-3xl" />
+//                   </div>
+//                   <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
+//                     AI &amp; Smart Automation
+//                   </div>
+//                 </div>
+
+//                 {/* CARD 2 */}
+//                 <div className="rounded-2xl border border-pink-200 bg-pink-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
+//                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-300 via-purple-300 to-indigo-300 text-slate-800 shadow-md">
+//                     <FaNetworkWired className="text-3xl" />
+//                   </div>
+//                   <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
+//                     Secure Tracking &amp; Blockchain
+//                   </div>
+//                 </div>
+
+//                 {/* CARD 3 */}
+//                 <div className="rounded-2xl border border-indigo-200 bg-indigo-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
+//                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-pink-300 to-purple-300 text-slate-800 shadow-md">
+//                     <FaMobileAlt className="text-3xl" />
+//                   </div>
+//                   <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
+//                     PM Dashboards &amp; Apps
+//                   </div>
+//                 </div>
+
+//                 {/* CARD 4 */}
+//                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
+//                   <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-300 via-indigo-300 to-pink-300 text-slate-800 shadow-md">
+//                     <FaCheckCircle className="text-3xl" />
+//                   </div>
+//                   <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
+//                     Testing · QA · Reliability
+//                   </div>
+//                 </div>
+//               </div>
+//             </div>
+//           </div>
+
+//           {/* Light divider */}
+//           <div className="mt-12 sm:mt-14 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+//         </div>
+//       </section>
+
+//       {/* FEATURE GRID — LIGHT VERSION */}
+//       <section className="bg-white">
+//         <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20">
+//           {/* Section Header */}
+//           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
+//             <div>
+//               <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-800">
+//                 Services we specialise in
+//               </h2>
+//               <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-xl font-medium">
+//                 We bring software development, AI, blockchain, cloud, and
+//                 automation together to build powerful project management tools,
+//                 QA platforms, and training ecosystems.
+//               </p>
+//             </div>
+
+//             <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500">
+//               <span className="inline-block h-2 w-2 rounded-full bg-pink-400" />
+//               <span className="inline-block h-2 w-2 rounded-full bg-purple-400" />
+//               <span className="inline-block h-2 w-2 rounded-full bg-indigo-400" />
+//             </div>
+//           </div>
+
+//           {/* Feature Cards */}
+//           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-7">
+//             {features.map((feature) => {
+//               const Icon = feature.icon;
+//               return (
+//                 <article
+//                   key={feature.name}
+//                   className="group relative flex flex-col rounded-2xl border border-indigo-200 bg-white p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all"
+//                 >
+//                   <div className="flex items-start gap-4">
+//                     <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-purple-300 to-pink-300 text-slate-800 shadow-md">
+//                       <Icon className="text-2xl" />
+//                     </div>
+//                     <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+//                       {feature.name}
+//                     </h3>
+//                   </div>
+
+//                   <p className="mt-4 text-[13px] sm:text-sm md:text-base text-slate-600 leading-relaxed flex-1">
+//                     {feature.description}
+//                   </p>
+
+//                   <div className="mt-5 flex items-center justify-between text-[11px] sm:text-xs text-slate-500">
+//                     <span className="truncate max-w-[70%]">{feature.link}</span>
+//                     <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-indigo-300 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition">
+//                       <FaArrowRight className="text-xs" />
+//                     </span>
+//                   </div>
+//                 </article>
+//               );
+//             })}
+//           </div>
+//         </div>
+//       </section>
+//     </div>
+//   );
+// }
+
 import React from "react";
 import {
   FaArrowRight,
@@ -812,221 +1044,164 @@ import {
   FaMobileAlt,
   FaCheckCircle,
   FaCogs,
-  FaChalkboardTeacher,
 } from "react-icons/fa";
 
 const features = [
   {
-    name: "AI and Machine Learning Solutions",
+    name: "AI & Machine Learning",
     description:
-      "Use AI and machine learning to automate repetitive work: smart project insights, test-case generation, defect triage, and intelligent dashboards that keep your teams aligned.",
-    link: "/ai-ml-solutions",
+      "Build intelligent systems that automate project workflows, generate insights and elevate decision-making.",
     icon: FaBrain,
   },
   {
-    name: "Blockchain Development",
+    name: "Blockchain Engineering",
     description:
-      "Implement secure, tamper-proof audit trails for your projects using blockchain — from approvals and releases to contract and asset tracking across distributed teams.",
-    link: "/blockchain-development",
+      "Design tamper-proof audit trails, secure workflows and decentralized systems for critical processes.",
     icon: FaNetworkWired,
   },
   {
-    name: "Web and Mobile Applications",
+    name: "Web & Mobile Platforms",
     description:
-      "Build responsive project management portals, admin panels, and mobile apps that give real-time visibility into tasks, timelines, sprints, and delivery status.",
-    link: "/web-mobile-apps",
+      "Craft fast, clean and scalable applications with modern UX, real-time dashboards and efficiency-focused features.",
     icon: FaMobileAlt,
   },
   {
-    name: "Software Testing and QA",
+    name: "Software QA Automation",
     description:
-      "Design automation-first QA frameworks: regression suites, API testing, CI/CD integration, and detailed defect reporting that keeps your releases stable and predictable.",
-    link: "/software-testing",
+      "Establish automation-first QA pipelines with API testing, regression suites and CI/CD integration.",
     icon: FaCheckCircle,
   },
   {
-    name: "Custom Client Solutions",
+    name: "Custom Software Solutions",
     description:
-      "Create tailored project management tools, workflow automation, and integration layers that match your exact business processes and team structure.",
-    link: "/custom-client-solutions",
+      "Engineer tailored platforms, workflow tools and integrations aligned to your exact business operations.",
     icon: FaCogs,
   },
   {
-    name: "Training and Placement Services",
+    name: "Cloud & DevOps",
     description:
-      "Upskill teams in QA automation, project management tools, and modern software development practices — with real projects and strong placement support.",
-    link: "/training-placement",
-    icon: FaChalkboardTeacher,
+      "Deploy cloud-native architectures, automated pipelines and secure scalable environments for any product.",
+    icon: FaCogs,
   },
 ];
 
 export default function Homepage() {
   return (
-    <div className="bg-white min-h-screen text-slate-700">
-      {/* HERO SECTION — LIGHT GRADIENT */}
+    <div className="bg-white text-slate-900">
+      {/* ========================= HERO SECTION ========================= */}
       <section className="relative overflow-hidden">
-        {/* Soft gradient background */}
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-500 to-pink-600" />
+        {/* subtle animated gradient glow */}
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-100 via-white to-slate-50" />
+        <div className="absolute top-[-80px] left-1/2 -translate-x-1/2 h-96 w-96 bg-gradient-to-tr from-indigo-300/40 via-purple-300/40 to-pink-300/40 blur-[120px] rounded-full animate-pulse" />
 
-        {/* soft blurred color blobs */}
-        <div className="pointer-events-none absolute -top-10 -right-16 h-56 w-56 rounded-full bg-pink-200/50 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-0 -left-10 h-64 w-64 rounded-full bg-indigo-200/50 blur-3xl" />
+        <div className="relative container mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20">
+          {/* TOP BADGES */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            {["SOFTWARE", "AI SYSTEMS", "BLOCKCHAIN", "CLOUD"].map((item) => (
+              <span
+                key={item}
+                className="px-3 py-1 text-[11px] font-medium rounded-full bg-slate-900 text-white"
+              >
+                {item}
+              </span>
+            ))}
+          </div>
 
-        <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
-          <div className="mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr),minmax(0,1fr)] gap-10 lg:gap-16 items-center">
-            {/* LEFT — TEXT */}
+          {/* MAIN HERO GRID */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            {/* LEFT TEXT BLOCK */}
             <div>
-              <p className="text-[11px] sm:text-xs md:text-sm font-bold uppercase tracking-[0.35em] text-pink-100 mb-4">
-                SOFTWARE · AI · BLOCKCHAIN · CLOUD · PROJECT MANAGEMENT ·
-                AUTOMATION
-              </p>
-
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-white drop-shadow-sm leading-snug lg:leading-tight">
-                Empowering Businesses with Innovative Project &amp; Automation
-                Solutions
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight text-slate-900">
+                Software, AI & Blockchain
+                <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
+                  Built for Modern Businesses
+                </span>
               </h1>
 
-              <p className="mt-5 text-sm sm:text-base lg:text-lg text-slate-50/90 leading-relaxed max-w-2xl">
-                We design and build modern project management platforms,
-                automation-first workflows, and intelligent dashboards — backed
-                by software development, AI, blockchain, cloud, and strong QA
-                practices. From planning and execution to testing and release,
-                we help your teams work smarter, faster, and with complete
-                visibility.
+              <p className="mt-4 text-sm sm:text-base lg:text-lg text-slate-600 max-w-xl leading-relaxed">
+                We create powerful software ecosystems—AI-driven dashboards,
+                blockchain-secured workflows, smart automation and clean, modern
+                web applications designed for speed, clarity and scale.
               </p>
 
-              {/* Modern chips */}
-              <div className="mt-7 flex flex-wrap gap-3 text-xs sm:text-sm">
-                <button className="inline-flex items-center gap-2 rounded-full border border-white/70 bg-white/80 px-5 py-2 font-semibold tracking-tight text-slate-800 shadow-sm backdrop-blur-sm hover:bg-indigo-600 hover:text-white hover:border-indigo-600 transition">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-indigo-400 via-purple-400 to-pink-400 text-white text-xs">
-                    <FaBrain />
-                  </span>
-                  <span>AI · Automation · Project Dashboards</span>
+              {/* CALL TO ACTION BUTTONS */}
+              <div className="mt-7 flex flex-wrap gap-4">
+                <button className="px-6 py-3 rounded-xl bg-slate-900 text-white text-sm font-medium shadow-md hover:shadow-lg hover:-translate-y-1 transition-all">
+                  Explore Solutions
                 </button>
 
-                <button className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/70 px-5 py-2 font-semibold text-slate-800 shadow-sm backdrop-blur-sm hover:bg-pink-500 hover:text-white hover:border-pink-500 transition">
-                  <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-tr from-pink-400 via-purple-400 to-indigo-400 text-white text-xs">
-                    <FaCheckCircle />
-                  </span>
-                  <span>Testing · QA Automation · Training</span>
+                <button className="px-6 py-3 rounded-xl border border-slate-300 text-sm font-medium hover:bg-slate-100 transition">
+                  View Projects
                 </button>
               </div>
             </div>
 
-            {/* RIGHT — MODERN CARDS WITH BIG ICONS */}
-            <div className="flex flex-col gap-5 sm:gap-6">
-              <div className="rounded-2xl border border-indigo-100 bg-white/80 backdrop-blur-sm px-6 py-3 shadow-md">
-                <p className="text-[12px] sm:text-sm uppercase tracking-[0.2em] text-indigo-500">
-                  What we deliver
-                </p>
-                <p className="mt-3 text-sm sm:text-base lg:text-lg font-semibold text-slate-800">
-                  End-to-end project management tools, automation pipelines, and
-                  QA platforms that connect your teams and keep every release on
-                  track.
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 sm:gap-5">
-                {/* CARD 1 */}
-                <div className="rounded-2xl border border-purple-200 bg-purple-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm text-center items-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-purple-300 to-pink-300 text-slate-800 shadow-md">
-                    <FaBrain className="text-3xl" />
-                  </div>
-                  <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
-                    AI &amp; Smart Automation
-                  </div>
+            {/* RIGHT — SLEEK FEATURE PREVIEW BOX */}
+            <div className="relative">
+              <div className="rounded-3xl bg-white/90 backdrop-blur-xl shadow-xl border border-slate-200 p-6 sm:p-8 flex flex-col gap-6">
+                <div className="text-sm sm:text-base font-medium">
+                  <span className="text-slate-900">Innovation powered by</span>{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 to-purple-600">
+                    AI · Blockchain · Cloud
+                  </span>
                 </div>
 
-                {/* CARD 2 */}
-                <div className="rounded-2xl border border-pink-200 bg-pink-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-pink-300 via-purple-300 to-indigo-300 text-slate-800 shadow-md">
-                    <FaNetworkWired className="text-3xl" />
-                  </div>
-                  <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
-                    Secure Tracking &amp; Blockchain
-                  </div>
-                </div>
-
-                {/* CARD 3 */}
-                <div className="rounded-2xl border border-indigo-200 bg-indigo-50/90 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-pink-300 to-purple-300 text-slate-800 shadow-md">
-                    <FaMobileAlt className="text-3xl" />
-                  </div>
-                  <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
-                    PM Dashboards &amp; Apps
-                  </div>
-                </div>
-
-                {/* CARD 4 */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 flex flex-col gap-4 shadow-sm  text-center items-center">
-                  <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-300 via-indigo-300 to-pink-300 text-slate-800 shadow-md">
-                    <FaCheckCircle className="text-3xl" />
-                  </div>
-                  <div className="text-[13px] sm:text-sm font-semibold text-slate-800">
-                    Testing · QA · Reliability
-                  </div>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { label: "AI Systems", icon: FaBrain },
+                    { label: "Blockchain", icon: FaNetworkWired },
+                    { label: "Web Apps", icon: FaMobileAlt },
+                    { label: "QA Automation", icon: FaCheckCircle },
+                  ].map(({ label, icon: Icon }, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-3 px-4 py-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition shadow-sm hover:shadow-md"
+                    >
+                      <Icon className="text-slate-700 text-xl" />
+                      <span className="text-sm font-medium text-slate-800">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
-
-          {/* Light divider */}
-          <div className="mt-12 sm:mt-14 h-px w-full bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
         </div>
       </section>
 
-      {/* FEATURE GRID — LIGHT VERSION */}
-      <section className="bg-white">
-        <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20">
-          {/* Section Header */}
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8 sm:mb-10">
-            <div>
-              <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-800">
-                Services we specialise in
-              </h2>
-              <p className="mt-3 text-sm sm:text-base text-slate-600 max-w-xl font-medium">
-                We bring software development, AI, blockchain, cloud, and
-                automation together to build powerful project management tools,
-                QA platforms, and training ecosystems.
-              </p>
-            </div>
+      {/* ======================= FEATURE GRID ======================= */}
+      <section className="py-12 sm:py-16 lg:py-20 bg-white">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-10">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-slate-900 mb-8">
+            What We Build
+          </h2>
 
-            <div className="flex items-center gap-2 text-[11px] sm:text-xs text-slate-500">
-              <span className="inline-block h-2 w-2 rounded-full bg-pink-400" />
-              <span className="inline-block h-2 w-2 rounded-full bg-purple-400" />
-              <span className="inline-block h-2 w-2 rounded-full bg-indigo-400" />
-            </div>
-          </div>
-
-          {/* Feature Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5 sm:gap-7">
-            {features.map((feature) => {
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+            {features.map((feature, i) => {
               const Icon = feature.icon;
               return (
-                <article
-                  key={feature.name}
-                  className="group relative flex flex-col rounded-2xl border border-indigo-200 bg-white p-5 sm:p-6 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all"
+                <div
+                  key={i}
+                  className="group border border-slate-200 rounded-2xl p-6 bg-white shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
                 >
-                  <div className="flex items-start gap-4">
-                    <div className="inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-300 via-purple-300 to-pink-300 text-slate-800 shadow-md">
-                      <Icon className="text-2xl" />
+                  <div className="flex items-center gap-4">
+                    <div className="h-12 w-12 flex items-center justify-center rounded-xl bg-slate-900 text-white shadow-md group-hover:scale-105 transition-all">
+                      <Icon className="text-xl" />
                     </div>
-                    <h3 className="text-sm sm:text-base font-semibold text-slate-900">
+                    <h3 className="text-base font-semibold text-slate-900">
                       {feature.name}
                     </h3>
                   </div>
 
-                  <p className="mt-4 text-[13px] sm:text-sm md:text-base text-slate-600 leading-relaxed flex-1">
+                  <p className="mt-4 text-sm text-slate-600 leading-relaxed">
                     {feature.description}
                   </p>
 
-                  <div className="mt-5 flex items-center justify-between text-[11px] sm:text-xs text-slate-500">
-                    <span className="truncate max-w-[70%]">{feature.link}</span>
-                    <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-white border border-indigo-300 text-indigo-600 group-hover:bg-indigo-500 group-hover:text-white transition">
-                      <FaArrowRight className="text-xs" />
-                    </span>
+                  <div className="mt-5 flex items-center text-xs text-slate-500 group-hover:text-slate-900 transition-colors">
+                    Learn more <FaArrowRight className="ml-2 text-xs" />
                   </div>
-                </article>
+                </div>
               );
             })}
           </div>
