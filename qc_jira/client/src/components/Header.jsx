@@ -374,6 +374,12 @@ export default function Header() {
           >
             About Us
           </Link>
+          <Link
+            to="/careers"
+            className="text-sm font-semibold leading-6 text-gray-700"
+          >
+            Careers
+          </Link>
         </div>
 
         {/* Right: Events + Notifications + User menu */}

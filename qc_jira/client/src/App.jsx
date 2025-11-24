@@ -3,7 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
 
 import Homepage from "./pages/common_pages/Homepage";
-import Header from "./components/Header";
+
 import Login from "./pages/common_pages/Login";
 import Register from "./pages/common_pages/Register";
 import Dashboard from "./pages/common_pages/Dashboard";
@@ -23,7 +23,17 @@ import AboutUs from "./pages/common_pages/AboutUs";
 import Careers from "./pages/common_pages/Careers";
 import NewsLetter from "./components/NewsLetter";
 import WorkWithUs from "./components/WorkWithUs";
+import Projects from "./pages/common_pages/Projects";
+import ExploreSolutions from "./pages/common_pages/ExploreSolutions";
+import WebApps from "./pages/common_pages/WebApps";
+import Blockchain from "./pages/common_pages/Blockchain";
+import QaAutomation from "./pages/common_pages/QaAutomation";
+import AiSystems from "./pages/common_pages/AiSystems";
+
+// header and footer.
+import Header from "./components/Header";
 import Footer from "./components/Footer";
+
 // blog pages.
 import AllBlogs from "./pages/blog_pages/AllBlogs";
 import AddBlog from "./pages/blog_pages/AddBlog";
@@ -160,6 +170,60 @@ function App() {
           element={
             <PageTitle title="Home">
               <Homepage />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/projects"
+          element={
+            <PageTitle title="Projects">
+              <Projects />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/explore-solutions"
+          element={
+            <PageTitle title="Explore Solutions">
+              <ExploreSolutions />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/ai-systems"
+          element={
+            <PageTitle title="AI Systems">
+              <AiSystems />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/blockchain"
+          element={
+            <PageTitle title="Blockchain">
+              <Blockchain />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/web-apps"
+          element={
+            <PageTitle title="Web & Mobile Apps">
+              <WebApps />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/qa-automation"
+          element={
+            <PageTitle title="QA Automation">
+              <QaAutomation />
             </PageTitle>
           }
         />
