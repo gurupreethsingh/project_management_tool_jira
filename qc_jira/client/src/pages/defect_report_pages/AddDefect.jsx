@@ -1,3 +1,5 @@
+// src/pages/defects/AddDefect.jsx
+
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate, useParams, Link } from "react-router-dom";
@@ -50,6 +52,12 @@ const AddDefect = () => {
     return token ? { headers: { Authorization: `Bearer ${token}` } } : {};
   };
 
+  // small helpers to read values from TestCase doc
+  const getScenarioNumberFromTC = (tc = {}) =>
+    tc.scenario_number || tc.scenarioNumber || "";
+  const getBuildNumberFromTC = (tc = {}) =>
+    tc.build_name_or_number || tc.build_number || tc.buildName || "";
+
   useEffect(() => {
     const loggedInUser = JSON.parse(localStorage.getItem("user"));
     if (loggedInUser?.name) {
@@ -58,7 +66,7 @@ const AddDefect = () => {
 
     const fetchProjectDetails = async () => {
       try {
-        // ✅ protected route → send token + correct path
+        // Project summary (for project_name)
         const projectRes = await axios.get(
           `${globalBackendRoute}/api/single-project/${projectId}`,
           authConfig()
@@ -72,7 +80,7 @@ const AddDefect = () => {
           }));
         }
 
-        // ✅ correct test-cases endpoint + auth
+        // All test cases for this project
         const tcRes = await axios.get(
           `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
           authConfig()
@@ -80,7 +88,7 @@ const AddDefect = () => {
 
         const all = Array.isArray(tcRes.data) ? tcRes.data : [];
 
-        // Mark a test as failed if any step is Fail (case-insensitive)
+        // Keep only failed test cases (any step status === fail)
         const failed = all.filter((tc) =>
           (tc.testing_steps || []).some(
             (step) => String(step?.status).toLowerCase() === "fail"
@@ -89,14 +97,12 @@ const AddDefect = () => {
 
         setTestCases(failed);
       } catch (err) {
-        // 401 here means your token is missing/expired/invalid
         console.error(
           "Error fetching project/test cases:",
           err?.message || err
         );
         if (err?.response?.status === 401) {
           alert("Your session has expired. Please log in again.");
-          // optionally redirect:
           // navigate("/login");
         }
       }
@@ -107,11 +113,11 @@ const AddDefect = () => {
   }, [projectId]);
 
   const handleTestCaseChange = (e) => {
-    const selected = testCases.find(
-      (tc) => tc.test_case_number === e.target.value
-    );
+    const value = e.target.value;
+    const selected = testCases.find((tc) => tc.test_case_number === value);
 
     if (!selected) {
+      // No test case selected → clear linkage, allow manual input
       setBug((prev) => ({
         ...prev,
         test_case_number: "",
@@ -137,10 +143,10 @@ const AddDefect = () => {
     setBug((prev) => ({
       ...prev,
       test_case_number: selected.test_case_number,
-      test_case_name: selected.test_case_name,
-      scenario_number: selected.scenario_number,
+      test_case_name: selected.test_case_name || "",
+      scenario_number: getScenarioNumberFromTC(selected),
       requirement_number: selected.requirement_number || "",
-      build_number: selected.build_name_or_number || "",
+      build_number: getBuildNumberFromTC(selected),
       module_name: selected.module_name || "",
       test_case_type: selected.test_case_type || "",
       expected_result: failedStep.expected_result || "",
@@ -201,6 +207,8 @@ const AddDefect = () => {
     try {
       await axios.post(`${globalBackendRoute}/api/addbug`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
+        // If /api/addbug is protected, merge authConfig here:
+        // ...authConfig(),
       });
       alert("Bug added successfully!");
       navigate(`/single-project/${projectId}/all-defects`);
@@ -225,19 +233,19 @@ const AddDefect = () => {
         <div className="flex space-x-4 flex-wrap">
           <Link
             to="/bugbucket"
-            className=" btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
+            className="btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
           >
             Bug Bucket
           </Link>
           <Link
             to={`/single-project/${projectId}/all-defects`}
-            className=" btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
+            className="btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
           >
             All Bugs
           </Link>
           <Link
             to={`/single-project/${projectId}`}
-            className=" btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
+            className="btn btn-sm bg-indigo-600 hover:bg-indigo-800 font-semibold text-white"
           >
             Project Dashboard
           </Link>
@@ -282,7 +290,9 @@ const AddDefect = () => {
               name="scenario_number"
               type="text"
               value={bug.scenario_number || ""}
-              readOnly
+              onChange={handleInputChange}
+              // read-only when linked to a test case; editable otherwise
+              readOnly={!!bug.test_case_number}
               className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
             />
           </div>
@@ -347,8 +357,10 @@ const AddDefect = () => {
               id="build_number"
               name="build_number"
               type="text"
-              value={bug.build_number}
-              readOnly
+              value={bug.build_number || ""}
+              onChange={handleInputChange}
+              // read-only when linked to a test case; editable otherwise
+              readOnly={!!bug.test_case_number}
               className="block w-full rounded-md border-0 py-1.5 shadow-sm focus:ring-2 focus:ring-indigo-600"
             />
           </div>
