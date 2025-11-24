@@ -30,6 +30,10 @@ import Blockchain from "./pages/common_pages/Blockchain";
 import QaAutomation from "./pages/common_pages/QaAutomation";
 import AiSystems from "./pages/common_pages/AiSystems";
 
+// careers pages.
+import AllCareersApplications from "./pages/careers_pages/AllCareersApplications";
+import SingleCareersApplication from "./pages/careers_pages/SingleCareersApplication";
+
 // header and footer.
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -114,6 +118,11 @@ import TopArrow from "./components/common_components/TopArrow";
 import SingleUser from "./pages/user_pages/SingleUser";
 import UpdateBlog from "./pages/blog_pages/UpdateBlog";
 import Breadcrumb from "./components/common_components/Breadcrumb";
+
+// report pages
+import AllReports from "./pages/report_pages/AllReports";
+import SingleReport from "./pages/report_pages/SingleReport";
+import GenerateReport from "./pages/report_pages/GenerateReport";
 
 /** Match the “PageTitle” pattern from your sample */
 /** Layout wrapper: sets <title> and shows Breadcrumb for this page */
@@ -276,6 +285,61 @@ function App() {
             <PageTitle title="Careers">
               <Careers />
             </PageTitle>
+          }
+        />
+
+        <Route
+          path="/all-careers-applications"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="All Careers Applications">
+                <AllCareersApplications />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-careers-applications/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="Single Careers Application">
+                <SingleCareersApplication />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/all-reports"
+          element={
+            <PrivateRoute>
+              <PageTitle title="All Reports">
+                <AllReports />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-report/:id"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Single Report">
+                <SingleReport />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-project/:projectId/generate-report"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Generate Report">
+                <GenerateReport />
+              </PageTitle>
+            </PrivateRoute>
           }
         />
 
