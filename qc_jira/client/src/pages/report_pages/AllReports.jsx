@@ -113,6 +113,31 @@ const statusChipClass = (statusRaw) => {
   return "border-slate-200 bg-slate-50 text-slate-700";
 };
 
+// ✅ Per-user “viewed” check: use viewedBy + currentUserId, fallback to isViewed if no user
+const hasUserViewed = (report, currentUserId) => {
+  if (!report) return false;
+
+  // If we don't know the user id (not logged in / no user in localStorage),
+  // fall back to the global isViewed flag (old behavior).
+  if (!currentUserId) {
+    return !!report.isViewed;
+  }
+
+  if (Array.isArray(report.viewedBy) && report.viewedBy.length > 0) {
+    return report.viewedBy.some((u) => {
+      if (!u) return false;
+      const uid =
+        typeof u === "string"
+          ? u
+          : u._id || u.id || u.userId || u.user_id || u.toString?.();
+      return uid && String(uid) === String(currentUserId);
+    });
+  }
+
+  // If no viewedBy info, treat as "not viewed" for this user.
+  return false;
+};
+
 export default function AllReports() {
   // ---- state ----
   const [reports, setReports] = useState([]);
@@ -123,9 +148,8 @@ export default function AllReports() {
   const [itemsPerPage, setItemsPerPage] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [sortOrder, setSortOrder] = useState("desc"); // newest first
-  const [statusFilter, setStatusFilter] = useState("all"); // same values as your original page
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  const [totalReports, setTotalReports] = useState(0);
   const [filteredCount, setFilteredCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -139,10 +163,39 @@ export default function AllReports() {
   const [linkedCount, setLinkedCount] = useState(0);
   const [generalCount, setGeneralCount] = useState(0);
 
-  // "Module-like" filter → here: Project / General chips
+  // project / general chips
   const [selectedProjectBucketId, setSelectedProjectBucketId] = useState(null);
 
-  // ---- fetch reports (like fetchTCs) ----
+  // current user (id + role)
+  const [currentUserId, setCurrentUserId] = useState(null);
+  const [currentUserRole, setCurrentUserRole] = useState("");
+
+  // ---- load current user from localStorage ----
+  useEffect(() => {
+    const raw = localStorage.getItem("user");
+    if (!raw) return;
+
+    try {
+      const user = JSON.parse(raw);
+      const id = user?.id || user?._id || user?.userId || user?.user_id || null;
+      const roleRaw = user?.role || user?.userType || user?.userRole || "";
+      setCurrentUserId(id ? String(id) : null);
+      setCurrentUserRole(String(roleRaw || "").toLowerCase());
+    } catch {
+      // ignore parse errors; just leave user as null
+    }
+  }, []);
+
+  const isAdminLike = useMemo(() => {
+    const r = (currentUserRole || "").toLowerCase();
+    if (!r) return false;
+    if (r === "admin" || r === "superadmin" || r === "super_admin") return true;
+    if (r.includes("owner")) return true;
+    if (r.includes("super") && r.includes("admin")) return true;
+    return false;
+  }, [currentUserRole]);
+
+  // ---- fetch reports ----
   const fetchReports = async (opts = {}) => {
     try {
       setLoading(true);
@@ -168,16 +221,13 @@ export default function AllReports() {
         : [];
 
       setReports(rows);
-      setTotalReports(rows.length);
 
       if (opts.resetPage) setCurrentPage(1);
     } catch (err) {
       const status = err?.response?.status;
       if (status === 404) {
-        // treat as empty list
         console.warn("Reports endpoint returned 404 – treating as empty list.");
         setReports([]);
-        setTotalReports(0);
         setError("");
       } else {
         console.error("Error fetching reports:", err);
@@ -193,26 +243,54 @@ export default function AllReports() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sortOrder]);
 
-  // ---- debounce search (like AllTestCases) ----
+  // ---- debounce search ----
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(searchQuery), 180);
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  // ---- project chips (Project / General) ----
+  // ---- visible reports (per-user visibility) ----
+  const visibleReports = useMemo(() => {
+    if (!currentUserId) return reports;
+
+    if (isAdminLike) {
+      // Admin / superadmin: see all reports
+      return reports;
+    }
+
+    // Normal user: only the reports they created
+    return reports.filter((r) => {
+      const rep = r.reporter;
+      const reporterId =
+        (rep && (rep._id || rep.id || rep.userId || rep.user_id)) ||
+        r.reporterId ||
+        r.createdBy ||
+        r.created_by;
+
+      if (!reporterId) return false;
+      return String(reporterId) === String(currentUserId);
+    });
+  }, [reports, currentUserId, isAdminLike]);
+
+  // ---- project chips (Project / General) based on visible reports ----
   const projectBuckets = useMemo(() => {
     const map = new Map(); // key -> { _id, name, count }
 
-    for (const r of reports) {
+    for (const r of visibleReports) {
       const project = r.project;
       const hasProject = !!project;
 
       const bucketId = hasProject
-        ? String(project._id || project.id || project.name || project.slug)
+        ? String(
+            project._id || project.id || project.name || project.slug || project
+          )
         : PROJECT_GENERAL_ID;
 
       const bucketName = hasProject
-        ? project.name || project.project_name || "Unnamed Project"
+        ? project.name ||
+          project.project_name ||
+          project.projectName ||
+          "Unnamed Project"
         : "General / Unlinked";
 
       if (!map.has(bucketId)) {
@@ -226,13 +304,13 @@ export default function AllReports() {
     );
 
     return list;
-  }, [reports]);
+  }, [visibleReports]);
 
   // ---- filtered reports (search + status + project bucket) ----
   const filtered = useMemo(() => {
     const tokens = tokenize(debouncedQuery);
 
-    const rows = reports.filter((r) => {
+    const rows = visibleReports.filter((r) => {
       const stRaw = r.overallStatus || "unknown";
       const st = String(stRaw || "").toLowerCase();
 
@@ -246,7 +324,13 @@ export default function AllReports() {
         const project = r.project;
         const hasProject = !!project;
         const bucketId = hasProject
-          ? String(project._id || project.id || project.name || project.slug)
+          ? String(
+              project._id ||
+                project.id ||
+                project.name ||
+                project.slug ||
+                project
+            )
           : PROJECT_GENERAL_ID;
 
         if (bucketId !== selectedProjectBucketId) return false;
@@ -262,7 +346,10 @@ export default function AllReports() {
           r.remarks || "",
           r.blockers || "",
           r.nonSubmissionReason || "",
-          r.project?.name || r.project?.project_name || "",
+          r.project?.name ||
+            r.project?.project_name ||
+            r.project?.projectName ||
+            "",
           r.task?.title || r.task?.task_title || "",
           r.reporter?.name || r.reporter?.email || "",
           r.overallStatus || "",
@@ -303,7 +390,7 @@ export default function AllReports() {
     setGeneralCount(general);
 
     return rows;
-  }, [reports, debouncedQuery, selectedProjectBucketId, statusFilter]);
+  }, [visibleReports, debouncedQuery, selectedProjectBucketId, statusFilter]);
 
   // ---- pagination + counts sync ----
   useEffect(() => {
@@ -345,7 +432,6 @@ export default function AllReports() {
 
       const updated = reports.filter((r) => r._id !== id);
       setReports(updated);
-      setTotalReports(updated.length);
     } catch (error) {
       console.error("Error deleting report:", error);
       alert(
@@ -355,16 +441,58 @@ export default function AllReports() {
     }
   };
 
+  // ✅ Mark a report as viewed for THIS user (backend + local state)
   const handleMarkViewed = async (id) => {
     try {
+      // If we don't know the current user, just update local state optimistically
+      if (!currentUserId) {
+        setReports((prev) =>
+          prev.map((r) => {
+            if (r._id !== id) return r;
+            return {
+              ...r,
+              isViewed: true,
+            };
+          })
+        );
+        return;
+      }
+
       const token =
         localStorage.getItem("token") || localStorage.getItem("userToken");
-      await axios.patch(`${globalBackendRoute}/api/reports/${id}/view`, null, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
 
+      // Send currentUserId in body so backend can push into viewedBy[]
+      await axios.patch(
+        `${globalBackendRoute}/api/reports/${id}/view`,
+        { currentUserId },
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+
+      // Update local state: mark as viewed for THIS user
       setReports((prev) =>
-        prev.map((r) => (r._id === id ? { ...r, isViewed: true } : r))
+        prev.map((r) => {
+          if (r._id !== id) return r;
+
+          const viewedBy = Array.isArray(r.viewedBy) ? [...r.viewedBy] : [];
+          const exists = viewedBy.some((u) => {
+            if (!u) return false;
+            const uid =
+              typeof u === "string"
+                ? u
+                : u._id || u.id || u.userId || u.user_id || u.toString?.();
+            return uid && String(uid) === String(currentUserId);
+          });
+
+          if (!exists) viewedBy.push(currentUserId);
+
+          return {
+            ...r,
+            isViewed: true,
+            viewedBy,
+          };
+        })
       );
     } catch (error) {
       console.error("Error marking report as viewed:", error);
@@ -381,18 +509,21 @@ export default function AllReports() {
     setCurrentPage(1);
   };
 
+  const totalVisibleReports = visibleReports.length;
+
   // ---- header / summary ----
   return (
     <div className="bg-white py-10 sm:py-12">
       <div className="mx-auto container px-2 sm:px-3 lg:px-4">
-        {/* Header / Controls (mirrors AllTestCases) */}
+        {/* Header / Controls */}
         <div className="flex justify-between items-center gap-3 flex-wrap">
           <div>
             <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
               All Reports
             </h2>
             <p className="text-xs text-gray-600 mt-1">
-              Total Reports: {totalReports}
+              Total Reports: {totalVisibleReports}
+              {isAdminLike ? " (visible to you as admin)" : ""}
             </p>
             {(searchQuery ||
               selectedProjectBucketId ||
@@ -436,7 +567,7 @@ export default function AllReports() {
           </div>
 
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Status filter (like Exec filter) */}
+            {/* Status filter */}
             <div className="flex items-center gap-2">
               <label className="text-xs text-slate-600">Status:</label>
               <select
@@ -537,15 +668,14 @@ export default function AllReports() {
         {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
         {/* Early exit */}
-        {!loading && !error && totalReports === 0 && (
+        {!loading && !error && totalVisibleReports === 0 && (
           <p className="mt-4 text-sm text-slate-600">
-            No reports found yet. Once users start submitting reports, they will
-            appear here.
+            No reports found yet for your account.
           </p>
         )}
 
         {/* Project / General chips row */}
-        {!loading && !error && totalReports > 0 && (
+        {!loading && !error && totalVisibleReports > 0 && (
           <>
             <div className="mt-4">
               <div className="flex items-center justify-between mb-2">
@@ -610,6 +740,7 @@ export default function AllReports() {
                     const projectName =
                       r.project?.name ||
                       r.project?.project_name ||
+                      r.project?.projectName ||
                       (r.project ? "Unnamed Project" : "General / Unlinked");
                     const taskName = r.task?.title || r.task?.task_title || "-";
                     const reporterName =
@@ -625,6 +756,8 @@ export default function AllReports() {
                       idx +
                       1;
 
+                    const viewedByUser = hasUserViewed(r, currentUserId);
+
                     return (
                       <div
                         key={r._id}
@@ -633,7 +766,7 @@ export default function AllReports() {
                         <div className="text-slate-700">{rowIndex}</div>
 
                         <div className="flex items-center justify-center">
-                          {!r.isViewed && (
+                          {!viewedByUser && (
                             <button
                               type="button"
                               onClick={() => handleMarkViewed(r._id)}
@@ -680,6 +813,7 @@ export default function AllReports() {
                             to={`/single-report/${r._id}`}
                             className="text-indigo-600 hover:text-indigo-800"
                             title="View / Edit"
+                            onClick={() => handleMarkViewed(r._id)} // ✅ mark when opening
                           >
                             <FaEye className="text-sm" />
                           </Link>
@@ -706,6 +840,7 @@ export default function AllReports() {
                   const projectName =
                     r.project?.name ||
                     r.project?.project_name ||
+                    r.project?.projectName ||
                     (r.project ? "Unnamed Project" : "General / Unlinked");
                   const taskName = r.task?.title || r.task?.task_title || "-";
                   const reporterName =
@@ -715,6 +850,8 @@ export default function AllReports() {
                     "-";
                   const created =
                     r.createdAt && new Date(r.createdAt).toLocaleString();
+
+                  const viewedByUser = hasUserViewed(r, currentUserId);
 
                   return (
                     <div
@@ -726,7 +863,7 @@ export default function AllReports() {
                           <span className="line-clamp-1">
                             {r.title || "(No title)"}
                           </span>
-                          {!r.isViewed && (
+                          {!viewedByUser && (
                             <button
                               type="button"
                               onClick={() => handleMarkViewed(r._id)}
@@ -768,6 +905,7 @@ export default function AllReports() {
                         <Link
                           to={`/single-report/${r._id}`}
                           className="text-indigo-600 hover:text-indigo-800 text-sm inline-flex items-center gap-1"
+                          onClick={() => handleMarkViewed(r._id)} // ✅ mark when opening
                         >
                           <FaEye className="text-sm" />
                           <span>View</span>
@@ -794,6 +932,7 @@ export default function AllReports() {
                   const projectName =
                     r.project?.name ||
                     r.project?.project_name ||
+                    r.project?.projectName ||
                     (r.project ? "Unnamed Project" : "General / Unlinked");
                   const taskName = r.task?.title || r.task?.task_title || "-";
                   const reporterName =
@@ -803,6 +942,8 @@ export default function AllReports() {
                     "-";
                   const created =
                     r.createdAt && new Date(r.createdAt).toLocaleString();
+
+                  const viewedByUser = hasUserViewed(r, currentUserId);
 
                   return (
                     <div
@@ -814,7 +955,7 @@ export default function AllReports() {
                           <span className="line-clamp-1">
                             {r.title || "(No title)"}
                           </span>
-                          {!r.isViewed && (
+                          {!viewedByUser && (
                             <button
                               type="button"
                               onClick={() => handleMarkViewed(r._id)}
@@ -856,6 +997,7 @@ export default function AllReports() {
                         <Link
                           to={`/single-report/${r._id}`}
                           className="text-indigo-600 hover:text-indigo-800 text-sm inline-flex items-center gap-1"
+                          onClick={() => handleMarkViewed(r._id)} // ✅ mark when opening
                         >
                           <FaEye className="text-sm" />
                           <span>View</span>

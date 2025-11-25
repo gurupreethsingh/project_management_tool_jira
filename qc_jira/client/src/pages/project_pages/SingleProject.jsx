@@ -458,6 +458,11 @@ const SingleProject = () => {
                   <FaBusinessTime className="text-[10px]" />
                   Generate Report
                 </Link>
+
+                <Link to={`/all-reports`} className={baseBtn}>
+                  <FaBusinessTime className="text-[10px]" />
+                  View All Reports
+                </Link>
               </div>
             </div>
           </div>
