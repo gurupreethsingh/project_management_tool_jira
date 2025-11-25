@@ -5,31 +5,28 @@ import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
 import generic.BaseClass_Anusha;
+import generic.TakingScreenshot;
 import pom.ShopPage;
 
-public class AS_8721ClickOnDropDownOfMainCategoryAndCountNumberOfSubCategoryInIt extends BaseClass_Anusha
+
+public class AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading extends BaseClass_Anusha 
 {
-	SoftAssert sa = new SoftAssert();
-		
+SoftAssert sa = new SoftAssert();
+	
 	@Test(enabled = true, priority = 1)
-	public void testCountNumberOfSubCategoriesOfThatMainCategory() throws InterruptedException
-	{
+   public void testVerifyingAllBrandsSubHeadingBelowToBrandsHeading()
+   {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
-		
+		  
+		String expectedText = "ALL BRANDS";
 		ShopPage sp = new ShopPage(driver);
-		int totalCategories=sp.findTotalCategoryCount(); 
 		
-		for(int k=1;k<=totalCategories;k++) 
-		{
-			sp.clickOnDropDownOfMainCategory(k);
-		 sp.countNumberOfSubCategoriesOfThatMainCategory();
-			
+		
+		sp.verifyAllBrandsSubHeadingBelowBrandsHeading(expectedText);
+		TakingScreenshot.captureScreenshot(driver);
+		
+   }
 	
-		}
-		
-		
-		
-}
 }

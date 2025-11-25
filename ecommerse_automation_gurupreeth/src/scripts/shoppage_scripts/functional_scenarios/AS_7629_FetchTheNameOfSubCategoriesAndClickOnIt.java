@@ -7,7 +7,7 @@ import generic.AllVerifications;
 import generic.BaseClass_Anusha;
 import pom.ShopPage;
 
-public class AS_8721FetchTheNameOfSubCatAndClickIt extends BaseClass_Anusha
+public class AS_7629_FetchTheNameOfSubCategoriesAndClickOnIt extends BaseClass_Anusha
 {
 	SoftAssert sa = new SoftAssert();
 		
@@ -19,13 +19,13 @@ public class AS_8721FetchTheNameOfSubCatAndClickIt extends BaseClass_Anusha
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		int totalCategories=sp.findTotalCategoryCount(); 
-		int totalSubCategories=sp.countNumberOfSubCategoriesOfThatMainCategory();
+		int totalCategories=sp.findTotalCategoryCount(); //------->
+		
 		for(int k=1;k<=totalCategories;k++) 
 		{
 			sp.clickOnDropDownOfMainCategory(k);
 			 sp.countNumberOfSubCategoriesOfThatMainCategory();
-		
+			 int totalSubCategories=sp.countNumberOfSubCategoriesOfThatMainCategory();
 			for(int p=1;p<=totalSubCategories;p++) 
 			{
 				sp.fetchTheNameOfSubCatAndClick(p);

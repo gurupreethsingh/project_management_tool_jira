@@ -5,6 +5,7 @@ import java.util.List;
 
 import org.openqa.selenium.By;
 import org.openqa.selenium.Dimension;
+import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
@@ -132,13 +133,13 @@ public class ShopPage extends AllVerifications
 	//div.space-y-6>div:nth-of-type(3)>div:last-child>div>span
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div.flex")
-	private WebElement brandsHeading;
+	private WebElement brandsHeadingBelowCategoriesHeading;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div>span")
-	private WebElement allBrandsLink;
+	private WebElement allBrandsLinkBelowBrandsHeading;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div>svg")
-	private WebElement allBrandsDropDown;
+	private WebElement dropDownOfAllBrandsBelowToBrandsHeading;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+"i"+")>span")
 	private WebElement brandsNameInAllBrands;
@@ -456,7 +457,7 @@ public class ShopPage extends AllVerifications
 		Thread.sleep(2000);	
 		
 	}
-	public void verifyProductCategoryHeadingInShopPage(String expectedText)
+	public void verifyCategoriesHeadingBelowClearFilterButton(String expectedText)
 	{
 		
 		
@@ -589,21 +590,58 @@ public int countNumberOfSubCategoriesOfThatMainCategory() {
 
 
 public void fetchTheNameOfSubCatAndClick(int o) {
-	WebElement	subCategoryNamesOfmainCategory=driver.findElement(By.cssSelector("div.pl-4>div.text-sm:nth-of-type("+o+")"));
+	WebElement	subCategoryBelongsToMainCategory=driver.findElement(By.cssSelector("div.pl-4>div.text-sm:nth-of-type("+o+")"));
   
-    System.out.println("Clicking on sub category of "+ subCategoryNamesOfmainCategory.getText());
+    System.out.println("Clicking on the sub category  "+ subCategoryBelongsToMainCategory.getText());
     
-   subCategoryNamesOfmainCategory.click();
+    subCategoryBelongsToMainCategory.click();
 	
+
+}
+//
+public void verifyBrandsHeadingBelowCategoriesHeading(String expectedText)
+{
+	AllVerifications.textIsPresentOrNot(expectedText, driver,brandsHeadingBelowCategoriesHeading, sa);
+}
+
+
+public void verifyAllBrandsSubHeadingBelowBrandsHeading(String expectedText) 
+{
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(allBrandsLinkBelowBrandsHeading).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,allBrandsLinkBelowBrandsHeading, sa);
+	
+}
+
+
+public void clickOnAllBrandsSubHeadingBelowBrandsHeading() throws InterruptedException
+{
+	 Thread.sleep(2000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(0, 500);");
+      AllVerifications.clickIfVisibleAndEnabled(allBrandsLinkBelowBrandsHeading, driver, sa);
+      Thread.sleep(2000);
+	
+}
+
+
+public void clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading() throws InterruptedException {
+	Thread.sleep(2000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(0, 500);");
+	AllVerifications.clickIfVisibleAndEnabled(dropDownOfAllBrandsBelowToBrandsHeading, driver, sa);
+	Thread.sleep(2000);
+	
+}
 
 }
 
 
 
 
-
     
-    }
+   
 
 
 	
