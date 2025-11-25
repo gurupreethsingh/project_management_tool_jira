@@ -1,3 +1,5 @@
+// src/pages/admin/SuperAdminDashboard.jsx
+
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -10,20 +12,21 @@ import {
   FaThLarge,
   FaTh,
   FaRegCalendarCheck,
-  FaCalendarAlt, // 👈 added
-  FaCalendarPlus, // 👈 (optional if you want to use elsewhere)
+  FaCalendarAlt,
+  FaFileAlt, // ✅ NEW
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import globalBackendRoute from "../../config/Config";
 
 const SuperAdminDashboard = () => {
   const [view, setView] = useState("grid");
+
   const [totalProjects, setTotalProjects] = useState(0);
   const [totalAdmins, setTotalAdmins] = useState(0);
   const [totalDevelopers, setTotalDevelopers] = useState(0);
   const [totalTestEngineers, setTotalTestEngineers] = useState(0);
   const [totalUsers, setTotalUsers] = useState(0);
-  const [totalEvents, setTotalEvents] = useState(0); // 👈 added
+  const [totalEvents, setTotalEvents] = useState(0);
 
   const [notifCounts, setNotifCounts] = useState({
     total: 0,
@@ -31,6 +34,22 @@ const SuperAdminDashboard = () => {
     role: 0,
     user: 0,
   });
+
+  // ✅ New: careers counts (internship / job)
+  const [careerCounts, setCareerCounts] = useState({
+    total: 0,
+    pending: 0,
+    shortlisted: 0,
+    accepted: 0,
+    rejected: 0,
+    on_hold: 0,
+    internship: 0,
+    job: 0,
+  });
+
+  // ✅ NEW: report counts
+  const [totalReports, setTotalReports] = useState(0);
+  const [hasUnviewedReports, setHasUnviewedReports] = useState(false);
 
   useEffect(() => {
     fetchCounts();
@@ -59,26 +78,52 @@ const SuperAdminDashboard = () => {
       setTotalTestEngineers(_totalTestEngineers || 0);
       setTotalUsers(_totalUsers || 0);
 
-      // ---- Events (from your routes/EventRoutes.js -> GET /events/count/all)
-      // assuming your server is mounted at /api
+      // ---- Events
       const eventsResponse = await axios.get(
         `${globalBackendRoute}/api/events/count/all`
       );
-      // expect { total: number } — safeguard fallback to 0
       setTotalEvents(eventsResponse?.data?.total || 0);
 
-      // ---- Notifications (needs token if your API is protected)
+      // ✅ ---- Reports (no auth required by default)
+      try {
+        // total reports
+        const reportsTotalRes = await axios.get(
+          `${globalBackendRoute}/api/reports/count`
+        );
+        const total = reportsTotalRes?.data?.data?.total || 0;
+        setTotalReports(total);
+
+        // unviewed reports
+        const reportsUnviewedRes = await axios.get(
+          `${globalBackendRoute}/api/reports/count`,
+          {
+            params: { isViewed: false },
+          }
+        );
+        const unviewed = reportsUnviewedRes?.data?.data?.total || 0;
+        setHasUnviewedReports(unviewed > 0);
+      } catch (err) {
+        console.warn("Error fetching report counts:", err?.message);
+      }
+
+      // ---- Token (for admin-protected APIs)
       const token =
         localStorage.getItem("userToken") || localStorage.getItem("token");
 
       if (!token) {
         console.warn(
-          "No token found in localStorage ('userToken' | 'token'). Admin notification counts may 401."
+          "No token found in localStorage ('userToken' | 'token'). Admin counts that need auth may fail."
         );
-      } else {
+        return;
+      }
+
+      const authHeaders = { Authorization: `Bearer ${token}` };
+
+      // ---- Notifications
+      try {
         const notificationResponse = await axios.get(
           `${globalBackendRoute}/api/counts/admin/all`,
-          { headers: { Authorization: `Bearer ${token}` } }
+          { headers: authHeaders }
         );
         const counts = notificationResponse?.data || {};
         setNotifCounts({
@@ -87,9 +132,35 @@ const SuperAdminDashboard = () => {
           role: counts.role || 0,
           user: counts.user || 0,
         });
+      } catch (err) {
+        console.warn("Error fetching notification counts:", err?.message);
+      }
+
+      // ---- Careers (internship + job counts)
+      try {
+        const careersResponse = await axios.get(
+          `${globalBackendRoute}/api/careers/counts`,
+          { headers: authHeaders }
+        );
+        const careersData = careersResponse?.data || {};
+        const byStatus = careersData.byStatus || {};
+        const byType = careersData.byType || {};
+
+        setCareerCounts({
+          total: careersData.total || 0,
+          pending: byStatus.pending || 0,
+          shortlisted: byStatus.shortlisted || 0,
+          accepted: byStatus.accepted || 0,
+          rejected: byStatus.rejected || 0,
+          on_hold: byStatus.on_hold || 0,
+          internship: byType.internship || 0,
+          job: byType.job || 0,
+        });
+      } catch (err) {
+        console.warn("Error fetching careers counts:", err?.message);
       }
     } catch (error) {
-      console.error("Error fetching counts:", error);
+      console.error("Error fetching dashboard counts:", error);
     }
   };
 
@@ -146,13 +217,40 @@ const SuperAdminDashboard = () => {
         linkText: "Create Notifications",
         link: "/create-notification",
       },
-      // -------- NEW: Events card (like Notifications) --------
+
+      // ✅ NEW: Reports card with red dot if any unviewed
+      {
+        title: "Reports",
+        count: totalReports,
+        icon: <FaFileAlt className="text-rose-500" />,
+        linkText: "View All Reports",
+        link: "/all-reports",
+        showUnreadDot: hasUnviewedReports,
+      },
+
+      // ✅ Split careers into two cards
+      {
+        title: "Internship Applications",
+        count: careerCounts.internship,
+        icon: <FaUserTie className="text-teal-500" />,
+        linkText: "View Applications",
+        link: "/all-careers-applications",
+      },
+      {
+        title: "Job Applications",
+        count: careerCounts.job,
+        icon: <FaUserTie className="text-orange-500" />,
+        linkText: "View Applications",
+        link: "/all-careers-applications",
+      },
+
+      // Events card
       {
         title: "Total Events",
         count: totalEvents,
         icon: <FaCalendarAlt className="text-indigo-500" />,
         linkText: "Create Event",
-        link: "/create-event", // adjust if your route differs
+        link: "/create-event",
       },
     ];
 
@@ -171,6 +269,11 @@ const SuperAdminDashboard = () => {
             key={index}
             className="bg-white p-4 shadow-lg rounded-lg flex flex-col items-center relative"
           >
+            {/* ✅ Red dot for unread reports */}
+            {item.showUnreadDot && (
+              <span className="absolute top-2 right-2 h-3 w-3 rounded-full bg-red-500" />
+            )}
+
             <div className="text-4xl mb-2 flex justify-center">{item.icon}</div>
             <h3 className="text-xs font-semibold text-gray-600">
               {item.title}

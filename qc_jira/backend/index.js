@@ -22,6 +22,8 @@ const defectRoutes = require("./routes/DefectRoutes");
 const contactRoutes = require("./routes/ContactRoutes");
 const userRoutes = require("./routes/UserRoutes");
 const eventRoutes = require("./routes/EventRoutes");
+const careersRoutes = require("./routes/CareersRoutes");
+const reportRoutes = require("./routes/ReportRoutes");
 
 // 2. give a name to your api backend. app = express()
 dotenv.config();
@@ -97,6 +99,8 @@ app.use("/api", defectRoutes);
 app.use("/api", contactRoutes);
 app.use("/api", userRoutes);
 app.use("/api", eventRoutes);
+app.use("/api", careersRoutes);
+app.use("/api", reportRoutes);
 
 // ===== DB + SERVER ====
 mongoose

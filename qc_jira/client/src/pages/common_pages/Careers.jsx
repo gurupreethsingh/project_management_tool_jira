@@ -196,8 +196,9 @@ export default function Careers() {
 
       if (res.status === 201 || res.data?.status === true) {
         setSubmitMessage(
-          "Application submitted! You’ll receive a confirmation email shortly."
+          "Application submitted! Our team will review it and get back to you over email/phone."
         );
+
         setFormData({
           fullName: "",
           email: "",
