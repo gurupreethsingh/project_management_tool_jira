@@ -148,6 +148,7 @@ const ReportSchema = new Schema(
       type: Boolean,
       default: false,
     },
+    viewedBy: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   },
   {
     timestamps: true,

@@ -3,9 +3,8 @@ const mongoose = require("mongoose");
 const ExcelJS = require("exceljs");
 const { Document, Packer, Paragraph, HeadingLevel, TextRun } = require("docx");
 const { Report } = require("../models/ReportModel");
-const { Project } = require("../models/ProjectModel"); // make sure path is correct
-const { Task } = require("../models/TaskModel"); // make sure path is correct
-// const { Notification } = require("../models/NotificationModel"); // if you have one
+const Project = require("../models/ProjectModel");
+const Task = require("../models/TaskModel");
 
 // -----------------------------------------------------------------------------
 // Helper: get current user id from auth middleware (fallback to body for now)
@@ -267,7 +266,7 @@ async function getReportById(req, res) {
     }
 
     const report = await Report.findOne({ _id: id })
-      .populate("project", "name key")
+      .populate("project", "project_name name key")
       .populate("task", "title status")
       .populate("reporter", "name email")
       .populate("recipients", "name email");
@@ -333,7 +332,7 @@ async function listReports(req, res) {
         .sort(sort)
         .skip(skip)
         .limit(limitNum)
-        .populate("project", "name key")
+        .populate("project", "project_name name key")
         .populate("task", "title status")
         .populate("reporter", "name email"),
       Report.countDocuments(filter),
@@ -501,13 +500,23 @@ async function markAsViewed(req, res) {
       });
     }
 
-    if (!report.isViewed) {
-      report.isViewed = true;
-      report.viewedAt = new Date();
+    // per-user viewed tracking
+    if (currentUserId) {
+      if (!Array.isArray(report.viewedBy)) {
+        report.viewedBy = [];
+      }
+      const idStr = String(currentUserId);
+      const already = report.viewedBy.some((u) => String(u) === idStr);
+      if (!already) {
+        report.viewedBy.push(currentUserId);
+      }
+      report.updatedBy = currentUserId;
     }
 
-    if (currentUserId) {
-      report.updatedBy = currentUserId;
+    // keep global flags if you still want them
+    if (!report.isViewed) {
+      report.isViewed = true; // first time anyone saw it
+      report.viewedAt = new Date();
     }
 
     await report.save();

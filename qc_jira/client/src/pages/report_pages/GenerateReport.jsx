@@ -1,6 +1,6 @@
 // src/pages/admin/GenerateReport.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import globalBackendRoute from "../../config/Config";
@@ -10,7 +10,6 @@ const GenerateReport = () => {
   const navigate = useNavigate();
 
   // ---- mode: general vs linked ----
-  // If coming from a specific project route, default to "linked", else "general"
   const [mode, setMode] = useState(routeProjectId ? "linked" : "general");
 
   // ---- dropdown data ----
@@ -24,7 +23,6 @@ const GenerateReport = () => {
   const [selectedTaskId, setSelectedTaskId] = useState("");
 
   const [form, setForm] = useState({
-    // when mode === "general", this is just free text reference, not ObjectId
     externalTaskId: "",
     title: "",
     description: "",
@@ -72,11 +70,28 @@ const GenerateReport = () => {
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
+  const getProjectNameById = (id) => {
+    if (!id) return "";
+    const p = projects.find((proj) => String(proj._id) === String(id));
+    return (
+      p?.project_name ||
+      p?.projectName ||
+      p?.name ||
+      p?.key ||
+      "Unnamed Project"
+    );
+  };
+
+  const getTaskTitleById = (id) => {
+    if (!id) return "";
+    const t = tasksForUser.find((task) => String(task._id) === String(id));
+    return t?.task_title || t?.title || "Untitled Task";
+  };
+
   // Filter tasks for dropdown (linked mode)
-  const filteredTasks = React.useMemo(() => {
+  const filteredTasks = useMemo(() => {
     if (!selectedProjectId) return tasksForUser;
     return tasksForUser.filter((t) => {
-      // Try multiple shapes safely
       const proj =
         t.project ||
         t.projectId ||
@@ -146,18 +161,28 @@ const GenerateReport = () => {
     setError("");
 
     if (!form.title.trim()) {
-      setError("Title is required.");
+      const msg = "Title is required.";
+      setError(msg);
+      window.alert(msg);
       return;
     }
 
-    // For linked mode, ensure project & task are chosen
+    // For linked mode, ensure project & (optionally) task are chosen
     if (mode === "linked") {
       if (!selectedProjectId) {
-        setError("Please select a project for this report.");
+        const msg = "Please select a project for this report.";
+        setError(msg);
+        window.alert(msg);
         return;
       }
-      if (!selectedTaskId) {
-        setError("Please select a task for this report.");
+
+      // ✅ Task is only required if there ARE tasks for this project
+      const hasTasksForProject = filteredTasks && filteredTasks.length > 0;
+      if (hasTasksForProject && !selectedTaskId) {
+        const msg =
+          "Please select a task for this report (tasks exist for this project).";
+        setError(msg);
+        window.alert(msg);
         return;
       }
     }
@@ -196,21 +221,25 @@ const GenerateReport = () => {
       // 🔹 LINKED MODE → send real project/task IDs to backend
       if (mode === "linked") {
         payload.project = selectedProjectId;
-        payload.task = selectedTaskId;
+
+        // ✅ Only send task if user actually selected one
+        if (selectedTaskId) {
+          payload.task = selectedTaskId;
+        }
       }
 
       // 🔹 GENERAL MODE → no project/task. Just store optional free-text ref.
       if (mode === "general" && form.externalTaskId.trim()) {
-        // this assumes you add a field like `externalTaskId` in ReportModel.
-        // Backend will ignore it if not present in schema, so it's safe.
         payload.externalTaskId = form.externalTaskId.trim();
       }
+
+      console.log("[GenerateReport] submitting payload:", payload);
 
       await axios.post(`${globalBackendRoute}/api/all-reports`, payload, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
 
-      alert("Report has been submitted. Please wait for status update.");
+      window.alert("Report has been submitted successfully.");
       navigate("/all-reports");
     } catch (err) {
       console.error("Error creating report:", err);
@@ -219,6 +248,7 @@ const GenerateReport = () => {
         err?.message ||
         "Failed to create report.";
       setError(msg);
+      window.alert(`Failed to create report: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -325,8 +355,20 @@ const GenerateReport = () => {
                 <select
                   value={selectedProjectId}
                   onChange={(e) => {
-                    setSelectedProjectId(e.target.value);
+                    const value = e.target.value;
+                    setSelectedProjectId(value);
                     setSelectedTaskId("");
+
+                    // 🔹 Auto-fill title when user hasn't typed anything yet
+                    setForm((prev) => {
+                      if (prev.title && prev.title.trim() !== "") return prev;
+                      const pName = getProjectNameById(value);
+                      if (!pName) return prev;
+                      return {
+                        ...prev,
+                        title: `[${pName}] Daily Status`,
+                      };
+                    });
                   }}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
@@ -344,14 +386,51 @@ const GenerateReport = () => {
 
               <div>
                 <label className="block font-semibold text-slate-700 mb-1 text-xs sm:text-sm">
-                  Task<span className="text-rose-500">*</span>
+                  Task
+                  {filteredTasks.length > 0 && (
+                    <span className="text-rose-500">*</span>
+                  )}
                 </label>
                 <select
                   value={selectedTaskId}
-                  onChange={(e) => setSelectedTaskId(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setSelectedTaskId(value);
+
+                    // 🔹 Auto-fill title if still blank
+                    setForm((prev) => {
+                      if (prev.title && prev.title.trim() !== "") return prev;
+                      const pName = getProjectNameById(selectedProjectId);
+                      const tName = getTaskTitleById(value);
+                      if (!pName && !tName) return prev;
+                      if (pName && tName) {
+                        return {
+                          ...prev,
+                          title: `[${pName}] – ${tName}`,
+                        };
+                      }
+                      if (pName) {
+                        return {
+                          ...prev,
+                          title: `[${pName}] Task Status`,
+                        };
+                      }
+                      if (tName) {
+                        return {
+                          ...prev,
+                          title: `Task: ${tName}`,
+                        };
+                      }
+                      return prev;
+                    });
+                  }}
                   className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 >
-                  <option value="">-- Select task --</option>
+                  <option value="">
+                    {filteredTasks.length === 0
+                      ? "-- No tasks assigned for this project --"
+                      : "-- Select task --"}
+                  </option>
                   {filteredTasks.map((t) => (
                     <option key={t._id} value={t._id}>
                       {t.task_title || t.title || "Untitled Task"}
@@ -359,8 +438,8 @@ const GenerateReport = () => {
                   ))}
                 </select>
                 <p className="mt-1 text-[10px] text-slate-500">
-                  Tasks are filtered by selected project (or show all if no
-                  project chosen).
+                  Tasks are filtered by selected project. If no tasks are
+                  listed, you can still submit a project-level report.
                 </p>
               </div>
             </div>
@@ -402,7 +481,7 @@ const GenerateReport = () => {
                 name="title"
                 value={form.title}
                 onChange={handleChange}
-                placeholder="E.g. Sprint 5 status update"
+                placeholder="E.g. [Project X] Sprint 5 status update"
                 className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 required
               />
