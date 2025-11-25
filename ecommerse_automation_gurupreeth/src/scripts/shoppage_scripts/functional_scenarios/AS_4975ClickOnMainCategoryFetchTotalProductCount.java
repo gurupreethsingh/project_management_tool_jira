@@ -8,7 +8,7 @@ import generic.BaseClass_Anusha;
 import generic.BaseClass_Anusha.Excel_Anusha;
 import pom.ShopPage;
 
-public class ClickOnElectronicsCategoryFetchTotalProductCount extends BaseClass_Anusha 
+public class AS_4975ClickOnMainCategoryFetchTotalProductCount extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
@@ -23,8 +23,8 @@ SoftAssert sa = new SoftAssert();
 		
 		//clcik on electronics category
 		
-		ShopPage sp = new ShopPage(driver);
-	int totalCategories=sp.findTotalCategoryCount();
+	ShopPage sp = new ShopPage(driver);
+	int totalCategories=sp.findTotalCategoryCount();  //finding the main category count 
 	for(int i=1;i<=totalCategories;i++) 
 	{
 		sp.clickOnMainCategory(i);

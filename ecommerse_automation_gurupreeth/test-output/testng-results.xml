@@ -2,24 +2,24 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-11-21T19:39:11 IST" name="Default suite" finished-at="2025-11-21T19:41:12 IST" duration-ms="121336">
+  <suite started-at="2025-11-25T01:03:32 IST" name="Default suite" finished-at="2025-11-25T01:04:01 IST" duration-ms="29173">
     <groups>
     </groups>
-    <test started-at="2025-11-21T19:39:11 IST" name="Default test" finished-at="2025-11-21T19:41:12 IST" duration-ms="121336">
-      <class name="scripts.shoppage_scripts.functional_scenarios.ClickOnElectronicsCategoryFetchTotalProductCount">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.ClickOnElectronicsCategoryFetchTotalProductCount@8458f04]" started-at="2025-11-21T19:39:11 IST" name="openApplication" finished-at="2025-11-21T19:39:18 IST" duration-ms="7168" status="PASS">
+    <test started-at="2025-11-25T01:03:32 IST" name="Default test" finished-at="2025-11-25T01:04:01 IST" duration-ms="29173">
+      <class name="scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt@48075da3]" started-at="2025-11-25T01:03:32 IST" name="openApplication" finished-at="2025-11-25T01:03:35 IST" duration-ms="2821" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="testClickMainCategoryFetchAllProduct()[pri:1, instance:scripts.shoppage_scripts.functional_scenarios.ClickOnElectronicsCategoryFetchTotalProductCount@8458f04]" started-at="2025-11-21T19:39:18 IST" name="testClickMainCategoryFetchAllProduct" finished-at="2025-11-21T19:41:10 IST" duration-ms="112458" status="PASS">
+        <test-method signature="testClickOnMainCategoryDropDown()[pri:1, instance:scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt@48075da3]" started-at="2025-11-25T01:03:35 IST" name="testClickOnMainCategoryDropDown" finished-at="2025-11-25T01:04:01 IST" duration-ms="25954" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- testClickMainCategoryFetchAllProduct -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.ClickOnElectronicsCategoryFetchTotalProductCount@8458f04]" started-at="2025-11-21T19:41:10 IST" name="closeApplication" finished-at="2025-11-21T19:41:12 IST" duration-ms="1606" status="PASS">
+        </test-method> <!-- testClickOnMainCategoryDropDown -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt@48075da3]" started-at="2025-11-25T01:04:01 IST" name="closeApplication" finished-at="2025-11-25T01:04:01 IST" duration-ms="292" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
-      </class> <!-- scripts.shoppage_scripts.functional_scenarios.ClickOnElectronicsCategoryFetchTotalProductCount -->
+      </class> <!-- scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>
