@@ -3,13 +3,13 @@
 <suite name="Failed suite [Default suite]" guice-stage="DEVELOPMENT">
   <test thread-count="5" name="Default test(failed)">
     <classes>
-      <class name="scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt">
+      <class name="scripts.shoppage_scripts.functional_scenarios.AS_3803ClickOnCheckBoxOfAnyBrandsCheckBoxShouldTick2">
         <methods>
           <include name="closeApplication"/>
-          <include name="testClickOnMainCategoryDropDown"/>
           <include name="openApplication"/>
+          <include name="testClickOnCheckBoxesOfAllBrandsSection"/>
         </methods>
-      </class> <!-- scripts.shoppage_scripts.functional_scenarios.AS_8721FetchTheNameOfSubCatAndClickIt -->
+      </class> <!-- scripts.shoppage_scripts.functional_scenarios.AS_3803ClickOnCheckBoxOfAnyBrandsCheckBoxShouldTick2 -->
     </classes>
   </test> <!-- Default test(failed) -->
 </suite> <!-- Failed suite [Default suite] -->

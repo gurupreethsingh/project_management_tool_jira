@@ -9,7 +9,7 @@ import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class AS_7705_Verifying_BRANDS_heading_below_categories_heading extends BaseClass_Anusha 
+public class AS_7705_Verifying_SortBy_heading_below_PriceRange_heading extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
@@ -20,9 +20,9 @@ SoftAssert sa = new SoftAssert();
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
 		
-		String expectedText = "PRICE RANGE";
+		String expectedText = "SORT BY";
 		ShopPage sp = new ShopPage(driver);
-		sp.verifyPriceRangeHeadingBelowAllBrandsHeading(expectedText);
+		sp.verifySortByHeadingBelowPriceRange(expectedText);
 		TakingScreenshot.captureScreenshot(driver);
 		
 		

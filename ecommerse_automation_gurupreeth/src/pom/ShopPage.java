@@ -144,11 +144,11 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+"i"+")>span")
 	private WebElement brandsNameInAllBrands;
 	
-	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+"i"+")>input")
-	private WebElement checkBoxesOfbrandsName;
+	@FindBy(css="div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex>input")
+	private List<WebElement> checkBoxesOfBrands_Container;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:first-child")
-	private WebElement priceRangeHeading;
+	private WebElement priceRangeHeadingBelowAllBrands;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span>span:nth-of-type(2)")
 	private WebElement leftPriceRangeButton;
@@ -163,25 +163,25 @@ public class ShopPage extends AllVerifications
 	private WebElement categoriesHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:first-child")
-	private WebElement sortByHeading;
+	private WebElement sortByHeadingBelowPriceRange;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(1)")
-	private WebElement defaultButton;
+	private WebElement defaultButtonBelongsToSortByHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(2)")
-	private WebElement priceIncrease;
+	private WebElement priceIncreaseBelongsToSortByHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(3)")
-	private WebElement priceDecrease;
+	private WebElement priceDecreaseBelongsToSortByHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(4)")
-	private WebElement newestButton;
+	private WebElement newestButtonBelongsToSortByHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(5)")
-	private WebElement oldestButton;
+	private WebElement oldestButtonBelongsToSortByHeading;
 
 	@FindBy(css="div.space-y-6>div:nth-of-type(5)>div:last-child>button:nth-of-type(6)")
-	private WebElement popularButton;
+	private WebElement popularButtonBelongsToSortByHeading;
 	
 	@FindBy(css="div.mb-6>h1")
 	private WebElement ourProductsHeadingOnShopPage;
@@ -635,9 +635,155 @@ public void clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading() throws Inte
 	
 }
 
+
+public void clickOnCheckBoxOfAnyBrands() throws InterruptedException 
+{
+	Thread.sleep(2000);
+	int allCheckBoxesCount=checkBoxesOfBrands_Container.size();
+	for(int i=1;i<=allCheckBoxesCount;i++) 
+	{
+		WebElement	CheckBoxOfBrands=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>input"));
+		WebElement  brandNamesBelongToThatCheckBox = driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>span"));
+	    System.out.println("Clicking on the checkboxes of brand "+  brandNamesBelongToThatCheckBox.getText());
+	    
+		CheckBoxOfBrands.click();
+		
+		
+	}
+	Thread.sleep(1000);
 }
 
 
+public void clickOnBrandNamesOfAllBrandsSection() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	int allBrandsCount=checkBoxesOfBrands_Container.size();
+	for(int i=1;i<=allBrandsCount;i++) 
+	{
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		
+		WebElement	brandNamesOfAllBrandsSection=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>span"));
+		Actions actions=new Actions(driver);
+		actions.scrollToElement(brandNamesOfAllBrandsSection).build().perform();
+		
+	    System.out.println("Clicking on the  brand "+ brandNamesOfAllBrandsSection.getText());
+	    
+	    brandNamesOfAllBrandsSection.click();
+		
+	    int allProductsCount=allProductContainer.size();
+	    System.out.println("Total products are  "+ allProductsCount);
+	    
+	    	//now find all the products name, sp,dp
+	    	for(int j=1;j<=allProductsCount;j++)
+	    	{
+	    		// fetching products names
+	    		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>h3"));
+	    	    System.out.println("Products belonging to "+brandNamesOfAllBrandsSection.getText()+" brands are :"+eachProductName.getText());
+	    	    
+	    	    //fetching products selling price
+	    	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
+	    	    System.out.println("Selling Price "+eachProductSellingPrice.getText());
+	    	    
+	    	    //fetching products display price
+	    	    WebElement	eachProductDisplayPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(1)>span:last-child"));
+	    	    System.out.println("Display Price "+eachProductDisplayPrice.getText());
+	    	    Thread.sleep(1000);
+	    	    
+	    	} 
+//	    	JavascriptExecutor js1 =(JavascriptExecutor)driver; 
+//	    	Actions action=new Actions(driver);
+	    	actions.scrollToElement(clearFilterButton).build().perform();
+	    	clearFilterButton.click();	
+	    	Thread.sleep(1000);
+	}
+	//
+	Thread.sleep(1000);
+}
+
+
+public void verifyPriceRangeHeadingBelowAllBrandsHeading(String expectedText) {
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(priceRangeHeadingBelowAllBrands).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver, priceRangeHeadingBelowAllBrands, sa);
+	
+}
+
+
+public void verifySortByHeadingBelowPriceRange(String expectedText) {
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(sortByHeadingBelowPriceRange).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver, sortByHeadingBelowPriceRange, sa);
+	
+}
+
+
+public void clickOnDefaultButtonBelowSortByHeading() {
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(defaultButtonBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(defaultButtonBelongsToSortByHeading, driver, sa);
+	
+}
+
+
+public void clickOnPriceIncreaseButtonBelowSortByHeading() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(priceIncreaseBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(priceIncreaseBelongsToSortByHeading, driver, sa);
+	Thread.sleep(1000);
+	
+}
+
+
+public void clickOnPriceDecreaseButtonBelowSortByHeading() throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(priceDecreaseBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(priceDecreaseBelongsToSortByHeading, driver, sa);
+	Thread.sleep(1000);
+	
+	
+}
+
+
+public void clickOnOldestButtonBelowSortByHeading() throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( oldestButtonBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled( oldestButtonBelongsToSortByHeading, driver, sa);
+	Thread.sleep(1000);
+	
+}
+
+
+public void clickOnNewestButtonBelowSortByHeading() throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( newestButtonBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled( newestButtonBelongsToSortByHeading, driver, sa);
+	Thread.sleep(1000);
+	
+}
+
+
+
+
+
+
+
+
+
+}
+//checkBoxesOfBrands_Container
+//
 
 
     
