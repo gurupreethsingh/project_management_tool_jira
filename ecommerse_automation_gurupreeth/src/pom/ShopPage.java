@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.List;
 
 import org.openqa.selenium.By;
+import org.openqa.selenium.Dimension;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
@@ -87,12 +88,12 @@ public class ShopPage extends AllVerifications
 //	private WebElement mainCategories;
 	
 	// there are 12 main category drop down 
-//	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:last-child")
-//	private WebElement mainCategoriesDropDown;
+	@FindBy(css="div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child(1)>div>span:last-child")
+	private WebElement DropDownOfMainCategories;
 	
 	//there is 4 sub category in first main category 
-	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
-	private WebElement SubCategoriesOfFirstMainCategory;
+	@FindBy(css="div.pl-4>div.text-sm")
+	private List<WebElement> subCategoriesOfFirstMainCategoryContainer;
 	
 	//there is 3 sub category in second main category 
 	@FindBy(css="div.pl-4>div.text-sm:nth-of-type(1)")
@@ -508,20 +509,18 @@ public class ShopPage extends AllVerifications
     	System.out.println("Total main categories are  "+ mainCategoryCount);
     	
     	return mainCategoryCount;
-    	
-    
-    
     }
 
-    public void clickOnMainCategory(int i)
+    public void clickOnMainCategory(int k)
     {
-    	int mainCategoryCount=mainCategoryName.size();
-    	System.out.println("Total main categories are  "+ mainCategoryCount);
+//    	int mainCategoryCount=mainCategoryName.size();
+//    	System.out.println("Total main categories are  "+ mainCategoryCount);
     	
     	//now find the electronics category 
     	
-    WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+i+")>div>span:first-child"));
-    System.out.println("Clicking on main category "+mainCategoryName.getText());
+    WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:first-child"));
+    String MainCategoryName =mainCategoryName.getText();
+    System.out.println("Clicking on main category "+ MainCategoryName);
     
     mainCategoryName.click();
     
@@ -562,16 +561,47 @@ public class ShopPage extends AllVerifications
         		// fetching products names
         		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
         	    System.out.println("Clicking on Products names "+eachProductName.getText());
-        	    eachProductName.click();
-        	    
-        	    
-        	    
-        	    
+        	    eachProductName.click();    
         	}
-    	
+        }
+        	
+   public void clickOnDropDownOfMainCategory(int k) throws InterruptedException {
+	
+	WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:first-child"));
+	String MainCategoryName =mainCategoryName.getText();
+    WebElement	eachDropDownOfMainCategory=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:last-child"));
+    Thread.sleep(500);	
+    System.out.println("Clicking on "+ MainCategoryName+" drop down ");
+    eachDropDownOfMainCategory.click();
+    Thread.sleep(500);
+//    int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
+//	System.out.println("Number of sub categories of "+ MainCategoryName + "are :"+subCategoryCount);
+	
+    eachDropDownOfMainCategory.click();  
+//    return subCategoryCount;
+  }
+
+public int countNumberOfSubCategoriesOfThatMainCategory() {
+	int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
+	System.out.println("Number of sub categories of   are :"+subCategoryCount);
+	return subCategoryCount;
+}
+
+
+public void fetchTheNameOfSubCatAndClick(int o) {
+	WebElement	subCategoryNamesOfmainCategory=driver.findElement(By.cssSelector("div.pl-4>div.text-sm:nth-of-type("+o+")"));
+  
+    System.out.println("Clicking on sub category of "+ subCategoryNamesOfmainCategory.getText());
     
-    
-   
+   subCategoryNamesOfmainCategory.click();
+	
+
+}
+
+
+
+
+
     
     }
 
@@ -582,4 +612,4 @@ public class ShopPage extends AllVerifications
 	//
 	 
 	
-}
+
