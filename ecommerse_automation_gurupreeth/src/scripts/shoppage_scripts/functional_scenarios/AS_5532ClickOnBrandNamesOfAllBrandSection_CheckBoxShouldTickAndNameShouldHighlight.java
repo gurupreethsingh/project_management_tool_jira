@@ -8,12 +8,12 @@ import generic.BaseClass_Anusha;
 import generic.TakingScreenshot;
 import pom.ShopPage;
 
-public class AS_3803ClickOnCheckBoxOfAnyBrandsCheckBoxShouldTick2 extends BaseClass_Anusha
+public class AS_5532ClickOnBrandNamesOfAllBrandSection_CheckBoxShouldTickAndNameShouldHighlight extends BaseClass_Anusha
 {
 	SoftAssert sa = new SoftAssert();
 		
 	@Test(enabled = true, priority = 1)
-	   public void testClickOnCheckBoxesOfAllBrandsSection() throws InterruptedException
+	   public void testClickOnBrandNameOfAllBrandsSection() throws InterruptedException
 	   {
 			String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 			AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
@@ -23,10 +23,6 @@ public class AS_3803ClickOnCheckBoxOfAnyBrandsCheckBoxShouldTick2 extends BaseCl
 			ShopPage sp = new ShopPage(driver);
 			sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
 			sp.clickOnBrandNamesOfAllBrandsSection();
-			
-		
-			
-			
 			TakingScreenshot.captureScreenshot(driver);
 			
 			

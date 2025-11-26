@@ -9,7 +9,7 @@ import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class ClickOnPriceDecreaseButtonBelowSortByHeading extends BaseClass_Anusha 
+public class AS_9590ClickOnPriceNewestButtonBelowSortByHeading extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
@@ -22,7 +22,7 @@ SoftAssert sa = new SoftAssert();
 		
 		ShopPage sp = new ShopPage(driver);
 		sp.clickONClearFilterButton();
-		sp.clickOnPriceDecreaseButtonBelowSortByHeading();
+		sp.clickOnNewestButtonBelowSortByHeading();
 		TakingScreenshot.captureScreenshot(driver);
    }
 	

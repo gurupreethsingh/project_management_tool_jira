@@ -5,11 +5,10 @@ import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
 import generic.BaseClass_Anusha;
-import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class ClickOnPriceOldestButtonBelowSortByHeading extends BaseClass_Anusha 
+public class AS_9569_ClickOnThirdPagination extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
@@ -21,9 +20,7 @@ SoftAssert sa = new SoftAssert();
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		sp.clickONClearFilterButton();
-		sp.clickOnOldestButtonBelowSortByHeading();
-		TakingScreenshot.captureScreenshot(driver);
+		sp.clickOnThirdPaginationButton();
    }
 	
 }

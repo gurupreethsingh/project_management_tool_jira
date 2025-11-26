@@ -209,13 +209,13 @@ public class ShopPage extends AllVerifications
 	private WebElement productCount;
 	
 	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(1)")
-	private WebElement firstPagination;
+	private WebElement firstPaginationButton;
 	
 	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(2)")
-	private WebElement secondPagination;
+	private WebElement secondPaginationButton;
 	
 	@FindBy(css="div.mt-10>div>nav>button:nth-of-type(3)")
-	private WebElement thirdPagination;
+	private WebElement thirdPaginationButton;
 	
 	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(1)>a")
 	private WebElement aboutUs;
@@ -653,8 +653,29 @@ public void clickOnCheckBoxOfAnyBrands() throws InterruptedException
 	Thread.sleep(1000);
 }
 
-
 public void clickOnBrandNamesOfAllBrandsSection() throws InterruptedException 
+{
+
+	Thread.sleep(1000);
+	int allBrandsCount=checkBoxesOfBrands_Container.size();
+	for(int i=1;i<=allBrandsCount;i++) 
+	{
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		
+		WebElement	brandNamesOfAllBrandsSection=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>span"));
+		Actions actions=new Actions(driver);
+		actions.scrollToElement(brandNamesOfAllBrandsSection).build().perform();
+		
+	    System.out.println("Clicking on the  brand name "+ brandNamesOfAllBrandsSection.getText());
+	    brandNamesOfAllBrandsSection.click();
+	
+	}
+	
+	Thread.sleep(1000);
+}
+
+
+public void clickOnBrandNamesOfAllBrandsSectionAndFetchAllTheProductsBelongsToThatBrand() throws InterruptedException 
 {
 	Thread.sleep(1000);
 	int allBrandsCount=checkBoxesOfBrands_Container.size();
@@ -699,6 +720,54 @@ public void clickOnBrandNamesOfAllBrandsSection() throws InterruptedException
 	//
 	Thread.sleep(1000);
 }
+
+public void clickOnCheckBoxOfAnyBrandBelongsToAllBrandsSectionAndFetchAllTheProductsBelongsToThatBrand() throws InterruptedException 
+{
+	int allCheckBoxesCount=checkBoxesOfBrands_Container.size();
+	for(int i=1;i<=allCheckBoxesCount;i++) 
+	{
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		WebElement	CheckBoxOfBrands=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>input"));
+		Actions actions=new Actions(driver);
+		actions.scrollToElement(CheckBoxOfBrands).build().perform();
+		
+		WebElement  brandNamesBelongToThatCheckBox = driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>span"));
+	    System.out.println("Clicking on the checkboxes of brand "+  brandNamesBelongToThatCheckBox.getText());
+	    
+	    CheckBoxOfBrands.click();
+		
+	    int allProductsCount=allProductContainer.size();
+	    System.out.println("Total products are  "+ allProductsCount);
+	    
+	    	//now find all the products name, sp,dp
+	    	for(int j=1;j<=allProductsCount;j++)
+	    	{
+	    		// fetching products names
+	    		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>h3"));
+	    	    System.out.println("Products belonging to "+ brandNamesBelongToThatCheckBox.getText()+" brands are :"+eachProductName.getText());
+	    	    
+	    	    //fetching products selling price
+	    	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
+	    	    System.out.println("Selling Price "+eachProductSellingPrice.getText());
+	    	    
+	    	    //fetching products display price
+	    	    WebElement	eachProductDisplayPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(1)>span:last-child"));
+	    	    System.out.println("Display Price "+eachProductDisplayPrice.getText());
+	    	    Thread.sleep(1000);
+	    	    
+	    	} 
+//	    	JavascriptExecutor js1 =(JavascriptExecutor)driver; 
+//	    	Actions action=new Actions(driver);
+	    	actions.scrollToElement(clearFilterButton).build().perform();
+	    	clearFilterButton.click();	
+	    	Thread.sleep(1000);
+	}
+	//
+	Thread.sleep(1000);
+}
+	
+	
+
 
 
 public void verifyPriceRangeHeadingBelowAllBrandsHeading(String expectedText) {
@@ -770,6 +839,41 @@ public void clickOnNewestButtonBelowSortByHeading() throws InterruptedException 
 	actions.scrollToElement( newestButtonBelongsToSortByHeading).build().perform();
 	AllVerifications.clickIfVisibleAndEnabled( newestButtonBelongsToSortByHeading, driver, sa);
 	Thread.sleep(1000);
+	
+}
+
+
+public void clickOnFirstPaginationButton() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver;
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( firstPaginationButton).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(firstPaginationButton, driver, sa);
+	Thread.sleep(1000);
+    
+}
+
+
+public void clickOnSecondPaginationButton() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( secondPaginationButton).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(secondPaginationButton, driver, sa);
+	Thread.sleep(1000);
+}
+//
+
+public void clickOnThirdPaginationButton() throws InterruptedException 
+{
+	Thread.sleep(2000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( thirdPaginationButton).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(thirdPaginationButton, driver, sa);
+	Thread.sleep(2000);
 	
 }
 
