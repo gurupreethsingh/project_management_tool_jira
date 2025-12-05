@@ -186,8 +186,8 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.mb-6>h1")
 	private WebElement ourProductsHeadingOnShopPage;
 	
-	@FindBy(css="div.grid:last-child>div.relative:nth-of-type("+"i"+")")
-	private WebElement eachProductCards;
+	@FindBy(css="div.grid:last-child>div.relative")
+	private List<WebElement> eachProductCardsContainer;
 	//div.grid:last-child>div.relative:nth-of-type(1)>button
 	
 	@FindBy(css="div.grid:last-child>div.relative:nth-of-type("+"i"+")>button")
@@ -878,16 +878,63 @@ public void clickOnThirdPaginationButton() throws InterruptedException
 }
 
 
-
-
-
-
-
-
-
+public void clickOnEachProductCards() throws InterruptedException
+{
+	Thread.sleep(2000);
+	int AllProductCardsCount=eachProductCardsContainer.size();
+	System.out.println("The Number of product cards in First page are :"+AllProductCardsCount);
+	for(int i=1;i<=AllProductCardsCount;i++) 
+	{
+	    JavascriptExecutor js =(JavascriptExecutor)driver; 
+		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+	    Actions actions=new Actions(driver);
+		actions.scrollToElement(productCards).build().perform();
+		//AllVerifications.clickIfVisibleAndEnabled(eachProductCardsContainer, driver, sa);
+	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
+	    
+	    productCards.click();
+//	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
+//	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
+	    Thread.sleep(2000);
+	    shopAllLinkText.click(); 
+	}
+	
+	
+	
 }
-//checkBoxesOfBrands_Container
-//
+
+public void clickOnEachProductCardsOnSecondPage() throws InterruptedException
+{
+	Thread.sleep(2000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(secondPaginationButton).build().perform();
+	secondPaginationButton.click();
+	int AllProductCardsCount=eachProductCardsContainer.size();
+	System.out.println("The Number of product cards in Second page are :"+AllProductCardsCount);
+	for(int i=1;i<=AllProductCardsCount;i++) 
+	{
+	  
+		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+	    Actions actions1=new Actions(driver);
+		actions1.scrollToElement(productCards).build().perform();
+		
+	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
+	    
+	    productCards.click();
+//	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
+//	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
+	    secondPaginationButton.click();
+	    Thread.sleep(2000);
+	    actions1.scrollToElement( shopAllLinkText).build().perform();
+	    shopAllLinkText.click(); 
+	}
+	
+	
+}
+}
+
+
 
 
     
