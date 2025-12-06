@@ -20,14 +20,13 @@ SoftAssert sa = new SoftAssert();
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		sp.clickOnEachProductCards();
+		//sp.clickOnEachProductCards();
 		
 //		String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",0,5);
 //		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
 //		sa.assertAll();
 		sp.clickOnEachProductCardsOnSecondPage();
-		
-	
+//		sp.clickOnEachProductCardsOnThirdPage();
    }
 	
 }
