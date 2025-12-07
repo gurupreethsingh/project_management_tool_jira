@@ -11,9 +11,12 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.interactions.Actions;
 import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.PageFactory;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
+import generic.TakingScreenshot;
 
 public class ShopPage extends AllVerifications
 {
@@ -190,8 +193,10 @@ public class ShopPage extends AllVerifications
 	private List<WebElement> eachProductCardsContainer;
 	//div.grid:last-child>div.relative:nth-of-type(1)>button
 	
-	@FindBy(css="div.grid:last-child>div.relative:nth-of-type("+"i"+")>button")
-	private WebElement wishlistIconOnEachProductCards;
+	
+//	div.grid:last-child>div.relative>button
+	@FindBy(css="div.grid:last-child>div.relative>button")
+	private List<WebElement> wishlistIconOnEachProductCardsContainer;
 	
 	@FindBy(css="div.grid>div.relative:nth-of-type(1)>div.p-4>div.flex>span:first-child")
 	private WebElement priceOnProductCardsInShopPage;
@@ -220,7 +225,7 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(1)>a")
 	private WebElement aboutUs;
 	
-	@FindBy(css="hdiv.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(2)>a")
+	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(2)>a")
 	private WebElement contactUs;
 	
 	@FindBy(css="div.mb-12>div:nth-of-type(1)>ul>li:nth-of-type(3)>a")
@@ -297,13 +302,24 @@ public class ShopPage extends AllVerifications
 	
 	@FindBy(css="div.transition:nth-of-type(1)>div.mt-4:nth-of-type(1)>p:nth-of-type(1)")
 	private WebElement productPriceInWishlistPage;
-	
-	
 		
+	@FindBy(css="form.space-y-6>div:first-child>input.w-full")
+	private WebElement emailInputFieldOnLoginPage;
+		
+	@FindBy(css="form.space-y-6>div:nth-of-type(2)>input")
+	private WebElement passwordInputFieldOnLoginPage;
 	
+	@FindBy(css="form.space-y-6>div:nth-of-type(2)>span")
+	private WebElement EyeButtonOnPasswordInputField;
 	
+	@FindBy(css="form.space-y-6>button")
+	private WebElement LoginButtonInLoginInPage;
 	
+	@FindBy(css="nav.containerWidth>div.flex:first-child>a:last-child")
+	private WebElement shopAllLinkTextFromUserDashBoardPage;
 	
+	@FindBy(css="div.grid:last-child>div.relative>div:nth-of-type(3)>div:nth-of-type(2)>button")
+	private List<WebElement> addToCartButtonOverProductCardContainer;
 	
 	
 	
@@ -472,6 +488,7 @@ public class ShopPage extends AllVerifications
 		
 		
 	}
+	
 	
 	
 	
@@ -733,9 +750,7 @@ public void clickOnCheckBoxOfAnyBrandBelongsToAllBrandsSectionAndFetchAllTheProd
 		
 		WebElement  brandNamesBelongToThatCheckBox = driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(3)>div:last-child>div:last-child>div.flex:nth-of-type("+i+")>span"));
 	    System.out.println("Clicking on the checkboxes of brand "+  brandNamesBelongToThatCheckBox.getText());
-	    
 	    CheckBoxOfBrands.click();
-		
 	    int allProductsCount=allProductContainer.size();
 	    System.out.println("Total products are  "+ allProductsCount);
 	    
@@ -889,12 +904,8 @@ public void clickOnEachProductCards() throws InterruptedException
 		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
 	    Actions actions=new Actions(driver);
 		actions.scrollToElement(productCards).build().perform();
-		//AllVerifications.clickIfVisibleAndEnabled(eachProductCardsContainer, driver, sa);
 	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
-	    
 	    productCards.click();
-//	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
-//	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
 	    Thread.sleep(2000);
 	    shopAllLinkText.click(); 
 	}
@@ -961,7 +972,196 @@ public void clickOnEachProductCardsOnThirdPage() throws InterruptedException
 	    Thread.sleep(2000);
 	}
  }
+
+
+public void clickOnWishListIconPresentOnEachProductCard() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	int wishlistIconOnEachProductCardsCount=wishlistIconOnEachProductCardsContainer.size();
+	System.out.println("The Number of wishlist icons  in First page are :"+wishlistIconOnEachProductCardsCount);
+	for(int i=1;i<=wishlistIconOnEachProductCardsCount;i++) 
+	{
+	    JavascriptExecutor js =(JavascriptExecutor)driver; 
+		WebElement eachWishlistIconPresentOnProductCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>button"));
+	    Actions actions=new Actions(driver);
+		actions.scrollToElement(eachWishlistIconPresentOnProductCards).build().perform();
+		//AllVerifications.clickIfVisibleAndEnabled(eachProductCardsContainer, driver, sa);
+	    System.out.println("Clicking On wishListIcon of :"+  eachWishlistIconPresentOnProductCards.getText());
+	    
+	    eachWishlistIconPresentOnProductCards.click();
+	    TakingScreenshot.captureScreenshot(driver);
+//	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
+//	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
+	    Thread.sleep(1000);
+	   
+	}
 }
+
+
+public void enterEmailInputField(String emailkeys) throws InterruptedException
+{
+	Thread.sleep(1000);	
+	AllVerifications.clickIfVisibleAndEnabled(emailInputFieldOnLoginPage, driver, sa);
+	
+	emailInputFieldOnLoginPage.clear();
+	emailInputFieldOnLoginPage.sendKeys(emailkeys);
+	Thread.sleep(1000);	
+	
+}
+	
+public void enterPasswordInputField(String passwordkeys) throws InterruptedException
+{
+	Thread.sleep(1000);	
+	AllVerifications.clickIfVisibleAndEnabled(passwordInputFieldOnLoginPage, driver, sa);
+	passwordInputFieldOnLoginPage.sendKeys(passwordkeys);
+	Thread.sleep(1000);	
+}
+
+
+public void clickOnEyeSymbolOnPassWordInputField() throws InterruptedException 
+{
+	Thread.sleep(1000);	
+	AllVerifications.clickIfVisibleAndEnabled(EyeButtonOnPasswordInputField, driver, sa);
+	Thread.sleep(1000);	
+	
+}
+
+
+public void clickOnLoginButtonInLoginInPage() throws InterruptedException {
+	Thread.sleep(1000);	
+	AllVerifications.clickIfVisibleAndEnabled(LoginButtonInLoginInPage, driver, sa);
+	// 🔹 Handle alert 
+	try {
+	    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+	    wait.until(ExpectedConditions.alertIsPresent());
+	    driver.switchTo().alert().accept();
+	    System.out.println("Login alert handled successfully!");
+	} catch (Exception e) {
+	    System.out.println("No alert found after login click");
+	}
+
+	// 🔹 WAIT for redirect page (instead of re-clicking login)
+	new WebDriverWait(driver, Duration.ofSeconds(15))
+	        .until(ExpectedConditions.titleContains("Dashboard"));
+
+	  
+	}
+public void clickOnShopAllLinkTextFromUserDashBoradpage() throws InterruptedException 
+{
+	Thread.sleep(1000);	
+	AllVerifications.clickIfVisibleAndEnabled(shopAllLinkTextFromUserDashBoardPage, driver, sa);
+	
+	Thread.sleep(1000);	
+}
+	
+public void clickOnAddToCartButtonOverProductCardsOnFirstPage() throws InterruptedException
+{
+		
+	int AddToCartButtonCount=addToCartButtonOverProductCardContainer.size();	
+	for(int j=1;j<=AddToCartButtonCount;j++) 
+	{
+		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>h3"));
+		WebElement AddToCartButtonOverProductCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(2)>button"));
+	    Actions actions1=new Actions(driver);
+	    actions1.scrollToElement(productCards).build().perform();
+		actions1.scrollToElement(AddToCartButtonOverProductCards).build().perform();
+		
+	    System.out.println("Clicking On the add to cart button of :"+ productCards.getText());
+	    AddToCartButtonOverProductCards.click();
+	    Thread.sleep(1000);  
+	     
+	}
+	 
+}
+
+
+public void clickOnAddToCartButtonOverProductCardsOnSecondPage() throws InterruptedException 
+{
+	secondPaginationButton.click();
+	int AddToCartButtonCount=addToCartButtonOverProductCardContainer.size();	
+	for(int j=1;j<=AddToCartButtonCount;j++) 
+	{
+		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>h3"));
+		WebElement AddToCartButtonOverProductCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(2)>button"));
+	    Actions actions1=new Actions(driver);
+	    actions1.scrollToElement(productCards).build().perform();
+		actions1.scrollToElement(AddToCartButtonOverProductCards).build().perform();
+		
+	    System.out.println("Clicking On the add to cart button of :"+ productCards.getText());
+	    AddToCartButtonOverProductCards.click();
+	    Thread.sleep(1000);  
+	     
+	}
+	
+}
+
+public void clickOnAddToCartButtonOverProductCardsOnThirdPage() throws InterruptedException 
+{
+	 thirdPaginationButton.click();
+	int AddToCartButtonCount=addToCartButtonOverProductCardContainer.size();	
+	for(int j=1;j<=AddToCartButtonCount;j++) 
+	{
+		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>h3"));
+		WebElement AddToCartButtonOverProductCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+j+")>div:nth-of-type(3)>div:nth-of-type(2)>button"));
+	    Actions actions1=new Actions(driver);
+	    actions1.scrollToElement(productCards).build().perform();
+		actions1.scrollToElement(AddToCartButtonOverProductCards).build().perform();
+		
+	    System.out.println("Clicking On the add to cart button of :"+ productCards.getText());
+	    AddToCartButtonOverProductCards.click();
+	    Thread.sleep(1000);  
+	     
+	}
+	
+}
+
+public void clickOnAboutUsFromShopPage() throws InterruptedException
+{
+
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( aboutUs).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(aboutUs, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnContactUsFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( contactUs).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(contactUs, driver, sa);
+	Thread.sleep(1000);
+	
+}
+public void clickOnCareersFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(careers).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(careers, driver, sa);
+	Thread.sleep(1000);
+	
+	
+}
+public void clickOnBlogsFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(blogs).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(blogs, driver, sa);
+	Thread.sleep(1000);
+	
+	
+	
+}
+
+}
+
+
 
 
 
