@@ -279,8 +279,10 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.border-t>p.text-sm:first-child")
 	private WebElement copyWriteTextLeftSide;
 	
+	
 	@FindBy(css="div.border-t>p.text-sm:last-child")
 	private WebElement copyWriteTextRightSide;
+	
 	
 	@FindBy(css="div>h1")
 	private WebElement productHeadingInSingleProductPage;
@@ -320,8 +322,6 @@ public class ShopPage extends AllVerifications
 	
 	@FindBy(css="div.grid:last-child>div.relative>div:nth-of-type(3)>div:nth-of-type(2)>button")
 	private List<WebElement> addToCartButtonOverProductCardContainer;
-	
-	
 	
 	
 	
@@ -1153,9 +1153,153 @@ public void clickOnBlogsFromShopPage() throws InterruptedException
 	Actions actions=new Actions(driver);
 	actions.scrollToElement(blogs).build().perform();
 	AllVerifications.clickIfVisibleAndEnabled(blogs, driver, sa);
+	Thread.sleep(1000);	
+}
+public void clickOnHelpCenterFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(helpCenter).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(helpCenter, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnPrivacyPolicyFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(privacyPolicy).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(privacyPolicy, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnTermsOfServiceFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(termsOfService).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(termsOfService, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnFacebookFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(faceBook).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(faceBook, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnLinkedInFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(linkedIn).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(linkedIn, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnTwitterFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(twitter).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(twitter, driver, sa);
+	Thread.sleep(1000);
+}
+public void clickOnGithubFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(gitHub).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(gitHub, driver, sa);
+	Thread.sleep(1000);
+}
+public void enterValueIntoEmailInputFieldFromShopPage(String keys) throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(enterEmailField).build().perform();
+	
+	AllVerifications.clickIfVisibleAndEnabled(enterEmailField, driver, sa);
+	enterEmailField.clear();
+	enterEmailField.sendKeys(keys);
+	Thread.sleep(1000);
+}
+public void clickOnSubscribeButtonFromShopPage() throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(subscribeButton).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(subscribeButton, driver, sa);
+	Thread.sleep(1000);
+}
+
+
+public void verifyCompanyHeadingInFooterSectionOfShopPage(String expectedText) throws InterruptedException
+{
+	
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(companyHeading).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,companyHeading, sa);
+	Thread.sleep(1000);
+}
+
+public void verifySupportHeadingInFooterSectionOfShopPage(String expectedText) throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(supportHeading).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,supportHeading, sa);
 	Thread.sleep(1000);
 	
+}
+public void verifyFollowUsHeadingInFooterSectionOfShopPage(String expectedText) throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(followUs).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,followUs, sa);
+	Thread.sleep(1000);
 	
+}
+public void verifySubscribeHeadingInFooterSectionOfShopPage(String expectedText) throws InterruptedException
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(subscribeHeading).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,subscribeHeading, sa);
+	Thread.sleep(1000);
+	
+}
+
+
+public void verifyCopyWriteTextLeftSideBelowFooterOfShopPage(String expectedText) throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(copyWriteTextLeftSide).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,copyWriteTextLeftSide, sa);
+	Thread.sleep(1000);
+	
+}
+public void verifyCopyWriteTextRightSideBelowFooterOfShopPage(String expectedText) throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(copyWriteTextRightSide).build().perform();
+	AllVerifications.textIsPresentOrNot(expectedText, driver,copyWriteTextRightSide, sa);
+	Thread.sleep(1000);
 	
 }
 
