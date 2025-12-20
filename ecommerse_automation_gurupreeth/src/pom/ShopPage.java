@@ -202,13 +202,13 @@ public class ShopPage extends AllVerifications
 	private WebElement priceOnProductCardsInShopPage;
 	
 	@FindBy(css="div.mb-6>div>div>button:nth-of-type(1)")
-	private WebElement firstCardView;
+	private WebElement CardView;
 	
 	@FindBy(css="div.mb-6>div>div>button:nth-of-type(2)")
-	private WebElement secondCardView;
+	private WebElement GridView;
 	
 	@FindBy(css="div.mb-6>div>div>button:nth-of-type(3)")
-	private WebElement thirdCardView;
+	private WebElement ListView;
 	
 	@FindBy(css="div.mb-6>div>span")
 	private WebElement productCount;
@@ -455,7 +455,7 @@ public class ShopPage extends AllVerifications
 	public void clickOnCardViewFromShopPage() throws InterruptedException 
 	{
 		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled( firstCardView, driver, sa);
+		AllVerifications.clickIfVisibleAndEnabled( CardView, driver, sa);
 		Thread.sleep(2000);	
 		
 	}
@@ -463,27 +463,28 @@ public class ShopPage extends AllVerifications
 
 	public void clickOnGridViewFromShopPage() throws InterruptedException {
 		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled( secondCardView, driver, sa);
+		AllVerifications.clickIfVisibleAndEnabled( GridView, driver, sa);
 		Thread.sleep(2000);	
 		
 	}
 	public void clickOnListViewFromShopPage() throws InterruptedException {
 		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled( thirdCardView, driver, sa);
+		AllVerifications.clickIfVisibleAndEnabled( ListView, driver, sa);
 		Thread.sleep(2000);	
 		
 	}
-	public void verifyCategoriesHeadingBelowClearFilterButton(String expectedText)
+	public void verifyCategoriesHeadingBelowClearFilterButton(String expectedText) throws InterruptedException
 	{
 		
-		
-		AllVerifications.textIsPresentOrNot(expectedText, driver,CategoriesHeadingBelowClearFilterButton, sa);
+	Thread.sleep(1000);
+	AllVerifications.textIsPresentOrNot(expectedText, driver,CategoriesHeadingBelowClearFilterButton, sa);
+	Thread.sleep(1000);
 	}
 	
 	public int verifyNumberOfMainCategories() throws InterruptedException
 {
 		Thread.sleep(2000);
-		 int allMainCategoryCount  = mainCategoryName.size();
+		int allMainCategoryCount  = mainCategoryName.size();
 		return  allMainCategoryCount;
 		
 		
@@ -547,14 +548,16 @@ public class ShopPage extends AllVerifications
     public void fetchAllProducts()
     {
     	int allProductsCount=allProductContainer.size();
-    	System.out.println("Total products are  "+ allProductsCount);
+    	System.out.println("Total products belonging to this main category are :"+ allProductsCount);
     	
     	//now find all the products name, sp,dp
     	for(int i=1;i<=allProductsCount;i++)
     	{
+    		
     		// fetching products names
     		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
-    	    System.out.println("Products names "+eachProductName.getText());
+    		
+    		System.out.println("Products names "+eachProductName.getText());
     	    
     	    //fetching products selling price
     	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
@@ -1300,6 +1303,36 @@ public void verifyCopyWriteTextRightSideBelowFooterOfShopPage(String expectedTex
 	actions.scrollToElement(copyWriteTextRightSide).build().perform();
 	AllVerifications.textIsPresentOrNot(expectedText, driver,copyWriteTextRightSide, sa);
 	Thread.sleep(1000);
+	
+}
+public void verifyOurProductsHeading(String expectedText) throws InterruptedException
+{
+	Thread.sleep(1000);
+JavascriptExecutor js =(JavascriptExecutor)driver; 
+Actions actions=new Actions(driver);
+actions.scrollToElement(ourProductsHeadingOnShopPage).build().perform();
+AllVerifications.textIsPresentOrNot(expectedText, driver,ourProductsHeadingOnShopPage, sa);
+Thread.sleep(1000);
+}
+
+public void verifyPresenceOfAllViews() throws InterruptedException
+{
+	Thread.sleep(1000);
+JavascriptExecutor js =(JavascriptExecutor)driver; 
+Actions actions=new Actions(driver);
+actions.scrollToElement(CardView).build().perform();
+
+Thread.sleep(1000);
+}
+
+
+public void VerifyCardViewIsSelectedByDefault() throws InterruptedException
+{
+	Thread.sleep(2000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(0, 1000);");
+	Thread.sleep(1000);
+	
 	
 }
 
