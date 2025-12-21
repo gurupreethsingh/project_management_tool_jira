@@ -2,24 +2,24 @@
 <testng-results ignored="0" total="1" passed="1" failed="0" skipped="0">
   <reporter-output>
   </reporter-output>
-  <suite started-at="2025-12-20T22:29:08 IST" name="Default suite" finished-at="2025-12-20T22:29:19 IST" duration-ms="10995">
+  <suite started-at="2025-12-21T22:24:47 IST" name="Default suite" finished-at="2025-12-21T22:25:10 IST" duration-ms="23160">
     <groups>
     </groups>
-    <test started-at="2025-12-20T22:29:08 IST" name="Default test" finished-at="2025-12-20T22:29:19 IST" duration-ms="10995">
-      <class name="scripts.shoppage_scripts.functional_scenarios.AS_9198_Verifying_Presence_UI_PropertiesoOfCategories_HeadingBelowClearFilterButton">
-        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_9198_Verifying_Presence_UI_PropertiesoOfCategories_HeadingBelowClearFilterButton@48075da3]" started-at="2025-12-20T22:29:08 IST" name="openApplication" finished-at="2025-12-20T22:29:13 IST" duration-ms="5189" status="PASS">
+    <test started-at="2025-12-21T22:24:47 IST" name="Default test" finished-at="2025-12-21T22:25:10 IST" duration-ms="23160">
+      <class name="scripts.shoppage_scripts.functional_scenarios.AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading">
+        <test-method is-config="true" signature="openApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading@48075da3]" started-at="2025-12-21T22:24:47 IST" name="openApplication" finished-at="2025-12-21T22:24:51 IST" duration-ms="4516" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- openApplication -->
-        <test-method signature="testVerifyingPresenceUI_PropertiesoOfCategoriesHeadingBelowClearFilterButton()[pri:1, instance:scripts.shoppage_scripts.functional_scenarios.AS_9198_Verifying_Presence_UI_PropertiesoOfCategories_HeadingBelowClearFilterButton@48075da3]" started-at="2025-12-20T22:29:13 IST" name="testVerifyingPresenceUI_PropertiesoOfCategoriesHeadingBelowClearFilterButton" finished-at="2025-12-20T22:29:18 IST" duration-ms="4915" status="PASS">
+        <test-method signature="testVerifyingAllBrandsSubHeadingBelowToBrandsHeading()[pri:1, instance:scripts.shoppage_scripts.functional_scenarios.AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading@48075da3]" started-at="2025-12-21T22:24:51 IST" name="testVerifyingAllBrandsSubHeadingBelowToBrandsHeading" finished-at="2025-12-21T22:25:10 IST" duration-ms="18235" status="PASS">
           <reporter-output>
           </reporter-output>
-        </test-method> <!-- testVerifyingPresenceUI_PropertiesoOfCategoriesHeadingBelowClearFilterButton -->
-        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_9198_Verifying_Presence_UI_PropertiesoOfCategories_HeadingBelowClearFilterButton@48075da3]" started-at="2025-12-20T22:29:18 IST" name="closeApplication" finished-at="2025-12-20T22:29:19 IST" duration-ms="796" status="PASS">
+        </test-method> <!-- testVerifyingAllBrandsSubHeadingBelowToBrandsHeading -->
+        <test-method is-config="true" signature="closeApplication()[pri:0, instance:scripts.shoppage_scripts.functional_scenarios.AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading@48075da3]" started-at="2025-12-21T22:25:10 IST" name="closeApplication" finished-at="2025-12-21T22:25:10 IST" duration-ms="316" status="PASS">
           <reporter-output>
           </reporter-output>
         </test-method> <!-- closeApplication -->
-      </class> <!-- scripts.shoppage_scripts.functional_scenarios.AS_9198_Verifying_Presence_UI_PropertiesoOfCategories_HeadingBelowClearFilterButton -->
+      </class> <!-- scripts.shoppage_scripts.functional_scenarios.AS_3261_Verifying_AllBrands_SubHeading_BelowToBrandsHeading -->
     </test> <!-- Default test -->
   </suite> <!-- Default suite -->
 </testng-results>

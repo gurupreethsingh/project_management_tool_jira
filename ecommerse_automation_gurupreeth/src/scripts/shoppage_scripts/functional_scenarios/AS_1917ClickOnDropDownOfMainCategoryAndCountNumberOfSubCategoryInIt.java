@@ -23,7 +23,7 @@ public class AS_1917ClickOnDropDownOfMainCategoryAndCountNumberOfSubCategoryInIt
 		
 		for(int k=1;k<=totalCategories;k++) 
 		{
-			sp.clickOnDropDownOfMainCategory(k);
+			sp.clickOnDropDownOfMainCategoryOPEN(k);
 		 sp.countNumberOfSubCategoriesOfThatMainCategory();
 			
 	

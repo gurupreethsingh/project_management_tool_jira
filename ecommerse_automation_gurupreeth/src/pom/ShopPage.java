@@ -455,6 +455,8 @@ public class ShopPage extends AllVerifications
 	public void clickOnCardViewFromShopPage() throws InterruptedException 
 	{
 		Thread.sleep(2000);
+		AllVerifications.clickIfVisibleAndEnabled( GridView, driver, sa);
+		Thread.sleep(2000);
 		AllVerifications.clickIfVisibleAndEnabled( CardView, driver, sa);
 		Thread.sleep(2000);	
 		
@@ -570,6 +572,29 @@ public class ShopPage extends AllVerifications
     	    
     	}    
     	}
+    public void fetchAllProductsBelongsToSubCategory()
+    {
+    	int allProductsCount=allProductContainer.size();
+    	System.out.println("Total products belonging to this sub-category are :"+ allProductsCount);
+    	
+    	//now find all the products name, sp,dp
+    	for(int i=1;i<=allProductsCount;i++)
+    	{
+    		
+    		// fetching products names
+    		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+    		System.out.println("Products names "+eachProductName.getText());
+    	    
+    	    //fetching products selling price
+    	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
+    	    System.out.println("Selling Price "+eachProductSellingPrice.getText());
+    	    
+    	    //fetching products display price
+    	    WebElement	eachProductDisplayPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:last-child"));
+    	    System.out.println("Display Price "+eachProductDisplayPrice.getText());
+    	    
+    	}   
+    	}    
     	
     	public void clickOnEachProduct()
         {
@@ -586,42 +611,100 @@ public class ShopPage extends AllVerifications
         	}
         }
         	
-   public void clickOnDropDownOfMainCategory(int k) throws InterruptedException {
-	
+   public void clickOnDropDownOfMainCategoryOPEN(int k) throws InterruptedException {
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+		
 	WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:first-child"));
+	actions.scrollToElement(mainCategoryName).build().perform();
 	String MainCategoryName =mainCategoryName.getText();
+	
+	Thread.sleep(500);	
     WebElement	eachDropDownOfMainCategory=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:last-child"));
-    Thread.sleep(500);	
+    actions.scrollToElement(eachDropDownOfMainCategory).build().perform();
     System.out.println("Clicking on "+ MainCategoryName+" drop down ");
+    
     eachDropDownOfMainCategory.click();
     Thread.sleep(500);
+    
+    
+    
+    
 //    int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
 //	System.out.println("Number of sub categories of "+ MainCategoryName + "are :"+subCategoryCount);
 	
-    eachDropDownOfMainCategory.click();  
+//    eachDropDownOfMainCategory.click();  
 //    return subCategoryCount;
   }
+   
+   public void clickOnDropDownOfMainCategoryCLOSE(int k) throws InterruptedException {
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		Actions actions=new Actions(driver);
+			
+		WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:first-child"));
+		actions.scrollToElement(mainCategoryName).build().perform();
+		String MainCategoryName =mainCategoryName.getText();
+		
+		Thread.sleep(500);	
+	    WebElement	eachDropDownOfMainCategory=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:last-child"));
+	    actions.scrollToElement(eachDropDownOfMainCategory).build().perform();
+	    System.out.println("Closing sub-cateories of  "+ MainCategoryName);
+	    
+	    eachDropDownOfMainCategory.click();
+	    Thread.sleep(500);
+//	    int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
+//		System.out.println("Number of sub categories of "+ MainCategoryName + "are :"+subCategoryCount);
+		
+//	    eachDropDownOfMainCategory.click();  
+//	    return subCategoryCount;
+	  }
 
+   public void clickOnDropDownOfMainCategoryOpenAndClose(int k) throws InterruptedException {
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		Actions actions=new Actions(driver);
+			
+		WebElement	mainCategoryName=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:first-child"));
+		actions.scrollToElement(mainCategoryName).build().perform();
+		String MainCategoryName =mainCategoryName.getText();
+		
+		Thread.sleep(500);	
+	    WebElement	eachDropDownOfMainCategory=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:last-child"));
+	    actions.scrollToElement(eachDropDownOfMainCategory).build().perform();
+	    System.out.println("Clicking on "+ MainCategoryName+" drop down ");
+	    
+	    eachDropDownOfMainCategory.click();
+	    Thread.sleep(500);
+//	    int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
+//		System.out.println("Number of sub categories of "+ MainCategoryName + "are :"+subCategoryCount);
+		
+	    eachDropDownOfMainCategory.click();  
+//	    return subCategoryCount;
+	  }
 public int countNumberOfSubCategoriesOfThatMainCategory() {
 	int subCategoryCount=subCategoriesOfFirstMainCategoryContainer.size();
 	System.out.println("Number of sub categories of   are :"+subCategoryCount);
+
 	return subCategoryCount;
 }
 
 
-public void fetchTheNameOfSubCatAndClick(int o) {
+public void fetchTheNameOfSubCatAndClick(int o) throws InterruptedException {
 	WebElement	subCategoryBelongsToMainCategory=driver.findElement(By.cssSelector("div.pl-4>div.text-sm:nth-of-type("+o+")"));
   
     System.out.println("Clicking on the sub category  "+ subCategoryBelongsToMainCategory.getText());
     
     subCategoryBelongsToMainCategory.click();
+    Thread.sleep(1000);
+    
 	
 
 }
 //
-public void verifyBrandsHeadingBelowCategoriesHeading(String expectedText)
+public void verifyBrandsHeadingBelowCategoriesHeading(String expectedText) throws InterruptedException
 {
+	Thread.sleep(1000);
 	AllVerifications.textIsPresentOrNot(expectedText, driver,brandsHeadingBelowCategoriesHeading, sa);
+	Thread.sleep(1000);
 }
 
 
