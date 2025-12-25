@@ -9,12 +9,12 @@ import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class AS_4585ClickOnPriceIncreaseButtonBelowSortByHeading extends BaseClass_Anusha 
+public class AS_9364ClickOnPopularButtonBelowSortByHeading extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testClickOnPriceIncreaseButtonBelowSortByHeading() throws InterruptedException
+   public void testClickOnPopularNewestButtonBelowSortByHeading() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
@@ -22,15 +22,8 @@ SoftAssert sa = new SoftAssert();
 		
 		ShopPage sp = new ShopPage(driver);
 		sp.clickONClearFilterButton();
-		sp.clickOnPriceIncreaseButtonBelowSortByHeading();
-		Thread.sleep(1000);
+		sp.clickOnPopulartButtonBelowSortByHeading();
 		TakingScreenshot.captureScreenshot(driver);
-		sp.fetchAllProductsComesUnderSelectedPriceRange();
-		sp.clickOnSecondPaginationButton();
-		sp.fetchAllProductsComesUnderSelectedPriceRange();
-		sp.clickOnThirdPaginationButton();
-		sp.fetchAllProductsComesUnderSelectedPriceRange();
-		System.out.println("\n All products are sorted according to ascending order in their price\n ");
    }
 	
 }

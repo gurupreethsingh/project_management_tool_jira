@@ -520,11 +520,12 @@ public class ShopPage extends AllVerifications
 
 	public void clickONClearFilterButton() throws InterruptedException 
 	{
-//		Thread.sleep(1000);
+		Thread.sleep(1000);
 		JavascriptExecutor js =(JavascriptExecutor)driver; 
 		Actions actions=new Actions(driver);
 		actions.scrollToElement( clearFilterButton).build().perform();
 		AllVerifications.clickIfVisibleAndEnabled(clearFilterButton, driver, sa);
+		js.executeScript("window.scrollTo(0, 500);");
 		Thread.sleep(1000);
 		
 	}
@@ -625,7 +626,7 @@ public void clickONClearFilterButtonAfterApplyingPriceRangeFilter() throws Inter
     	public void clickOnEachProduct()
         {
         	int allProductsCount=allProductContainer.size();
-        	System.out.println("Total products are  "+ allProductsCount);
+        	System.out.println("Total products are : "+ allProductsCount);
         	
         	//now find all the products name, sp,dp
         	for(int i=1;i<=allProductsCount;i++)
@@ -674,7 +675,7 @@ public void clickONClearFilterButtonAfterApplyingPriceRangeFilter() throws Inter
 		Thread.sleep(500);	
 	    WebElement	eachDropDownOfMainCategory=driver.findElement(By.cssSelector("div.py-10>div>div.rounded-xl>div:nth-of-type(2)>div:nth-of-type(2)>div:nth-child("+k+")>div>span:last-child"));
 	    actions.scrollToElement(eachDropDownOfMainCategory).build().perform();
-	    System.out.println("Closing sub-cateories of  "+ MainCategoryName);
+	    System.out.println("Closing sub-cateories of : "+ MainCategoryName);
 	    
 	    eachDropDownOfMainCategory.click();
 	    Thread.sleep(500);
@@ -717,7 +718,7 @@ public int countNumberOfSubCategoriesOfThatMainCategory() {
 public void fetchTheNameOfSubCatAndClick(int o) throws InterruptedException {
 	WebElement	subCategoryBelongsToMainCategory=driver.findElement(By.cssSelector("div.pl-4>div.text-sm:nth-of-type("+o+")"));
   
-    System.out.println("Clicking on the sub category  "+ subCategoryBelongsToMainCategory.getText());
+    System.out.println("Clicking on the sub category : "+ subCategoryBelongsToMainCategory.getText());
     
     subCategoryBelongsToMainCategory.click();
     Thread.sleep(1000);
@@ -910,9 +911,20 @@ public void verifySortByHeadingBelowPriceRange(String expectedText) {
 	JavascriptExecutor js =(JavascriptExecutor)driver; 
 	Actions actions=new Actions(driver);
 	actions.scrollToElement(sortByHeadingBelowPriceRange).build().perform();
+	
 	AllVerifications.textIsPresentOrNot(expectedText, driver, sortByHeadingBelowPriceRange, sa);
 	
 }
+public void verifyAllOptionsWhichBelongsToSortBySection() throws InterruptedException 
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(0, 600);");
+	Thread.sleep(1000);
+	
+	
+}
+
 
 
 public void clickOnDefaultButtonBelowSortByHeading() {
@@ -965,6 +977,20 @@ public void clickOnNewestButtonBelowSortByHeading() throws InterruptedException 
 	Actions actions=new Actions(driver);
 	actions.scrollToElement( newestButtonBelongsToSortByHeading).build().perform();
 	AllVerifications.clickIfVisibleAndEnabled( newestButtonBelongsToSortByHeading, driver, sa);
+	Thread.sleep(1000);
+	js.executeScript("window.scrollTo(800, 0);");
+	Thread.sleep(1000);
+	TakingScreenshot.captureScreenshot(driver);
+	
+	
+	
+}
+public void clickOnPopulartButtonBelowSortByHeading() throws InterruptedException {
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( popularButtonBelongsToSortByHeading).build().perform();
+	AllVerifications.clickIfVisibleAndEnabled(popularButtonBelongsToSortByHeading, driver, sa);
 	Thread.sleep(1000);
 	
 }
@@ -1531,6 +1557,14 @@ public void verifyPresenceAndEnabledStateOfpriceRangeScale() throws InterruptedE
 	JavascriptExecutor js =(JavascriptExecutor)driver; 
 	Actions actions=new Actions(driver);
 	actions.scrollToElement( priceRangeScaleBelowAllBrands).build().perform();
+	Thread.sleep(1000);
+	
+	
+}
+public void verifyTheFooterSectionOfShoppage() throws InterruptedException
+{
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(0, document.body.scrollHeight);");
 	Thread.sleep(1000);
 	
 	

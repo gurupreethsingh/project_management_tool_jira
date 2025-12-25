@@ -19,11 +19,18 @@ SoftAssert sa = new SoftAssert();
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
-		
+	
 		ShopPage sp = new ShopPage(driver);
 		sp.clickONClearFilterButton();
 		sp.clickOnPriceDecreaseButtonBelowSortByHeading();
+		Thread.sleep(1000);
 		TakingScreenshot.captureScreenshot(driver);
+		sp.fetchAllProductsComesUnderSelectedPriceRange();
+		sp.clickOnSecondPaginationButton();
+		sp.fetchAllProductsComesUnderSelectedPriceRange();
+		sp.clickOnThirdPaginationButton();
+		sp.fetchAllProductsComesUnderSelectedPriceRange();
+		System.out.println("\n All products are sorted according to descending order in their price\n ");
    }
 	
 }

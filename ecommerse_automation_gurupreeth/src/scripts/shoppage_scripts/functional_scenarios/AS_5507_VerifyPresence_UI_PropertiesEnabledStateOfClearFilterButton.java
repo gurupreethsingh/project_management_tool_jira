@@ -22,8 +22,9 @@ SoftAssert sa = new SoftAssert();
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
+	
+		sp.verifySortByHeadingBelowPriceRange("SORT BY");
 		TakingScreenshot.captureScreenshot(driver);
-		sp.clickONClearFilterButton();
 		
 		
 		

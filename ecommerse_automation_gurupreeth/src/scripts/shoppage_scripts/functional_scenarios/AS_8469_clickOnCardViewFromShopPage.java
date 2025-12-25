@@ -21,6 +21,7 @@ SoftAssert sa = new SoftAssert();
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
+		
 		sp.clickOnCardViewFromShopPage();
 		
 		

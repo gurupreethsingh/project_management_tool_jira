@@ -9,21 +9,26 @@ import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class AS_9590ClickOnPriceNewestButtonBelowSortByHeading extends BaseClass_Anusha 
+
+public class AS_3382VerifyCopyWriteTextRightSideBelowFooterOfShopPage extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testClickOnPriceNewestButtonBelowSortByHeading() throws InterruptedException
+   public void testVerifyCopyWriteTextRightSideBelowFooterOfShopPage() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		sp.clickONClearFilterButton();
-		sp.clickOnNewestButtonBelowSortByHeading();
+		sp.verifyCopyWriteTextRightSideBelowFooterOfShopPage("Empowering online shopping — one click at a time.");
 		TakingScreenshot.captureScreenshot(driver);
+		
+//		String expectedFacebookpageTitle = (String)Excel_Anusha.getData("ShopPage",14,0);
+//		AllVerifications.verifyTitle(expectedFacebookpageTitle, driver, sa);
+//		sa.assertAll();
+		
    }
 	
 }
