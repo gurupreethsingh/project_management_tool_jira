@@ -22,11 +22,13 @@ SoftAssert sa = new SoftAssert();
 		  
 		
 		ShopPage sp = new ShopPage(driver);
-		sp.verifyAllBrandsSubHeadingBelowBrandsHeading("All Brands");
+	
 		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
 		Thread.sleep(1000);
-		sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
+		TakingScreenshot.captureScreenshot(driver);
+		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
 		Thread.sleep(1000);
+		
 		
 		
    }

@@ -9,22 +9,24 @@ import generic.TakingScreenshot;
 import pom.ShopPage;
 
 
-public class AS_2133_Verifying_PriceRange_Heading_below_AllBrands_Heading extends BaseClass_Anusha 
+public class AS_7970_clickOnAllBrandsDropDownBelowToBrandsHeading extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testVerifyingPriceRangeHeadingBelowAllBrandsHeading() throws InterruptedException
+   public void testClickOnAllBrandsDropDownBelowToBrandsHeading() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
+		  
 		
-		String expectedText = "PRICE RANGE";
 		ShopPage sp = new ShopPage(driver);
-		sp.verifyPriceRangeHeadingBelowAllBrandsHeading(expectedText);
+		sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
+		Thread.sleep(1000);
 		TakingScreenshot.captureScreenshot(driver);
-		
+		sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
+		Thread.sleep(1000);
 		
    }
 	

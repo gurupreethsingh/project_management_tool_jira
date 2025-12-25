@@ -16,6 +16,7 @@ import org.openqa.selenium.support.ui.WebDriverWait;
 import org.testng.asserts.SoftAssert;
 
 import generic.AllVerifications;
+import generic.AllVerifications_Anusha;
 import generic.TakingScreenshot;
 
 public class ShopPage extends AllVerifications
@@ -153,14 +154,21 @@ public class ShopPage extends AllVerifications
 	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:first-child")
 	private WebElement priceRangeHeadingBelowAllBrands;
 	
+	
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span")
+	private WebElement priceRangeScaleBelowAllBrands;
+	
 	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span>span:nth-of-type(2)")
-	private WebElement leftPriceRangeButton;
+	private WebElement leftButtonOfPriceRangeScale;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>span>span:nth-of-type(3)")
-	private WebElement rightPriceRangeButton;
+	private WebElement rightButtonOfPriceRangeScale;
+//	
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>div>span:first-child")
+	private WebElement MinimumPricePresentBelowToPriceRangeScale;
 	
-	@FindBy(css="div.px-2>div.text-sm")
-	private WebElement realPriceBelowPriceRange;
+	@FindBy(css="div.space-y-6>div:nth-of-type(4)>div:last-child>div>span:last-child")
+	private WebElement MaximumPricePresentBelowToPriceRangeScale;
 	
 	@FindBy(css="div.space-y-6>div:nth-of-type(2)>div.flex")
 	private WebElement categoriesHeading;
@@ -509,14 +517,32 @@ public class ShopPage extends AllVerifications
 //		Thread.sleep(2000);	
 //		
 //	}
-	
 
-	public void clickONClearFilterButton() throws InterruptedException {
-		Thread.sleep(2000);
-		AllVerifications.clickIfVisibleAndEnabled( clearFilterButton, driver, sa);
-		Thread.sleep(2000);	
+	public void clickONClearFilterButton() throws InterruptedException 
+	{
+//		Thread.sleep(1000);
+		JavascriptExecutor js =(JavascriptExecutor)driver; 
+		Actions actions=new Actions(driver);
+		actions.scrollToElement( clearFilterButton).build().perform();
+		AllVerifications.clickIfVisibleAndEnabled(clearFilterButton, driver, sa);
+		Thread.sleep(1000);
 		
 	}
+
+public void clickONClearFilterButtonAfterApplyingPriceRangeFilter() throws InterruptedException 
+	{
+		
+	AllVerifications.clickIfVisibleAndEnabled(clearFilterButton, driver, sa);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	js.executeScript("window.scrollTo(500, 0);");
+	AllVerifications.clickIfVisibleAndEnabled(clearFilterButton, driver, sa);
+	
+		
+	}
+	
+	
+	
+	
 
 
 //	public String verifyMainCategoryName() {
@@ -1418,8 +1444,102 @@ public void VerifyCardViewIsSelectedByDefault() throws InterruptedException
 	
 	
 }
+public void adjustThePriceRangeSliderFromMinimumValue() throws InterruptedException
 
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(leftButtonOfPriceRangeScale).build().perform();
+	Thread.sleep(1000);
+	AllVerifications_Anusha.dragSliderIfVisibleAndEnabled(leftButtonOfPriceRangeScale, 40, 0, driver, sa);
+	Thread.sleep(1000);
+	
 }
+public void fetchAllProductsComesUnderSelectedPriceRange()
+{
+	int allProductsCount=allProductContainer.size();
+	System.out.println("Total products belonging to this price range are :"+ allProductsCount);
+	
+	//now find all the products name, sp,dp
+	for(int i=1;i<=allProductsCount;i++)
+	{
+		
+		// fetching products names
+		WebElement	eachProductName=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+		System.out.println("Products names "+eachProductName.getText());
+	    
+	    //fetching products selling price
+	    WebElement	eachProductSellingPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:first-child"));
+	    System.out.println("Selling Price "+eachProductSellingPrice.getText());
+	    
+	    //fetching products display price
+	    WebElement	eachProductDisplayPrice=driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>div:nth-of-type(1)>span:last-child"));
+	    System.out.println("Display Price "+eachProductDisplayPrice.getText());
+	    
+	}  	
+}
+public void adjustThePriceRangeSliderFromMaximumValue() throws InterruptedException
+
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(rightButtonOfPriceRangeScale).build().perform();
+	Thread.sleep(1000);
+	AllVerifications_Anusha.dragSliderIfVisibleAndEnabled(rightButtonOfPriceRangeScale, -60, 0, driver, sa);
+	Thread.sleep(1000);
+	
+}
+
+public void adjustThePriceRangeSliderFromMinimumAndMaximumValues() throws InterruptedException
+
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement(leftButtonOfPriceRangeScale).build().perform();
+	Thread.sleep(1000);
+	AllVerifications_Anusha.dragSliderIfVisibleAndEnabled(leftButtonOfPriceRangeScale, 40, 0, driver, sa);
+	Thread.sleep(1000);
+
+	actions.scrollToElement(rightButtonOfPriceRangeScale).build().perform();
+	Thread.sleep(1000);
+	AllVerifications_Anusha.dragSliderIfVisibleAndEnabled(rightButtonOfPriceRangeScale, -60, 0, driver, sa);
+	Thread.sleep(1000);
+	
+}
+public void verifyDeafultPriceValuesPresentBelowToPriceRangeScale() throws InterruptedException
+{
+	 Thread.sleep(1000);
+     JavascriptExecutor js =(JavascriptExecutor)driver; 
+     Actions actions=new Actions(driver);
+     actions.scrollToElement(MinimumPricePresentBelowToPriceRangeScale).build().perform();
+     WebElement	MinimumPriceMentionedBelowToPriceRangeScale=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(4)>div:last-child>div>span:first-child"));
+     System.out.println("Default minimum price  is :"+MinimumPriceMentionedBelowToPriceRangeScale.getText());
+     Thread.sleep(1000);
+     
+     WebElement	MaximumPriceMentionedBelowToPriceRangeScale=driver.findElement(By.cssSelector("div.space-y-6>div:nth-of-type(4)>div:last-child>div>span:last-child"));
+     System.out.println("Default maximum price is "+MaximumPriceMentionedBelowToPriceRangeScale.getText());
+     Thread.sleep(1000);
+}
+
+public void verifyPresenceAndEnabledStateOfpriceRangeScale() throws InterruptedException
+
+{
+	Thread.sleep(1000);
+	JavascriptExecutor js =(JavascriptExecutor)driver; 
+	Actions actions=new Actions(driver);
+	actions.scrollToElement( priceRangeScaleBelowAllBrands).build().perform();
+	Thread.sleep(1000);
+	
+	
+}
+	
+}
+
+
+
 
 
 

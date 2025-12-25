@@ -22,7 +22,7 @@ public class AS_8721ClickOnDropDownOfMainCategoryAndDisplayItsSubCategories exte
 		int totalCategories=sp.findTotalCategoryCount(); 
 		for(int k=1;k<=totalCategories;k++) 
 		{
-			sp.clickOnDropDownOfMainCategory(k);
+			sp.clickOnDropDownOfMainCategoryOPEN(k);
 			
 		}
 		
