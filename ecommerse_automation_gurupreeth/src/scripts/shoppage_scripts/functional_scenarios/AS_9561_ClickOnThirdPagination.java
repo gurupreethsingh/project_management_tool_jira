@@ -8,7 +8,7 @@ import generic.BaseClass_Anusha;
 import pom.ShopPage;
 
 
-public class AS_9569_ClickOnThirdPagination extends BaseClass_Anusha 
+public class AS_9561_ClickOnThirdPagination extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
