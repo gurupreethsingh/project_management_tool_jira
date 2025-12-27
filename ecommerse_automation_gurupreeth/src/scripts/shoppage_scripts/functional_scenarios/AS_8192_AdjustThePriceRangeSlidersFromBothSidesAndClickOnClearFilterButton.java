@@ -14,7 +14,7 @@ public class AS_8192_AdjustThePriceRangeSlidersFromBothSidesAndClickOnClearFilte
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testAdjustThePriceRangeSlidersFromBothSides () throws InterruptedException
+   public void testAdjustThePriceRangeSlidersFromBothSidesAndClickOnClearFilterButton () throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);

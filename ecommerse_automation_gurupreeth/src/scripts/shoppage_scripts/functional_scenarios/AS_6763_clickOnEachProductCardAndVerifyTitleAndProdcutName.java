@@ -8,25 +8,21 @@ import generic.BaseClass_Anusha;
 import pom.ShopPage;
 
 
-public class AS_9194_clickOnEachProductCard extends BaseClass_Anusha 
+public class AS_6763_clickOnEachProductCardAndVerifyTitleAndProdcutName extends BaseClass_Anusha 
 {
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void clickOnEachProductCard() throws InterruptedException
+   public void testClickOnEachProductCardAndVerifyTitleAndProdcutName() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		//sp.clickOnEachProductCards();
-		
-//		String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",0,5);
-//		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
-//		sa.assertAll();
-		sp.clickOnEachProductCardsOnSecondPage();
-//		sp.clickOnEachProductCardsOnThirdPage();
+		sp.clickOnEachProductCardsOnFirstPage();
+        sp.clickOnEachProductCardsOnSecondPage();  //-->Im getting element click intercepted exception so i used  chat gpt ocde 
+		sp.clickOnEachProductCardsOnThirdPage();
    }
 	
 }

@@ -13,7 +13,7 @@ public class AS_9194_loginFromShoppage extends BaseClass_Anusha
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void openShoppageUsingUrl() throws InterruptedException
+   public void testSignInFromShopPage() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
@@ -32,7 +32,7 @@ SoftAssert sa = new SoftAssert();
 		AllVerifications.verifyTitle(expectedUserDashBoradpageTitle, driver, sa);
 		sa.assertAll();
 		
-//		sp.clickOnShopAllLinkTextFromUserDashBoradpage();
+		sp.clickOnShopAllLinkTextFromUserDashBoradpage();
 		
 		
 		

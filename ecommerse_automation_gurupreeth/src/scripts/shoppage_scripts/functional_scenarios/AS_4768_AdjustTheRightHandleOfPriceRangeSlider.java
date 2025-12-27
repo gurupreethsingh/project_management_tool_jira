@@ -14,7 +14,7 @@ public class AS_4768_AdjustTheRightHandleOfPriceRangeSlider extends BaseClass_An
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testAdjustTheLeftHandleOfPriceRangeSlider() throws InterruptedException
+   public void testAdjustTheRightHandleOfPriceRangeSlider() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);

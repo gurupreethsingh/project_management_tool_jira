@@ -18,6 +18,7 @@ import org.testng.asserts.SoftAssert;
 import generic.AllVerifications;
 import generic.AllVerifications_Anusha;
 import generic.TakingScreenshot;
+import generic.BaseClass_Anusha.Excel_Anusha;
 
 public class ShopPage extends AllVerifications
 {
@@ -1031,7 +1032,7 @@ public void clickOnThirdPaginationButton() throws InterruptedException
 }
 
 
-public void clickOnEachProductCards() throws InterruptedException
+public void clickOnEachProductCardsOnFirstPage() throws InterruptedException
 {
 	Thread.sleep(2000);
 	int AllProductCardsCount=eachProductCardsContainer.size();
@@ -1044,42 +1045,106 @@ public void clickOnEachProductCards() throws InterruptedException
 		actions.scrollToElement(productCards).build().perform();
 	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
 	    productCards.click();
-	    Thread.sleep(2000);
-	    shopAllLinkText.click(); 
+	    Thread.sleep(1000);
+	    
+	    String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",5,0);
+		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
+		sa.assertAll();
+		shopAllLinkText.click(); 
 	}
 }
 
-public void clickOnEachProductCardsOnSecondPage() throws InterruptedException
-{
-	Thread.sleep(1000);
-	JavascriptExecutor js =(JavascriptExecutor)driver; 
-	Actions actions=new Actions(driver);
-	actions.scrollToElement(secondPaginationButton).build().perform();
-	secondPaginationButton.click();
-	int AllProductCardsCount=eachProductCardsContainer.size();
-	System.out.println("The Number of product cards in Second page are :"+AllProductCardsCount);
-	for(int i=1;i<=AllProductCardsCount;i++) 
-	{
-	  
-		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type(6)>div:nth-of-type(3)>h3"));
-	    Actions actions1=new Actions(driver);
-   	actions1.scrollToElement(productCards).build().perform();
-		
-	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
-	    
-	    productCards.click();
-	    Thread.sleep(500);
-	    actions1.scrollToElement( shopAllLinkText).build().perform();
-	    shopAllLinkText.click(); 
-	    Thread.sleep(500);
-//	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
-//	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
-	    actions1.scrollToElement(secondPaginationButton).build().perform();
-	    secondPaginationButton.click();
-	    Thread.sleep(1000);
-	    
-	}
+//public void clickOnEachProductCardsOnSecondPage() throws InterruptedException
+//{
+//	Thread.sleep(1000);
+//	JavascriptExecutor js =(JavascriptExecutor)driver; 
+//	Actions actions=new Actions(driver);
+//	actions.scrollToElement(secondPaginationButton).build().perform();
+//	secondPaginationButton.click();
+//	int AllProductCardsCount=eachProductCardsContainer.size();
+//	System.out.println("The Number of product cards in Second page are :"+AllProductCardsCount);
+//	for(int i=1;i<=AllProductCardsCount;i++) 
+//	
+//	{
+//	  
+//		WebElement productCards = driver.findElement(By.cssSelector("div.grid:last-child>div.relative:nth-of-type("+i+")>div:nth-of-type(3)>h3"));
+//	    Actions actions1=new Actions(driver);
+//   	    actions1.scrollToElement(productCards).build().perform();
+//	 	
+//	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
+//	    productCards.click();
+//	    Thread.sleep(1000);
+//	    
+//	    String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",5,0);
+//		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
+//		sa.assertAll();
+//		
+//	    actions1.scrollToElement( shopAllLinkText).build().perform();
+//	    shopAllLinkText.click(); 
+//	    Thread.sleep(500);
+////	    WebElement productNameInSingleProductPage=driver.findElement(By.cssSelector("h1.text-4xl"));
+////	    AllVerifications.textIsPresentOrNot( productCards.getText(), driver, productNameInSingleProductPage, sa);
+//	    actions1.scrollToElement(secondPaginationButton).build().perform();
+//	    secondPaginationButton.click();
+//	    Thread.sleep(1000);
+//	    
+//	}
+//}
+public void clickOnEachProductCardsOnSecondPage() throws InterruptedException {
+
+    JavascriptExecutor js = (JavascriptExecutor) driver;
+    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+
+    // Go to 2nd pagination
+    wait.until(ExpectedConditions.elementToBeClickable(secondPaginationButton));
+    js.executeScript("arguments[0].scrollIntoView({block:'center'});", secondPaginationButton);
+    secondPaginationButton.click();
+
+    Thread.sleep(1500);
+
+    // Get total product count on page
+    int productCount = eachProductCardsContainer.size();
+    System.out.println("The Number of product cards in Second page are : " + productCount);
+
+    for (int i = 1; i <= productCount; i++) {
+
+        // Re-locate element every time to avoid stale element exception
+        By productLocator = By.cssSelector(
+                "div.grid:last-child > div.relative:nth-of-type(" + i + ") > div:nth-of-type(3) > h3"
+        );
+
+        WebElement productCard = wait.until(ExpectedConditions.visibilityOfElementLocated(productLocator));
+
+        // Scroll product to center (prevents header overlap)
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", productCard);
+        Thread.sleep(500);
+
+        System.out.println("Clicking On Product: " + productCard.getText());
+
+        try {
+            productCard.click();
+        } catch (Exception e) {
+            // Fallback JS click
+            js.executeScript("arguments[0].click();", productCard);
+        }
+
+        // Verify product page
+        String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",5,0);
+        AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
+
+        // Navigate back to shop page
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", shopAllLinkText);
+        shopAllLinkText.click();
+
+        // Wait for page to reload
+        wait.until(ExpectedConditions.elementToBeClickable(secondPaginationButton));
+        js.executeScript("arguments[0].scrollIntoView({block:'center'});", secondPaginationButton);
+        secondPaginationButton.click();
+
+        Thread.sleep(1500);
+    }
 }
+
 public void clickOnEachProductCardsOnThirdPage() throws InterruptedException
 {
 	Thread.sleep(2000);
@@ -1088,7 +1153,7 @@ public void clickOnEachProductCardsOnThirdPage() throws InterruptedException
 	actions.scrollToElement(thirdPaginationButton).build().perform();
 	thirdPaginationButton.click();
 	int AllProductCardsCount=eachProductCardsContainer.size();
-	System.out.println("The Number of product cards in Second page are :"+AllProductCardsCount);
+	System.out.println("The Number of product cards in Third page are :"+AllProductCardsCount);
 	for(int i=1;i<=AllProductCardsCount;i++) 
 	{
 	  
@@ -1100,6 +1165,11 @@ public void clickOnEachProductCardsOnThirdPage() throws InterruptedException
 	    
 	    productCards.click();
 	    Thread.sleep(1000);
+	    
+	    String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",5,0);
+		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
+		sa.assertAll();
+		
 	    actions1.scrollToElement( shopAllLinkText).build().perform();
 	    shopAllLinkText.click(); 
 	    Thread.sleep(1000);
@@ -1164,7 +1234,7 @@ public void clickOnEyeSymbolOnPassWordInputField() throws InterruptedException
 	
 }
 
-
+//i used the chat gpt code here 
 public void clickOnLoginButtonInLoginInPage() throws InterruptedException {
 	Thread.sleep(1000);	
 	AllVerifications.clickIfVisibleAndEnabled(LoginButtonInLoginInPage, driver, sa);

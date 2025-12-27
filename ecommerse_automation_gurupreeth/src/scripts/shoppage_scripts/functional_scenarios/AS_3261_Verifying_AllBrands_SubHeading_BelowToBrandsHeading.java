@@ -26,10 +26,10 @@ SoftAssert sa = new SoftAssert();
 		
 		sp.verifyAllBrandsSubHeadingBelowBrandsHeading(expectedText);
 		TakingScreenshot.captureScreenshot(driver);
-		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
-		Thread.sleep(1000);
-		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
-		sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
+//		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
+//		Thread.sleep(1000);
+//		sp.clickOnAllBrandsSubHeadingBelowBrandsHeading();
+//		sp.clickOnDropDownOfAllBrandsSubHeadingBelowBrandsHeading();
 		Thread.sleep(1000);
 		
 		

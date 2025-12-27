@@ -14,7 +14,7 @@ public class AS_8340_Verifying_SortBy_heading_below_PriceRange_heading extends B
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void testVerifyingPriceRangeHeadingBelowAllBrands()
+   public void testVerifyingSortByHeadingBelowAllBrands()
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);

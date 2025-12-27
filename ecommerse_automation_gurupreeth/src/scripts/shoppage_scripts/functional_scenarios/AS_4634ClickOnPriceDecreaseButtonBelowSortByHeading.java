@@ -14,7 +14,7 @@ public class AS_4634ClickOnPriceDecreaseButtonBelowSortByHeading extends BaseCla
 SoftAssert sa = new SoftAssert();
 	
 	@Test(enabled = true, priority = 1)
-   public void openShoppageUsingUrl() throws InterruptedException
+   public void testClickOnPriceDecreaseButtonBelowSortByHeading() throws InterruptedException
    {
 		String expectedShoppageTitle = (String)Excel_Anusha.getData("ShopPage",0,0);
 		AllVerifications.verifyTitle(expectedShoppageTitle, driver, sa);
