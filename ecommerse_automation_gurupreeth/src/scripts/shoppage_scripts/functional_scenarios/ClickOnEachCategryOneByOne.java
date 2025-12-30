@@ -25,7 +25,7 @@ SoftAssert sa = new SoftAssert();
 		//verifying CATEGORIES haeding below clear filter button 
         String expectedText = "CATEGORIES";
 	    ShopPage sp = new ShopPage(driver);
-	    sp.verifyProductCategoryHeadingInShopPage(expectedText);
+	    sp.verifyCategoriesHeadingBelowClearFilterButton(expectedText);
 		
 //		sp.verifyNumberOfMainCategories();
 		// not getting number of categories in pom class ------------> doubt
