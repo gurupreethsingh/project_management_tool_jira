@@ -1,15 +1,14 @@
 // api/routes/DashboardGenRoutes.js
-
 const router = require("express").Router();
-const C = require("../controllers/DashboardGenController");
+const ctrl = require("../controllers/DashboardGenController");
 
-// Dashboard generator endpoints
-router.get("/dashboard-gen/model-info", C.modelInfo);
-router.post("/dashboard-gen/reload", C.reload);
-router.post("/dashboard-gen/ask", C.ask);
+router.get("/model-info", ctrl.modelInfo);
+router.post("/reload", ctrl.reloadModel);
+router.get("/lora-debug", ctrl.loraDebug);
 
-// Optional: history
-router.get("/dashboard-gen/interactions/:id", C.getById);
-router.get("/dashboard-gen/interactions", C.list);
+router.post("/generate", ctrl.generateDashboard);
+
+router.get("/history", ctrl.history);
+router.delete("/clear", ctrl.clearSession);
 
 module.exports = router;

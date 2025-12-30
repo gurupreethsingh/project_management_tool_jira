@@ -1,269 +1,214 @@
-// api/controllers/DashboardGenController.js
-
 const axios = require("axios");
-const {
-  DashboardGenInteraction,
-} = require("../models/DashboardGenInteractionModel");
+const DashboardGenInteraction =
+  require("../models/DashboardGenInteractionModel")?.DashboardGenInteraction ||
+  require("../models/DashboardGenInteractionModel");
 
-// IMPORTANT:
-// Must match dashboard_gen_api.py:
-//   GET  /dash/v1/model-info
-//   POST /dash/v1/reload
-//   POST /dash/v1/generate
-//
-// Configurable via .env:
-//   DASH_FLASK_BASE=http://127.0.0.1:5067/dash/v1
 const FLASK_BASE =
   process.env.DASH_FLASK_BASE || "http://127.0.0.1:5067/dash/v1";
 
-console.log("[DashboardGen] Using FLASK_BASE:", FLASK_BASE);
+const GEN_URL = `${FLASK_BASE}/generate`;
+const INFO_URL = `${FLASK_BASE}/model-info`;
+const RELOAD_URL = `${FLASK_BASE}/reload`;
+const LORA_DEBUG_URL = `${FLASK_BASE}/debug/lora`;
 
-/* -------------------------------------------------------------------------- */
-/*                               Helper: HTML/JSX                             */
-/* -------------------------------------------------------------------------- */
-
-function looksLikeHtmlOrJsx(s) {
-  if (!s || typeof s !== "string") return false;
-  const t = s.trim().toLowerCase();
-  if (t.length < 12) return false;
-
-  if (t.includes("<!doctype html") || t.includes("<html")) return true;
-  if (t.includes("<head") && t.includes("<body")) return true;
-
-  if (
-    /<(div|section|header|footer|main|form|nav|table|button|input|h1|h2|aside|canvas|svg)\b/i.test(
-      t
-    )
-  )
-    return true;
-
-  if (/\bexport\s+default\s+function\b/i.test(s)) return true;
-
-  return false;
-}
-
-function getClientIp(req) {
-  const xff = (req.headers["x-forwarded-for"] || "").split(",")[0].trim();
+function sidFromReq(req) {
   return (
-    xff ||
-    req.ip ||
-    req.connection?.remoteAddress ||
-    req.socket?.remoteAddress ||
-    null
+    req.headers["x-session-id"] ||
+    req.headers["X-Session-Id"] ||
+    req.headers["x-sessionid"] ||
+    "no_sid"
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*                             Model Info / Reload                            */
-/* -------------------------------------------------------------------------- */
+function pickPrompt(body) {
+  return String(body?.prompt ?? body?.task ?? "").trim();
+}
 
-exports.modelInfo = async (_req, res) => {
+function pickNumber(x, def) {
+  const n = Number(x);
+  return Number.isFinite(n) ? n : def;
+}
+
+function safeString(x) {
+  if (typeof x === "string") return x;
+  if (x == null) return "";
   try {
-    const { data } = await axios.get(`${FLASK_BASE}/model-info`, {
-      timeout: 10000,
-    });
-    return res.json(data);
+    return JSON.stringify(x, null, 2);
+  } catch {
+    return String(x);
+  }
+}
+
+module.exports.modelInfo = async (_req, res) => {
+  try {
+    const r = await axios.get(INFO_URL, { timeout: 20000 });
+    return res.json(r.data);
   } catch (e) {
-    console.error("[DashboardGen] /model-info upstream error:", {
-      message: e.message,
-      code: e.code,
-      status: e.response?.status,
-      data: e.response?.data,
-    });
-    return res.status(502).json({
+    return res.status(500).json({
       ok: false,
-      error: e?.message || "dashboard_gen_api unreachable",
+      message: "model-info failed",
+      errorText: safeString(e?.response?.data || e?.message || e),
+      flask_base: FLASK_BASE,
     });
   }
 };
 
-exports.reload = async (req, res) => {
+module.exports.reloadModel = async (_req, res) => {
   try {
-    const body = req.body || {};
-    const { data } = await axios.post(`${FLASK_BASE}/reload`, body, {
-      timeout: 60000,
-    });
-    return res.json(data);
+    const r = await axios.post(RELOAD_URL, {}, { timeout: 120000 });
+    return res.json(r.data);
   } catch (e) {
-    console.error("[DashboardGen] /reload upstream error:", {
-      message: e.message,
-      code: e.code,
-      status: e.response?.status,
-      data: e.response?.data,
-    });
-    return res.status(502).json({
+    return res.status(500).json({
       ok: false,
-      error: e?.message || "dashboard_gen_api reload failed",
+      message: "reload failed",
+      errorText: safeString(e?.response?.data || e?.message || e),
+      flask_base: FLASK_BASE,
     });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                                   Ask API                                  */
-/* -------------------------------------------------------------------------- */
+module.exports.loraDebug = async (_req, res) => {
+  try {
+    const r = await axios.get(LORA_DEBUG_URL, { timeout: 20000 });
+    return res.json(r.data);
+  } catch (e) {
+    return res.status(500).json({
+      ok: false,
+      message: "lora debug failed",
+      errorText: safeString(e?.response?.data || e?.message || e),
+      flask_base: FLASK_BASE,
+    });
+  }
+};
 
-exports.ask = async (req, res) => {
-  const task = (req.body?.task || "").trim();
+module.exports.generateDashboard = async (req, res) => {
+  const sid = sidFromReq(req);
+  const prompt = pickPrompt(req.body);
 
-  const max_new_tokens = Number.isFinite(+req.body?.max_new_tokens)
-    ? +req.body.max_new_tokens
-    : 1024;
-
-  const use_retrieval = req.body?.use_retrieval !== false; // default true
-
-  if (!task) {
-    return res.status(400).json({ ok: false, message: "empty task" });
+  if (!prompt) {
+    return res.status(400).json({ ok: false, message: "prompt is required" });
   }
 
-  const askedAt = Date.now();
-  const authUser = req.user || null;
-  const ip = getClientIp(req);
-  const ipHash = DashboardGenInteraction.hashIp(ip);
+  // ✅ CPU-friendly defaults if caller doesn't set them
+  const max_new_tokens = Math.max(
+    256,
+    Math.min(1200, pickNumber(req.body?.max_new_tokens, 600))
+  );
+
+  const num_beams = Math.max(
+    1,
+    Math.min(4, pickNumber(req.body?.num_beams, 1))
+  );
+  const do_sample = Boolean(req.body?.do_sample ?? false);
+
+  const temperature = Math.max(
+    0,
+    Math.min(2, pickNumber(req.body?.temperature, 0.7))
+  );
+  const top_p = Math.max(0, Math.min(1, pickNumber(req.body?.top_p, 0.95)));
+
+  const payload = {
+    prompt,
+    max_new_tokens,
+    num_beams,
+    do_sample,
+    temperature,
+    top_p,
+  };
 
   try {
-    const { data } = await axios.post(
-      `${FLASK_BASE}/generate`,
-      { task, max_new_tokens, use_retrieval },
-      { timeout: 120000 }
+    const t0 = Date.now();
+
+    // ✅ accept 2xx–4xx so 422 doesn't throw
+    const r = await axios.post(GEN_URL, payload, {
+      timeout: 360000, // 6 minutes
+      validateStatus: (status) => status >= 200 && status < 500,
+    });
+
+    const ms = Date.now() - t0;
+    const d = r?.data || {};
+
+    const completion = safeString(
+      d?.completion || d?.cleaned_completion || d?.raw_completion || ""
     );
 
-    const code = data?.code ?? "";
-    const source = data?.source ?? "model";
-    const confidence =
-      typeof data?.confidence === "number" ? data.confidence : null;
+    const errorText = safeString(d?.error || d?.message || d?.errorText || "");
 
-    const htmlOk = looksLikeHtmlOrJsx(code);
-    const status = htmlOk || source === "fallback" ? "ok" : "low_confidence";
-
-    const respondedAt = Date.now();
-    const dt = Math.max(0, respondedAt - askedAt);
-
-    await DashboardGenInteraction.create({
-      user: authUser?._id || null,
-      isAuthenticated: !!authUser,
-      request: {
-        task,
-        language: "en",
-        tags: ["dashboard", "generator"],
-      },
-      response: {
-        code,
-        contentType: htmlOk || source === "fallback" ? "html" : "text",
-        status,
-        source,
-        confidence,
-        copyRatio: data?.copy_ratio || null,
-        model: data?.active && data.active.base_path ? "seq2seq" : undefined,
-        modelVersion: data?.active?.type || undefined,
-        latencyMs: dt,
-        suggestions: data?.suggestions || undefined,
-      },
-      askedAt: new Date(askedAt),
-      respondedAt: new Date(respondedAt),
-      responseTimeMs: dt,
-      meta: {
-        sessionId: req.headers["x-session-id"] || null,
-        channel: req.headers["x-channel"] || "widget",
-        pageUrl: req.headers["referer"] || req.headers["origin"] || null,
-        userAgent: req.headers["user-agent"] || null,
-        ipHash,
-      },
-    });
-
-    return res.json({
-      ok: true,
-      data: {
-        id: String(Date.now()),
-        code,
-        status,
-        confidence,
-        source,
-        latencyMs: dt,
-        suggestions: data?.suggestions || undefined,
-      },
-    });
-  } catch (e) {
-    const respondedAt = Date.now();
-    const dt = Math.max(0, respondedAt - askedAt);
-    const ipErr = getClientIp(req);
-    const ipHashErr = DashboardGenInteraction.hashIp(ipErr);
-
-    console.error("[DashboardGen] /ask upstream error:", {
-      message: e.message,
-      code: e.code,
-      status: e.response?.status,
-      data: e.response?.data,
-    });
-
+    // store if we got something
     try {
-      await DashboardGenInteraction.create({
-        user: authUser?._id || null,
-        isAuthenticated: !!authUser,
-        request: {
-          task,
-          language: "en",
-          tags: ["dashboard", "generator"],
-        },
-        response: {
-          code: "",
-          contentType: "text",
-          status: "error",
-          source: "api",
-          confidence: 0,
-          errorCode: "UPSTREAM_ERROR",
-          errorMessage: e?.message || "dashboard generator error",
-          latencyMs: dt,
-        },
-        askedAt: new Date(askedAt),
-        respondedAt: new Date(respondedAt),
-        responseTimeMs: dt,
-        meta: {
-          sessionId: req.headers["x-session-id"] || null,
-          channel: req.headers["x-channel"] || "widget",
-          pageUrl: req.headers["referer"] || req.headers["origin"] || null,
-          userAgent: req.headers["user-agent"] || null,
-          ipHash: ipHashErr,
-        },
+      if (DashboardGenInteraction?.create && completion.trim()) {
+        await DashboardGenInteraction.create({
+          sessionId: sid,
+          prompt,
+          completion,
+          meta: d.meta || {},
+          createdAt: new Date(),
+        });
+      }
+    } catch {}
+
+    // ✅ normalize response to frontend (ALWAYS)
+    if (d.ok === true) {
+      return res.json({
+        ok: true,
+        completion,
+        meta: { ...(d.meta || {}), latency_ms: ms, flask_status: r.status },
+        debug: d.debug || {},
       });
-    } catch (logErr) {
-      console.error("DashboardGenInteraction log error:", logErr);
     }
 
-    return res.status(502).json({
+    // Flask ok:false (often 422 output_not_jsx) → still return 200 to frontend
+    return res.json({
       ok: false,
-      message:
-        e?.message ||
-        e?.response?.data?.error ||
-        "Dashboard generator is unavailable.",
+      completion: completion || "⚠️ Model returned non-JSX output.",
+      errorText: errorText || "Model output did not look like JSX.",
+      meta: { ...(d.meta || {}), latency_ms: ms, flask_status: r.status },
+      debug: d.debug || {},
+      flask_response: d,
+    });
+  } catch (e) {
+    return res.status(500).json({
+      ok: false,
+      completion: "Dashboard generator unavailable. Please try again.",
+      errorText: safeString(e?.response?.data || e?.message || e),
+      flask_base: FLASK_BASE,
     });
   }
 };
 
-/* -------------------------------------------------------------------------- */
-/*                          Optional Read / List APIs                         */
-/* -------------------------------------------------------------------------- */
-
-exports.getById = async (req, res) => {
+module.exports.history = async (req, res) => {
+  const sid = sidFromReq(req);
   try {
-    const id = req.params.id;
-    const doc = await DashboardGenInteraction.findById(id).lean();
-    if (!doc) {
-      return res.status(404).json({ ok: false, message: "not found" });
-    }
-    return res.json({ ok: true, data: doc });
+    if (!DashboardGenInteraction?.find)
+      return res.json({ ok: true, history: [] });
+
+    const rows = await DashboardGenInteraction.find({ sessionId: sid })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .lean();
+
+    return res.json({ ok: true, history: rows });
   } catch (e) {
-    return res.status(500).json({ ok: false, message: e.message });
+    return res.status(500).json({
+      ok: false,
+      message: "history failed",
+      errorText: String(e?.message || e),
+    });
   }
 };
 
-exports.list = async (_req, res) => {
+module.exports.clearSession = async (req, res) => {
+  const sid = sidFromReq(req);
   try {
-    const rows = await DashboardGenInteraction.find({})
-      .sort({ createdAt: -1 })
-      .limit(50)
-      .lean();
-    return res.json({ ok: true, data: rows });
+    if (DashboardGenInteraction?.deleteMany) {
+      await DashboardGenInteraction.deleteMany({ sessionId: sid });
+    }
+    return res.json({ ok: true, cleared: true });
   } catch (e) {
-    return res.status(500).json({ ok: false, message: e.message });
+    return res.status(500).json({
+      ok: false,
+      message: "clear failed",
+      errorText: String(e?.message || e),
+    });
   }
 };

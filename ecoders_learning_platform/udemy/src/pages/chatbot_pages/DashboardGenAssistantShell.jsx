@@ -1,5 +1,3 @@
-// src/components/ai_components/DashboardGenAssistantShell.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -11,7 +9,6 @@ import {
   FiTrash2,
   FiLoader,
   FiCopy,
-  FiExternalLink,
   FiDownload,
   FiInfo,
   FiRefreshCw,
@@ -20,13 +17,22 @@ import {
 import globalBackendRoute from "../../config/Config";
 import { getAuthorizationHeader } from "../../components/auth_components/AuthManager";
 
-const API = globalBackendRoute; // e.g., http://localhost:3011
+const API = globalBackendRoute; // e.g. http://localhost:3011
+
+// ✅ Node endpoints (Node → Flask)
 const DASH_BASE = `${API}/api/dashboard-gen`;
-const ASK_DASH = `${DASH_BASE}/ask`;
+const ASK_DASH = `${DASH_BASE}/generate`;
 const INFO_DASH = `${DASH_BASE}/model-info`;
 const RELOAD_DASH = `${DASH_BASE}/reload`;
 
 const SID_KEY = "dash_gen_workspace_sid_v1";
+
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
+
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
   if (!sid) {
@@ -36,36 +42,38 @@ function ensureSessionId() {
   return sid;
 }
 
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+function lsKey(scope, suffix) {
+  return `dash_${scope}_${suffix}_v1`;
 }
 
-function looksLikeHtmlOrJsx(s) {
-  if (!s || typeof s !== "string") return false;
-  const t = s.trim().toLowerCase();
-  if (t.length < 12) return false;
-  if (t.includes("<!doctype html") || t.includes("<html")) return true;
-  if (t.includes("<head") && t.includes("<body")) return true;
+function looksLikeJSX(text) {
+  if (!text || typeof text !== "string") return false;
+  const t = text.trim();
+  if (t.length < 50) return false;
+  if (t.includes("export default function")) return true;
+  if (t.includes('from "react"') || t.includes("from 'react'")) return true;
   if (
-    /(<(div|section|header|footer|main|form|nav|table|button|input|h1|h2|aside|canvas|svg)\b)/i.test(
-      t
-    )
+    t.includes("return (") &&
+    (t.includes("className=") || t.includes("<div"))
   )
     return true;
-  if (/\bexport\s+default\s+function\b/i.test(s)) return true;
   return false;
 }
 
-function lsKey(scope, suffix) {
-  return `dash_${scope}_${suffix}_v1`;
+function safeString(x) {
+  if (typeof x === "string") return x;
+  if (x == null) return "";
+  try {
+    return JSON.stringify(x, null, 2);
+  } catch {
+    return String(x);
+  }
 }
 
 export default function DashboardGenAssistantShell({
   title = "Dashboard Generator",
   scope = "dashboard-gen",
-  placeholder = "Describe the dashboard you want (KPIs, charts, filters, roles)…",
+  placeholder = "Describe the dashboard…",
   starterPrompts = [],
 }) {
   const sid = useMemo(() => ensureSessionId(), []);
@@ -81,8 +89,6 @@ export default function DashboardGenAssistantShell({
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
   const [modelInfo, setModelInfo] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [lastCode, setLastCode] = useState("");
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -95,7 +101,7 @@ export default function DashboardGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `📊 Welcome to ${title}. Describe your KPIs, segments, and layout, and I’ll generate a dashboard UI (HTML/CSS/JS).`,
+        text: `📊 Welcome to ${title}. Describe the dashboard you want and I’ll generate React JSX (Tailwind + Recharts).`,
         time: Date.now(),
       },
     ];
@@ -125,7 +131,7 @@ export default function DashboardGenAssistantShell({
   useEffect(() => {
     (async () => {
       try {
-        const r = await axios.get(INFO_DASH, { headers, timeout: 10000 });
+        const r = await axios.get(INFO_DASH, { headers, timeout: 20000 });
         setModelInfo(r?.data || null);
       } catch {
         setModelInfo(null);
@@ -138,17 +144,12 @@ export default function DashboardGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `🆕 New ${title} session. What dashboard should I design?`,
+        text: `🆕 New ${title} session. What dashboard should I generate?`,
         time: Date.now(),
       },
     ]);
     setInput("");
     setError("");
-    setLastCode("");
-    setPreviewUrl((u) => {
-      if (u) URL.revokeObjectURL(u);
-      return "";
-    });
   }
 
   function addTopic(titleText) {
@@ -156,7 +157,7 @@ export default function DashboardGenAssistantShell({
     if (!t) return;
     const topic = {
       id: cryptoRandomId(8),
-      title: t.slice(0, 80),
+      title: t.slice(0, 90),
       at: Date.now(),
     };
     const next = [topic, ...topics].slice(0, 200);
@@ -175,22 +176,11 @@ export default function DashboardGenAssistantShell({
   }
 
   function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).catch(() => {});
+    navigator.clipboard.writeText(String(text || "")).catch(() => {});
   }
 
-  function openPreview(code) {
-    try {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      const blob = new Blob([code], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-    } catch (e) {
-      console.warn("preview failed:", e);
-    }
-  }
-
-  function downloadHtml(code, filename = "dashboard_snippet.html") {
-    const blob = new Blob([code], { type: "text/html" });
+  function downloadJSX(text, filename = "Dashboard.jsx") {
+    const blob = new Blob([String(text || "")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -203,17 +193,26 @@ export default function DashboardGenAssistantShell({
 
   async function reloadModel() {
     try {
-      await axios.post(RELOAD_DASH, {}, { headers, timeout: 60000 });
-      const info = await axios.get(INFO_DASH, { headers, timeout: 10000 });
+      setError("");
+      await axios.post(RELOAD_DASH, {}, { headers, timeout: 120000 });
+      const info = await axios.get(INFO_DASH, { headers, timeout: 20000 });
       setModelInfo(info?.data || null);
     } catch (e) {
-      setError(e?.response?.data?.message || "Reload failed");
+      setError(
+        safeString(
+          e?.response?.data?.errorText ||
+            e?.response?.data?.error ||
+            e?.message ||
+            "Reload failed"
+        )
+      );
     }
   }
 
   async function send() {
     const task = input.trim();
     if (!task || busy) return;
+
     setBusy(true);
     setError("");
 
@@ -227,62 +226,68 @@ export default function DashboardGenAssistantShell({
     setInput("");
     addTopic(task);
 
-    let code = "";
+    let jsx = "";
     try {
-      let payload = { task, max_new_tokens: 1024, use_retrieval: true };
-      let resp = await axios.post(ASK_DASH, payload, {
+      // ✅ CPU-friendly defaults: beams=1 (fast), fewer tokens
+      const payload = {
+        prompt: task,
+        max_new_tokens: 600,
+        num_beams: 1,
+        do_sample: false,
+      };
+
+      // ✅ increase frontend timeout so it doesn't die before Node/Flask responds
+      const resp = await axios.post(ASK_DASH, payload, {
         headers,
-        timeout: 120000,
+        timeout: 360000, // 6 minutes
       });
-      let data = resp?.data?.data || resp?.data || {};
 
-      const notHtml =
-        !data?.code ||
-        !looksLikeHtmlOrJsx(String(data.code)) ||
-        data?.status === "low_confidence" ||
-        /low confidence/i.test(String(data.code || ""));
+      const raw = resp?.data || {};
 
-      if (notHtml) {
-        payload = { task, max_new_tokens: 1400, use_retrieval: false };
-        resp = await axios.post(ASK_DASH, payload, {
-          headers,
-          timeout: 120000,
-        });
-        data = resp?.data?.data || resp?.data || {};
+      // ✅ completion ALWAYS rendered as string
+      jsx = safeString(raw.completion);
+
+      if (raw.ok === false) {
+        const msg = safeString(
+          raw.errorText || raw.message || raw.error || "Generation failed."
+        );
+        setError(msg);
+        if (!jsx.trim()) jsx = `⚠️ ${msg}`;
+      } else {
+        if (!looksLikeJSX(jsx)) {
+          setError("Output does not look like JSX (still showing it).");
+        }
       }
-
-      code = data?.code ?? "<!-- No code returned -->";
     } catch (e) {
-      setError(
-        e?.response?.data?.message || "Dashboard generator is unavailable."
+      const msg = safeString(
+        e?.response?.data?.errorText ||
+          e?.response?.data?.error ||
+          e?.message ||
+          "Dashboard generator unavailable."
       );
+      setError(msg);
+      jsx = `⚠️ ${msg}`;
     }
 
     const aiMsg = {
       id: "a_" + cryptoRandomId(8),
       role: "ai",
-      text: code || "No output.",
+      text: jsx || "No output.",
       time: Date.now(),
     };
     setMessages((m) => [...m, aiMsg]);
-    setLastCode(code || "");
-
-    if (looksLikeHtmlOrJsx(code)) {
-      openPreview(code);
-    }
-
     setBusy(false);
   }
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
-      {/* Top bar (mobile) */}
+      {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white sticky top-0 z-10">
         <button
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50"
           onClick={() => setSidebarOpen(true)}
         >
-          <FiMenu /> Topics
+          <FiMenu /> Prompts
         </button>
         <div className="text-base font-semibold">{title}</div>
         <button
@@ -305,10 +310,10 @@ export default function DashboardGenAssistantShell({
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
-            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4 overflow-y-auto`}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold">{title} Topics</div>
+              <div className="text-sm font-semibold">{title} Prompts</div>
               <button
                 onClick={newChat}
                 className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 bg-gray-50"
@@ -316,12 +321,14 @@ export default function DashboardGenAssistantShell({
                 <FiPlus /> New
               </button>
             </div>
+
             <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
-                  No topics yet. Describe a dashboard to start!
+                  No prompts yet. Start by describing a dashboard.
                 </li>
               )}
+
               {topics.map((t) => (
                 <li
                   key={t.id}
@@ -335,6 +342,7 @@ export default function DashboardGenAssistantShell({
                     <FiChevronRight className="shrink-0 text-gray-400" />
                     <span className="text-sm line-clamp-1">{t.title}</span>
                   </button>
+
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <FiClock />
                     {new Date(t.at).toLocaleTimeString()}
@@ -349,11 +357,12 @@ export default function DashboardGenAssistantShell({
                 </li>
               ))}
             </ul>
+
             {sidebarOpen && (
               <button
                 className="absolute top-3 right-3 text-white"
                 onClick={() => setSidebarOpen(false)}
-                aria-label="Close topics"
+                aria-label="Close prompts"
               >
                 ✕
               </button>
@@ -363,16 +372,17 @@ export default function DashboardGenAssistantShell({
 
         {/* Main */}
         <main className="min-h-[70vh] flex flex-col">
-          {/* Header (desktop) */}
+          {/* Desktop header */}
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+
               <button
                 onClick={async () => {
                   try {
                     const r = await axios.get(INFO_DASH, {
                       headers,
-                      timeout: 10000,
+                      timeout: 20000,
                     });
                     setModelInfo(r?.data || null);
                   } catch {
@@ -380,31 +390,24 @@ export default function DashboardGenAssistantShell({
                   }
                 }}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Fetch model info"
               >
                 <FiInfo /> Model info
               </button>
+
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload adapters / retrieval"
               >
                 <FiRefreshCw /> Reload
               </button>
-              {modelInfo && (
+
+              {modelInfo?.model?.adapter_name && (
                 <div className="text-[11px] text-gray-600">
-                  device: <code>{String(modelInfo.device)}</code>
-                  {Array.isArray(modelInfo.adapters) && (
-                    <>
-                      {" "}
-                      · adapters: <code>{modelInfo.adapters.length}</code>
-                    </>
-                  )}
-                  {" · allowCDN: "}
-                  <code>{String(modelInfo.allow_cdn)}</code>
+                  adapter: <code>{String(modelInfo.model.adapter_name)}</code>
                 </div>
               )}
             </div>
+
             <button
               onClick={newChat}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
@@ -423,25 +426,26 @@ export default function DashboardGenAssistantShell({
                 <div
                   key={m.id}
                   className={`mb-5 ${
-                    m.role === "user" ? "text-right" : "text-left"
+                    m.role === "user"
+                      ? "flex justify-end"
+                      : "flex justify-start"
                   }`}
                 >
                   <div
-                    className={`inline-block rounded-2xl px-4 py-3 text-sm shadow ${
+                    className={`rounded-2xl px-4 py-3 shadow ${
                       m.role === "user"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-50 text-gray-900 border"
+                        ? "bg-indigo-600 text-white w-full md:w-[70%]"
+                        : "bg-gray-50 text-gray-900 border w-full"
                     }`}
                   >
-                    {m.role === "ai" && /<\/?[a-z][\s\S]*>/i.test(m.text) ? (
-                      <pre className="whitespace-pre-wrap break-words text-xs">
-                        {m.text}
-                      </pre>
-                    ) : (
-                      <div className="whitespace-pre-wrap break-words">
-                        {m.text}
-                      </div>
-                    )}
+                    <div
+                      className={`whitespace-pre-wrap break-words text-xs md:text-sm ${
+                        m.role === "ai" ? "font-mono" : ""
+                      }`}
+                    >
+                      {String(m.text || "")}
+                    </div>
+
                     <div
                       className={`text-[10px] mt-1 ${
                         m.role === "user"
@@ -451,87 +455,38 @@ export default function DashboardGenAssistantShell({
                     >
                       {new Date(m.time).toLocaleTimeString()}
                     </div>
-                  </div>
 
-                  {m.role === "ai" && m.text && (
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <button
-                        onClick={() => copyToClipboard(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Copy code"
-                      >
-                        <FiCopy /> Copy
-                      </button>
-                      <button
-                        onClick={() =>
-                          looksLikeHtmlOrJsx(m.text) && openPreview(m.text)
-                        }
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Open preview below"
-                        disabled={!looksLikeHtmlOrJsx(m.text)}
-                      >
-                        <FiExternalLink /> Preview
-                      </button>
-                      <button
-                        onClick={() => downloadHtml(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Download .html"
-                      >
-                        <FiDownload /> Download
-                      </button>
-                    </div>
-                  )}
+                    {m.role === "ai" && m.text && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <button
+                          onClick={() => copyToClipboard(m.text)}
+                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                        >
+                          <FiCopy /> Copy
+                        </button>
+                        <button
+                          onClick={() => downloadJSX(m.text, "Dashboard.jsx")}
+                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                        >
+                          <FiDownload /> Download JSX
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <FiLoader className="animate-spin" /> generating…
+                  <FiLoader className="animate-spin" /> generating dashboard…
                 </div>
               )}
+
               {error && (
                 <div className="mt-2 text-xs text-red-600">{error}</div>
               )}
             </div>
           </div>
-
-          {/* Live preview */}
-          {previewUrl && (
-            <div className="border-t bg-gray-50">
-              <div className="mx-auto max-w-5xl px-4 md:px-6 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-gray-600">
-                    Live Dashboard Preview
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() =>
-                        window.open(previewUrl, "_blank", "noopener,noreferrer")
-                      }
-                      className="inline-flex items-center gap-1 border rounded px-2 py-1 text-xs bg-white hover:bg-gray-50"
-                    >
-                      <FiExternalLink /> Open in new tab
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (lastCode) openPreview(lastCode);
-                      }}
-                      className="inline-flex items-center gap-1 border rounded px-2 py-1 text-xs bg-white hover:bg-gray-50"
-                    >
-                      <FiRefreshCw /> Refresh
-                    </button>
-                  </div>
-                </div>
-                <div className="rounded-lg overflow-hidden border bg-white">
-                  <iframe
-                    title="dashboard-gen-preview"
-                    src={previewUrl}
-                    className="w-full h-[480px]"
-                    sandbox="allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Starter prompts */}
           {starterPrompts?.length > 0 && (
@@ -550,7 +505,7 @@ export default function DashboardGenAssistantShell({
             </div>
           )}
 
-          {/* Composer */}
+          {/* Input */}
           <div className="border-t bg-white px-4 md:px-6 py-3">
             <div className="mx-auto max-w-4xl">
               <div className="flex items-end gap-2">
