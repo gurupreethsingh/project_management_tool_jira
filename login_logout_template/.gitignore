@@ -1,0 +1,115 @@
+#####################################
+# OS / Editor
+#####################################
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+#####################################
+# Node / NPM / Yarn
+#####################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+#####################################
+# Environment variables (CRITICAL)
+#####################################
+.env
+.env.*
+!.env.example
+
+#####################################
+# Build outputs
+#####################################
+# React
+client/build/
+client/dist/
+
+# Node
+backend/dist/
+backend/build/
+
+#####################################
+# Logs
+#####################################
+logs/
+*.log
+
+#####################################
+# Coverage / Testing
+#####################################
+coverage/
+.nyc_output/
+
+#####################################
+# MongoDB / Database
+#####################################
+data/
+*.mongodb
+*.db
+dump/
+backup/
+
+#####################################
+# Uploads / Images / Media (BIG FILES)
+#####################################
+uploads/
+public/uploads/
+assets/uploads/
+
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
+*.svg
+*.bmp
+*.tiff
+*.ico
+*.mp4
+*.mp3
+*.avi
+*.mov
+*.zip
+*.rar
+*.7z
+*.tar
+*.gz
+*.pdf
+
+#####################################
+# Cache / Temp
+#####################################
+.cache/
+.tmp/
+temp/
+
+#####################################
+# React / Next / Vite cache
+#####################################
+client/.cache/
+client/.next/
+client/.vite/
+
+#####################################
+# TypeScript
+#####################################
+*.tsbuildinfo
+
+#####################################
+# Large ML / Data files (extra safety)
+#####################################
+*.h5
+*.pt
+*.pth
+*.onnx
+*.pkl
+*.joblib
+*.npy
+*.npz
