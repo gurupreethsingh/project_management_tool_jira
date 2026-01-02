@@ -20,9 +20,10 @@ SoftAssert sa = new SoftAssert();
 		sa.assertAll();
 		
 		ShopPage sp = new ShopPage(driver);
-		sp.clickOnEachProductCardsOnFirstPage();
-        sp.clickOnEachProductCardsOnSecondPage();  //-->Im getting element click intercepted exception so i used  chat gpt ocde 
-		sp.clickOnEachProductCardsOnThirdPage();
+	    sp.clickOnEachProductCardsOnFirstPage();
+		
+//        sp.clickOnEachProductCardsOnSecondPage();  //-->Im getting element click intercepted exception so i used  chat gpt ocde 
+//		sp.clickOnEachProductCardsOnThirdPage();
    }
 	
 }

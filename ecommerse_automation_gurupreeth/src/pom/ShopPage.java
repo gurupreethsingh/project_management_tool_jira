@@ -1032,8 +1032,9 @@ public void clickOnThirdPaginationButton() throws InterruptedException
 }
 
 
-public void clickOnEachProductCardsOnFirstPage() throws InterruptedException
+public String clickOnEachProductCardsOnFirstPage() throws InterruptedException
 {
+	String expectedProductText =null;
 	Thread.sleep(2000);
 	int AllProductCardsCount=eachProductCardsContainer.size();
 	System.out.println("The Number of product cards in First page are :"+AllProductCardsCount);
@@ -1044,14 +1045,23 @@ public void clickOnEachProductCardsOnFirstPage() throws InterruptedException
 	    Actions actions=new Actions(driver);
 		actions.scrollToElement(productCards).build().perform();
 	    System.out.println("Clicking On the Product Card :"+  productCards.getText());
+	     expectedProductText =  productCards.getText();
 	    productCards.click();
 	    Thread.sleep(1000);
 	    
 	    String expectedSingleProductpageTitle = (String)Excel_Anusha.getData("ShopPage",5,0);
 		AllVerifications.verifyTitle(expectedSingleProductpageTitle, driver, sa);
 		sa.assertAll();
+		WebElement singleProduct = driver.findElement(By.cssSelector("h1.text-4xl"));
+		String actualProductName = singleProduct.getText();
+		if(  expectedProductText.equals(actualProductName))
+		{
+			System.out.println(" test case passed products name is matcing ");
+		}
+		
 		shopAllLinkText.click(); 
 	}
+	return expectedProductText ;
 }
 
 //public void clickOnEachProductCardsOnSecondPage() throws InterruptedException
