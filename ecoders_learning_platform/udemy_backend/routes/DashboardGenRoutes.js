@@ -1,14 +1,14 @@
-// api/routes/DashboardGenRoutes.js
-const router = require("express").Router();
-const ctrl = require("../controllers/DashboardGenController");
+const express = require("express");
+const router = express.Router();
 
-router.get("/model-info", ctrl.modelInfo);
-router.post("/reload", ctrl.reloadModel);
-router.get("/lora-debug", ctrl.loraDebug);
+const {
+  generateDashboard,
+  getModelInfo,
+  reloadModel,
+} = require("../controllers/DashboardGenController");
 
-router.post("/generate", ctrl.generateDashboard);
-
-router.get("/history", ctrl.history);
-router.delete("/clear", ctrl.clearSession);
+router.post("/generate", generateDashboard);
+router.get("/model-info", getModelInfo);
+router.post("/reload", reloadModel);
 
 module.exports = router;

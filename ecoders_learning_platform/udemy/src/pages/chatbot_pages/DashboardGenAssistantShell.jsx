@@ -1,4 +1,6 @@
+// src/pages/chatbot_pages/DashboardGenAssistantShell.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom/client";
 import axios from "axios";
 import {
   FiSend,
@@ -46,20 +48,6 @@ function lsKey(scope, suffix) {
   return `dash_${scope}_${suffix}_v1`;
 }
 
-function looksLikeJSX(text) {
-  if (!text || typeof text !== "string") return false;
-  const t = text.trim();
-  if (t.length < 50) return false;
-  if (t.includes("export default function")) return true;
-  if (t.includes('from "react"') || t.includes("from 'react'")) return true;
-  if (
-    t.includes("return (") &&
-    (t.includes("className=") || t.includes("<div"))
-  )
-    return true;
-  return false;
-}
-
 function safeString(x) {
   if (typeof x === "string") return x;
   if (x == null) return "";
@@ -68,6 +56,289 @@ function safeString(x) {
   } catch {
     return String(x);
   }
+}
+
+/** Remove ``` fences if model ever returns them */
+function stripFences(text) {
+  const t = String(text || "").trim();
+  return t
+    .replace(/```[a-zA-Z]*\s*/g, "")
+    .replace(/\s*```$/g, "")
+    .trim();
+}
+
+/**
+ * Extract first React component-like block so preview doesn't die
+ * when model appends junk or starts a second JSX section.
+ */
+function extractFirstComponentBlock(raw) {
+  let code = stripFences(raw);
+
+  // Remove leaked system text lines
+  code = code
+    .split("\n")
+    .filter((ln) => {
+      const s = ln.trim();
+      if (!s) return true;
+      if (s.startsWith("You are a code generator")) return false;
+      if (s.startsWith("Return ONLY valid")) return false;
+      if (s.startsWith("No markdown")) return false;
+      if (s.startsWith("No explanation")) return false;
+      if (s.startsWith("USER REQUEST:")) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+
+  // If it contains "JSX:" markers, keep only content after the LAST marker
+  const last = code.lastIndexOf("JSX:");
+  if (last !== -1) {
+    code = code.slice(last + "JSX:".length).trim();
+  }
+
+  // If model repeats second JSX block, cut it
+  const second = code.indexOf("\nJSX:");
+  if (second !== -1) code = code.slice(0, second).trim();
+
+  // Remove import lines (preview runs in isolated context)
+  code = code.replace(/^\s*import\s+[\s\S]*?;\s*$/gm, "").trim();
+
+  // Try to start from export default / function / const
+  const starters = ["export default function", "function ", "const "];
+  let startIndex = -1;
+  for (const s of starters) {
+    const i = code.indexOf(s);
+    if (i !== -1) startIndex = startIndex === -1 ? i : Math.min(startIndex, i);
+  }
+  if (startIndex > 0) code = code.slice(startIndex).trim();
+
+  // Now brace-balance to cut incomplete tails
+  const firstBrace = code.indexOf("{");
+  if (firstBrace === -1) return code;
+
+  let out = "";
+  let depth = 0;
+  let inStr = false;
+  let strCh = "";
+  let esc = false;
+
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    out += ch;
+
+    if (esc) {
+      esc = false;
+      continue;
+    }
+
+    if (inStr) {
+      if (ch === "\\") esc = true;
+      else if (ch === strCh) inStr = false;
+      continue;
+    }
+
+    if (ch === "'" || ch === '"' || ch === "`") {
+      inStr = true;
+      strCh = ch;
+      continue;
+    }
+
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+
+    if (i >= firstBrace && depth === 0) break;
+  }
+
+  return out.trim();
+}
+
+/**
+ * Normalize model output to something previewable:
+ * - Remove "export default"
+ * - Ensure we end with: window.App = ComponentName
+ */
+function normalizeForPreview(codeRaw) {
+  let code = extractFirstComponentBlock(codeRaw);
+
+  // remove leading BOM / weird chars
+  code = code.replace(/^\uFEFF/, "").trim();
+
+  // export default function X -> function X
+  code = code.replace(/export\s+default\s+function\s+/g, "function ");
+
+  // remove trailing export default X;
+  code = code.replace(/export\s+default\s+([A-Za-z0-9_]+)\s*;\s*$/gm, "");
+
+  // remove any remaining "export default"
+  code = code.replace(/export\s+default\s+/g, "");
+
+  // detect component name
+  let compName = null;
+  const m1 = code.match(/function\s+([A-Za-z0-9_]+)\s*\(/);
+  if (m1?.[1]) compName = m1[1];
+  if (!compName) {
+    const m2 = code.match(/const\s+([A-Za-z0-9_]+)\s*=\s*\(/);
+    if (m2?.[1]) compName = m2[1];
+  }
+  if (!compName) compName = "App";
+
+  if (!/window\.App\s*=/.test(code)) {
+    code += `\n\nwindow.App = ${compName};\n`;
+  }
+
+  return code;
+}
+
+function looksLikeJSX(text) {
+  const t = stripFences(text);
+  if (t.length < 60) return false;
+  if (t.includes("<div") && t.includes("return")) return true;
+  if (
+    t.includes("className=") &&
+    (t.includes("function") || t.includes("const"))
+  )
+    return true;
+  if (t.includes("export default") && t.includes("return")) return true;
+  return false;
+}
+
+function isProbablyValidDashboardJSX(text) {
+  const t = stripFences(text);
+  if (/\bdef\b|\blambda\b|\bprint\s*\(/i.test(t)) return false;
+  if (
+    t.includes("return (") &&
+    (t.includes("<div") || t.includes("className="))
+  )
+    return true;
+  return false;
+}
+
+function ensureScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = Array.from(document.scripts).find((s) => s.src === src);
+    if (existing && existing.getAttribute("data-loaded") === "1") {
+      resolve(true);
+      return;
+    }
+
+    const s = existing || document.createElement("script");
+    if (!existing) {
+      s.src = src;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+
+    s.onload = () => {
+      s.setAttribute("data-loaded", "1");
+      resolve(true);
+    };
+    s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+  });
+}
+
+async function ensureBabelLoaded() {
+  if (window.Babel && window.Babel.transform) return true;
+  await ensureScript("https://unpkg.com/@babel/standalone/babel.min.js");
+  if (!window.Babel || !window.Babel.transform) {
+    throw new Error("Babel Standalone did not initialize.");
+  }
+  return true;
+}
+
+async function ensureRechartsLoaded() {
+  if (window.Recharts && window.Recharts.ResponsiveContainer) return true;
+  try {
+    await ensureScript("https://unpkg.com/recharts/umd/Recharts.min.js");
+  } catch {
+    return false;
+  }
+  return !!(window.Recharts && window.Recharts.ResponsiveContainer);
+}
+
+function JSXPreview({ jsxCode }) {
+  const mountRef = useRef(null);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setStatus("");
+      const code = normalizeForPreview(jsxCode);
+
+      if (!mountRef.current) return;
+      mountRef.current.innerHTML = "";
+      if (!code.trim()) return;
+
+      try {
+        await ensureBabelLoaded();
+        await ensureRechartsLoaded();
+
+        if (cancelled) return;
+
+        // expose React/ReactDOM to generated code
+        window.__REACT__ = React;
+        window.__REACTDOM__ = ReactDOM;
+
+        const wrapped = `
+          (function(){
+            const React = window.__REACT__;
+            const ReactDOM = window.__REACTDOM__;
+            const Recharts = window.Recharts || {};
+            ${code}
+          })();
+        `;
+
+        const compiled = window.Babel.transform(wrapped, {
+          presets: ["react"],
+        }).code;
+
+        window.App = null;
+
+        // eslint-disable-next-line no-new-func
+        new Function(compiled)();
+
+        const App = window.App;
+        if (!App) throw new Error("Preview failed: window.App missing.");
+
+        const rootEl = document.createElement("div");
+        mountRef.current.appendChild(rootEl);
+
+        const root = ReactDOM.createRoot(rootEl);
+        root.render(React.createElement(App));
+
+        setStatus("✅ Preview rendered");
+      } catch (e) {
+        const msg = e?.message || String(e);
+        setStatus(`❌ ${msg}`);
+
+        if (mountRef.current) {
+          const safe = msg
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+          mountRef.current.innerHTML = `<div style="padding:12px;border:1px solid #fecdd3;background:#fff1f2;color:#991b1b;border-radius:14px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;font-size:12px;white-space:pre-wrap;">${safe}</div>`;
+        }
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [jsxCode]);
+
+  return (
+    <div className="rounded-2xl border bg-white overflow-hidden mt-4">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <div className="text-sm font-semibold text-gray-900">Preview</div>
+        <div className="text-xs text-gray-500">{status}</div>
+      </div>
+      <div className="p-4">
+        <div ref={mountRef} />
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardGenAssistantShell({
@@ -101,7 +372,7 @@ export default function DashboardGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `📊 Welcome to ${title}. Describe the dashboard you want and I’ll generate React JSX (Tailwind + Recharts).`,
+        text: `📊 Welcome to ${title}. Describe the dashboard you want and I’ll generate React JSX.`,
         time: Date.now(),
       },
     ];
@@ -173,6 +444,7 @@ export default function DashboardGenAssistantShell({
 
   function pickTopic(t) {
     setInput(t.title);
+    if (sidebarOpen) setSidebarOpen(false);
   }
 
   function copyToClipboard(text) {
@@ -194,7 +466,7 @@ export default function DashboardGenAssistantShell({
   async function reloadModel() {
     try {
       setError("");
-      await axios.post(RELOAD_DASH, {}, { headers, timeout: 120000 });
+      await axios.post(RELOAD_DASH, {}, { headers, timeout: 180000 });
       const info = await axios.get(INFO_DASH, { headers, timeout: 20000 });
       setModelInfo(info?.data || null);
     } catch (e) {
@@ -228,23 +500,19 @@ export default function DashboardGenAssistantShell({
 
     let jsx = "";
     try {
-      // ✅ CPU-friendly defaults: beams=1 (fast), fewer tokens
+      // ✅ THIS IS WHERE YOU PUT IT
       const payload = {
         prompt: task,
-        max_new_tokens: 600,
-        num_beams: 1,
-        do_sample: false,
+        max_new_tokens: 1400,
+        max_time_s: 240, // matches backend safety cap
       };
 
-      // ✅ increase frontend timeout so it doesn't die before Node/Flask responds
       const resp = await axios.post(ASK_DASH, payload, {
         headers,
-        timeout: 360000, // 6 minutes
+        timeout: 420000,
       });
 
       const raw = resp?.data || {};
-
-      // ✅ completion ALWAYS rendered as string
       jsx = safeString(raw.completion);
 
       if (raw.ok === false) {
@@ -254,9 +522,8 @@ export default function DashboardGenAssistantShell({
         setError(msg);
         if (!jsx.trim()) jsx = `⚠️ ${msg}`;
       } else {
-        if (!looksLikeJSX(jsx)) {
-          setError("Output does not look like JSX (still showing it).");
-        }
+        if (!looksLikeJSX(jsx))
+          setError("Output may not be JSX (still showing).");
       }
     } catch (e) {
       const msg = safeString(
@@ -401,9 +668,9 @@ export default function DashboardGenAssistantShell({
                 <FiRefreshCw /> Reload
               </button>
 
-              {modelInfo?.model?.adapter_name && (
+              {modelInfo?.model_dir && (
                 <div className="text-[11px] text-gray-600">
-                  adapter: <code>{String(modelInfo.model.adapter_name)}</code>
+                  model: <code>{String(modelInfo.model_dir)}</code>
                 </div>
               )}
             </div>
@@ -457,20 +724,26 @@ export default function DashboardGenAssistantShell({
                     </div>
 
                     {m.role === "ai" && m.text && (
-                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
-                        <button
-                          onClick={() => copyToClipboard(m.text)}
-                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
-                        >
-                          <FiCopy /> Copy
-                        </button>
-                        <button
-                          onClick={() => downloadJSX(m.text, "Dashboard.jsx")}
-                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
-                        >
-                          <FiDownload /> Download JSX
-                        </button>
-                      </div>
+                      <>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <button
+                            onClick={() => copyToClipboard(m.text)}
+                            className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                          >
+                            <FiCopy /> Copy
+                          </button>
+                          <button
+                            onClick={() => downloadJSX(m.text, "Dashboard.jsx")}
+                            className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                          >
+                            <FiDownload /> Download JSX
+                          </button>
+                        </div>
+
+                        {isProbablyValidDashboardJSX(m.text) && (
+                          <JSXPreview jsxCode={m.text} />
+                        )}
+                      </>
                     )}
                   </div>
                 </div>

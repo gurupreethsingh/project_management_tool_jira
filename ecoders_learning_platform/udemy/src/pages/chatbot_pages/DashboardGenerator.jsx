@@ -1,4 +1,3 @@
-// src/pages/ai_pages/DashboardGenerator.jsx
 import React from "react";
 import DashboardGenAssistantShell from "../chatbot_pages/DashboardGenAssistantShell";
 

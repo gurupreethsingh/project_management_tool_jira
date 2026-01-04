@@ -1,34 +1,8 @@
+// controllers/DashboardGenController.js
 const axios = require("axios");
-const DashboardGenInteraction =
-  require("../models/DashboardGenInteractionModel")?.DashboardGenInteraction ||
-  require("../models/DashboardGenInteractionModel");
+const DashboardGen = require("../models/DashboardGenModel");
 
-const FLASK_BASE =
-  process.env.DASH_FLASK_BASE || "http://127.0.0.1:5067/dash/v1";
-
-const GEN_URL = `${FLASK_BASE}/generate`;
-const INFO_URL = `${FLASK_BASE}/model-info`;
-const RELOAD_URL = `${FLASK_BASE}/reload`;
-const LORA_DEBUG_URL = `${FLASK_BASE}/debug/lora`;
-
-function sidFromReq(req) {
-  return (
-    req.headers["x-session-id"] ||
-    req.headers["X-Session-Id"] ||
-    req.headers["x-sessionid"] ||
-    "no_sid"
-  );
-}
-
-function pickPrompt(body) {
-  return String(body?.prompt ?? body?.task ?? "").trim();
-}
-
-function pickNumber(x, def) {
-  const n = Number(x);
-  return Number.isFinite(n) ? n : def;
-}
-
+// Helpers
 function safeString(x) {
   if (typeof x === "string") return x;
   if (x == null) return "";
@@ -39,176 +13,258 @@ function safeString(x) {
   }
 }
 
-module.exports.modelInfo = async (_req, res) => {
-  try {
-    const r = await axios.get(INFO_URL, { timeout: 20000 });
-    return res.json(r.data);
-  } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      message: "model-info failed",
-      errorText: safeString(e?.response?.data || e?.message || e),
-      flask_base: FLASK_BASE,
-    });
+function num(v, fallback) {
+  const n = Number(v);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function buildClientTimeoutMs() {
+  const s = num(process.env.DASH_REQUEST_TIMEOUT_S, 900);
+  return Math.max(10, s) * 1000;
+}
+
+function baseUrl() {
+  return String(process.env.DASH_FLASK_BASE || "").replace(/\/+$/, "");
+}
+
+function requireBaseUrl() {
+  const b = baseUrl();
+  if (!b) {
+    const e = new Error(
+      "DASH_FLASK_BASE is missing in .env (example: http://127.0.0.1:5077)"
+    );
+    e.statusCode = 500;
+    throw e;
   }
-};
+  return b;
+}
 
-module.exports.reloadModel = async (_req, res) => {
-  try {
-    const r = await axios.post(RELOAD_URL, {}, { timeout: 120000 });
-    return res.json(r.data);
-  } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      message: "reload failed",
-      errorText: safeString(e?.response?.data || e?.message || e),
-      flask_base: FLASK_BASE,
-    });
-  }
-};
+function authUserId(req) {
+  return req.user?._id || null;
+}
 
-module.exports.loraDebug = async (_req, res) => {
-  try {
-    const r = await axios.get(LORA_DEBUG_URL, { timeout: 20000 });
-    return res.json(r.data);
-  } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      message: "lora debug failed",
-      errorText: safeString(e?.response?.data || e?.message || e),
-      flask_base: FLASK_BASE,
-    });
-  }
-};
+function sessionId(req) {
+  return String(req.headers["x-session-id"] || "");
+}
 
-module.exports.generateDashboard = async (req, res) => {
-  const sid = sidFromReq(req);
-  const prompt = pickPrompt(req.body);
+function channel(req) {
+  return String(req.headers["x-channel"] || "api");
+}
 
+/**
+ * POST /api/dashboard-gen/generate
+ * Body: { prompt, max_new_tokens, max_time_s }
+ */
+async function generateDashboard(req, res) {
+  const started = Date.now();
+  const b = requireBaseUrl();
+
+  const prompt = String(req.body?.prompt || "").trim();
   if (!prompt) {
-    return res.status(400).json({ ok: false, message: "prompt is required" });
+    return res.status(400).json({
+      ok: false,
+      error: "prompt is required",
+      errorText: "prompt is required",
+    });
   }
 
-  // ✅ CPU-friendly defaults if caller doesn't set them
-  const max_new_tokens = Math.max(
-    256,
-    Math.min(1200, pickNumber(req.body?.max_new_tokens, 600))
-  );
-
-  const num_beams = Math.max(
-    1,
-    Math.min(4, pickNumber(req.body?.num_beams, 1))
-  );
-  const do_sample = Boolean(req.body?.do_sample ?? false);
-
-  const temperature = Math.max(
-    0,
-    Math.min(2, pickNumber(req.body?.temperature, 0.7))
-  );
-  const top_p = Math.max(0, Math.min(1, pickNumber(req.body?.top_p, 0.95)));
+  const maxGenDefault = num(process.env.DASH_GEN_MAX, 1400);
+  const maxTimeDefault = num(process.env.DASH_MAX_TIME_S, 240);
 
   const payload = {
     prompt,
-    max_new_tokens,
-    num_beams,
-    do_sample,
-    temperature,
-    top_p,
+    max_new_tokens: num(req.body?.max_new_tokens, maxGenDefault),
+    max_time_s: num(req.body?.max_time_s, maxTimeDefault),
   };
 
-  try {
-    const t0 = Date.now();
+  const timeoutMs = buildClientTimeoutMs();
+  const url = `${b}/generate`;
 
-    // ✅ accept 2xx–4xx so 422 doesn't throw
-    const r = await axios.post(GEN_URL, payload, {
-      timeout: 360000, // 6 minutes
-      validateStatus: (status) => status >= 200 && status < 500,
+  let savedDoc = null;
+
+  try {
+    const resp = await axios.post(url, payload, {
+      timeout: timeoutMs,
+      headers: {
+        "Content-Type": "application/json",
+        "X-Session-Id": sessionId(req),
+        "X-Channel": channel(req),
+      },
+      validateStatus: () => true,
     });
 
-    const ms = Date.now() - t0;
-    const d = r?.data || {};
+    const data = resp?.data || {};
+    const ok =
+      resp.status >= 200 &&
+      resp.status < 300 &&
+      (data.ok === true || data.ok == null);
 
-    const completion = safeString(
-      d?.completion || d?.cleaned_completion || d?.raw_completion || ""
-    );
+    const completion = safeString(data.completion);
 
-    const errorText = safeString(d?.error || d?.message || d?.errorText || "");
-
-    // store if we got something
+    // Save to Mongo (best-effort)
     try {
-      if (DashboardGenInteraction?.create && completion.trim()) {
-        await DashboardGenInteraction.create({
-          sessionId: sid,
-          prompt,
-          completion,
-          meta: d.meta || {},
-          createdAt: new Date(),
-        });
-      }
-    } catch {}
-
-    // ✅ normalize response to frontend (ALWAYS)
-    if (d.ok === true) {
-      return res.json({
-        ok: true,
+      savedDoc = await DashboardGen.create({
+        user: authUserId(req),
+        sessionId: sessionId(req),
+        channel: channel(req),
+        prompt,
+        params: {
+          max_new_tokens: payload.max_new_tokens,
+          max_time_s: payload.max_time_s,
+        },
         completion,
-        meta: { ...(d.meta || {}), latency_ms: ms, flask_status: r.status },
-        debug: d.debug || {},
+        ok,
+        error: ok ? "" : safeString(data.error || data.errorText || "Failed"),
+        modelInfo: data.modelInfo || data.info || {},
+        latencyMs: Date.now() - started,
+      });
+    } catch {
+      // ignore DB errors
+    }
+
+    if (!ok) {
+      return res.status(502).json({
+        ok: false,
+        status: resp.status,
+        error: safeString(data.error || data.errorText || "Generation failed"),
+        errorText: safeString(
+          data.errorText || data.error || "Generation failed"
+        ),
+        completion,
       });
     }
 
-    // Flask ok:false (often 422 output_not_jsx) → still return 200 to frontend
     return res.json({
-      ok: false,
-      completion: completion || "⚠️ Model returned non-JSX output.",
-      errorText: errorText || "Model output did not look like JSX.",
-      meta: { ...(d.meta || {}), latency_ms: ms, flask_status: r.status },
-      debug: d.debug || {},
-      flask_response: d,
+      ok: true,
+      completion,
+      savedId: savedDoc?._id || null,
+      latencyMs: Date.now() - started,
+      modelInfo: data.modelInfo || {},
     });
   } catch (e) {
-    return res.status(500).json({
+    const msg = safeString(
+      e?.response?.data?.errorText ||
+        e?.response?.data?.error ||
+        e?.message ||
+        "Dashboard generator unavailable"
+    );
+
+    // Save fail to Mongo (best-effort)
+    try {
+      await DashboardGen.create({
+        user: authUserId(req),
+        sessionId: sessionId(req),
+        channel: channel(req),
+        prompt,
+        params: {
+          max_new_tokens: payload.max_new_tokens,
+          max_time_s: payload.max_time_s,
+        },
+        completion: "",
+        ok: false,
+        error: msg,
+        modelInfo: {},
+        latencyMs: Date.now() - started,
+      });
+    } catch {}
+
+    return res.status(503).json({
       ok: false,
-      completion: "Dashboard generator unavailable. Please try again.",
-      errorText: safeString(e?.response?.data || e?.message || e),
-      flask_base: FLASK_BASE,
+      error: msg,
+      errorText: msg,
     });
   }
-};
+}
 
-module.exports.history = async (req, res) => {
-  const sid = sidFromReq(req);
+/**
+ * GET /api/dashboard-gen/model-info
+ */
+async function getModelInfo(req, res) {
+  const b = requireBaseUrl();
+  const timeoutMs = Math.min(buildClientTimeoutMs(), 20000);
+  const url = `${b}/model-info`;
+
   try {
-    if (!DashboardGenInteraction?.find)
-      return res.json({ ok: true, history: [] });
-
-    const rows = await DashboardGenInteraction.find({ sessionId: sid })
-      .sort({ createdAt: -1 })
-      .limit(200)
-      .lean();
-
-    return res.json({ ok: true, history: rows });
-  } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      message: "history failed",
-      errorText: String(e?.message || e),
+    const resp = await axios.get(url, {
+      timeout: timeoutMs,
+      headers: {
+        "X-Session-Id": sessionId(req),
+        "X-Channel": channel(req),
+      },
+      validateStatus: () => true,
     });
-  }
-};
 
-module.exports.clearSession = async (req, res) => {
-  const sid = sidFromReq(req);
-  try {
-    if (DashboardGenInteraction?.deleteMany) {
-      await DashboardGenInteraction.deleteMany({ sessionId: sid });
+    const data = resp?.data || {};
+    const ok =
+      resp.status >= 200 &&
+      resp.status < 300 &&
+      (data.ok === true || data.ok == null);
+
+    if (!ok) {
+      return res.status(502).json({
+        ok: false,
+        status: resp.status,
+        error: safeString(data.errorText || data.error || "model-info failed"),
+        errorText: safeString(
+          data.errorText || data.error || "model-info failed"
+        ),
+      });
     }
-    return res.json({ ok: true, cleared: true });
+
+    return res.json(data);
   } catch (e) {
-    return res.status(500).json({
-      ok: false,
-      message: "clear failed",
-      errorText: String(e?.message || e),
-    });
+    const msg = safeString(e?.message || "model-info unavailable");
+    return res.status(503).json({ ok: false, error: msg, errorText: msg });
   }
+}
+
+/**
+ * POST /api/dashboard-gen/reload
+ */
+async function reloadModel(req, res) {
+  const b = requireBaseUrl();
+  const timeoutMs = Math.max(60000, buildClientTimeoutMs());
+  const url = `${b}/reload`;
+
+  try {
+    const resp = await axios.post(
+      url,
+      {},
+      {
+        timeout: timeoutMs,
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId(req),
+          "X-Channel": channel(req),
+        },
+        validateStatus: () => true,
+      }
+    );
+
+    const data = resp?.data || {};
+    const ok =
+      resp.status >= 200 &&
+      resp.status < 300 &&
+      (data.ok === true || data.ok == null);
+
+    if (!ok) {
+      return res.status(502).json({
+        ok: false,
+        status: resp.status,
+        error: safeString(data.errorText || data.error || "reload failed"),
+        errorText: safeString(data.errorText || data.error || "reload failed"),
+      });
+    }
+
+    return res.json(data);
+  } catch (e) {
+    const msg = safeString(e?.message || "reload unavailable");
+    return res.status(503).json({ ok: false, error: msg, errorText: msg });
+  }
+}
+
+module.exports = {
+  generateDashboard,
+  getModelInfo,
+  reloadModel,
 };
