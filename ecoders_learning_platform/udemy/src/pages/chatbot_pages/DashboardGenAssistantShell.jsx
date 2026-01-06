@@ -1,6 +1,6 @@
-// src/components/ai_components/DashboardGenAssistantShell.jsx
-
+// src/pages/chatbot_pages/DashboardGenAssistantShell.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import ReactDOM from "react-dom/client";
 import axios from "axios";
 import {
   FiSend,
@@ -11,7 +11,6 @@ import {
   FiTrash2,
   FiLoader,
   FiCopy,
-  FiExternalLink,
   FiDownload,
   FiInfo,
   FiRefreshCw,
@@ -20,13 +19,21 @@ import {
 import globalBackendRoute from "../../config/Config";
 import { getAuthorizationHeader } from "../../components/auth_components/AuthManager";
 
-const API = globalBackendRoute; // e.g., http://localhost:3011
+const API = globalBackendRoute;
+
 const DASH_BASE = `${API}/api/dashboard-gen`;
-const ASK_DASH = `${DASH_BASE}/ask`;
+const ASK_DASH = `${DASH_BASE}/generate`;
 const INFO_DASH = `${DASH_BASE}/model-info`;
 const RELOAD_DASH = `${DASH_BASE}/reload`;
 
 const SID_KEY = "dash_gen_workspace_sid_v1";
+
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
+
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
   if (!sid) {
@@ -36,37 +43,290 @@ function ensureSessionId() {
   return sid;
 }
 
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+function lsKey(scope, suffix) {
+  return `dash_${scope}_${suffix}_v1`;
 }
 
-function looksLikeHtmlOrJsx(s) {
-  if (!s || typeof s !== "string") return false;
-  const t = s.trim().toLowerCase();
-  if (t.length < 12) return false;
-  if (t.includes("<!doctype html") || t.includes("<html")) return true;
-  if (t.includes("<head") && t.includes("<body")) return true;
-  if (
-    /(<(div|section|header|footer|main|form|nav|table|button|input|h1|h2|aside|canvas|svg)\b)/i.test(
-      t
-    )
-  )
+function safeString(x) {
+  if (typeof x === "string") return x;
+  if (x == null) return "";
+  try {
+    return JSON.stringify(x, null, 2);
+  } catch {
+    return String(x);
+  }
+}
+
+function stripFences(text) {
+  const t = String(text || "").trim();
+  return t
+    .replace(/```[a-zA-Z]*\s*/g, "")
+    .replace(/\s*```$/g, "")
+    .trim();
+}
+
+function looksLikeJSX(text) {
+  const t = stripFences(text);
+  if (t.length < 60) return false;
+  if (t.includes("return") && (t.includes("<div") || t.includes("className=")))
     return true;
-  if (/\bexport\s+default\s+function\b/i.test(s)) return true;
+  if (t.includes("export default") && t.includes("return")) return true;
   return false;
 }
 
-function lsKey(scope, suffix) {
-  return `dash_${scope}_${suffix}_v1`;
+function sanitizeMultilineClassName(code) {
+  const s = safeString(code);
+
+  const dq = s.replace(/className="([\s\S]*?)"/g, (_m, inner) => {
+    const fixed = String(inner).replace(/\s+/g, " ").trim();
+    return `className="${fixed}"`;
+  });
+
+  const sq = dq.replace(/className='([\s\S]*?)'/g, (_m, inner) => {
+    const fixed = String(inner).replace(/\s+/g, " ").trim();
+    return `className='${fixed}'`;
+  });
+
+  return sq;
+}
+
+// ✅ Fix: style={height:"..", ...} -> style={{ height:"..", ... }}
+function sanitizeBadStyleObject(code) {
+  let s = safeString(code);
+  s = s.replace(/style=\{(\s*[^{}][\s\S]*?)\}/g, (m, inner) => {
+    if (inner.trim().startsWith("{")) return m;
+    return `style={{ ${inner.trim()} }}`;
+  });
+  return s;
+}
+
+function sanitizeAll(code) {
+  let s = safeString(code);
+  s = sanitizeMultilineClassName(s);
+  s = sanitizeBadStyleObject(s);
+  return s;
+}
+
+function extractFirstComponentBlock(raw) {
+  let code = stripFences(raw);
+
+  code = code
+    .split("\n")
+    .filter((ln) => {
+      const s = ln.trim();
+      if (!s) return true;
+      if (s.startsWith("You are a code generator")) return false;
+      if (s.startsWith("Return ONLY valid")) return false;
+      if (s.startsWith("No markdown")) return false;
+      if (s.startsWith("No explanation")) return false;
+      if (s.startsWith("USER REQUEST:")) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+
+  const last = code.lastIndexOf("JSX:");
+  if (last !== -1) code = code.slice(last + "JSX:".length).trim();
+
+  code = code.replace(/^\s*import\s+[\s\S]*?;\s*$/gm, "").trim();
+
+  const starters = ["export default function", "function ", "const "];
+  let startIndex = -1;
+  for (const s of starters) {
+    const i = code.indexOf(s);
+    if (i !== -1) startIndex = startIndex === -1 ? i : Math.min(startIndex, i);
+  }
+  if (startIndex > 0) code = code.slice(startIndex).trim();
+
+  const firstBrace = code.indexOf("{");
+  if (firstBrace === -1) return code;
+
+  let out = "";
+  let depth = 0;
+  let inStr = false;
+  let strCh = "";
+  let esc = false;
+
+  for (let i = 0; i < code.length; i++) {
+    const ch = code[i];
+    out += ch;
+
+    if (esc) {
+      esc = false;
+      continue;
+    }
+    if (inStr) {
+      if (ch === "\\") esc = true;
+      else if (ch === strCh) inStr = false;
+      continue;
+    }
+    if (ch === "'" || ch === '"' || ch === "`") {
+      inStr = true;
+      strCh = ch;
+      continue;
+    }
+    if (ch === "{") depth++;
+    if (ch === "}") depth--;
+    if (i >= firstBrace && depth === 0) break;
+  }
+
+  return out.trim();
+}
+
+function normalizeForPreview(codeRaw) {
+  let code = extractFirstComponentBlock(codeRaw);
+  code = code.replace(/^\uFEFF/, "").trim();
+
+  code = code.replace(/export\s+default\s+function\s+/g, "function ");
+  code = code.replace(/export\s+default\s+([A-Za-z0-9_]+)\s*;\s*$/gm, "");
+  code = code.replace(/export\s+default\s+/g, "");
+
+  let compName = null;
+  const m1 = code.match(/function\s+([A-Za-z0-9_]+)\s*\(/);
+  if (m1?.[1]) compName = m1[1];
+  if (!compName) {
+    const m2 = code.match(/const\s+([A-Za-z0-9_]+)\s*=\s*\(/);
+    if (m2?.[1]) compName = m2[1];
+  }
+  if (!compName) compName = "App";
+
+  if (!/window\.App\s*=/.test(code)) {
+    code += `\n\nwindow.App = ${compName};\n`;
+  }
+
+  return code;
+}
+
+function isProbablyValidDashboardJSX(text) {
+  const t = stripFences(text);
+  if (!looksLikeJSX(t)) return false;
+  if (/\bdef\b|\blambda\b|\bprint\s*\(/i.test(t)) return false;
+  return true;
+}
+
+function ensureScript(src) {
+  return new Promise((resolve, reject) => {
+    const existing = Array.from(document.scripts).find((s) => s.src === src);
+    if (existing && existing.getAttribute("data-loaded") === "1") {
+      resolve(true);
+      return;
+    }
+
+    const s = existing || document.createElement("script");
+    if (!existing) {
+      s.src = src;
+      s.async = true;
+      document.head.appendChild(s);
+    }
+
+    s.onload = () => {
+      s.setAttribute("data-loaded", "1");
+      resolve(true);
+    };
+    s.onerror = () => reject(new Error(`Failed to load script: ${src}`));
+  });
+}
+
+async function ensureBabelLoaded() {
+  if (window.Babel && window.Babel.transform) return true;
+  await ensureScript("https://unpkg.com/@babel/standalone/babel.min.js");
+  if (!window.Babel || !window.Babel.transform) {
+    throw new Error("Babel Standalone did not initialize.");
+  }
+  return true;
+}
+
+function JSXPreview({ jsxCode }) {
+  const mountRef = useRef(null);
+  const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      setStatus("");
+
+      const cleaned = sanitizeAll(jsxCode);
+      const code = normalizeForPreview(cleaned);
+
+      if (!mountRef.current) return;
+      mountRef.current.innerHTML = "";
+      if (!code.trim()) return;
+
+      try {
+        await ensureBabelLoaded();
+
+        if (cancelled) return;
+
+        window.__REACT__ = React;
+        window.__REACTDOM__ = ReactDOM;
+
+        const wrapped = `
+          (function(){
+            const React = window.__REACT__;
+            const ReactDOM = window.__REACTDOM__;
+            ${code}
+          })();
+        `;
+
+        const compiled = window.Babel.transform(wrapped, {
+          presets: ["react"],
+        }).code;
+
+        window.App = null;
+        // eslint-disable-next-line no-new-func
+        new Function(compiled)();
+
+        const App = window.App;
+        if (!App) throw new Error("Preview failed: window.App missing.");
+
+        const rootEl = document.createElement("div");
+        mountRef.current.appendChild(rootEl);
+
+        const root = ReactDOM.createRoot(rootEl);
+        root.render(React.createElement(App));
+
+        setStatus("✅ Preview rendered");
+      } catch (e) {
+        const msg = e?.message || String(e);
+        setStatus(`❌ ${msg}`);
+
+        if (mountRef.current) {
+          const safe = msg
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;");
+          mountRef.current.innerHTML = `<div style="padding:12px;border:1px solid #fecdd3;background:#fff1f2;color:#991b1b;border-radius:14px;font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;font-size:12px;white-space:pre-wrap;">${safe}</div>`;
+        }
+      }
+    }
+
+    run();
+    return () => {
+      cancelled = true;
+    };
+  }, [jsxCode]);
+
+  return (
+    <div className="rounded-2xl border bg-white overflow-hidden mt-4">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <div className="text-sm font-semibold text-gray-900">Preview</div>
+        <div className="text-xs text-gray-500">{status}</div>
+      </div>
+      <div className="p-4">
+        <div ref={mountRef} />
+      </div>
+    </div>
+  );
 }
 
 export default function DashboardGenAssistantShell({
   title = "Dashboard Generator",
   scope = "dashboard-gen",
-  placeholder = "Describe the dashboard you want (KPIs, charts, filters, roles)…",
+  placeholder = "Describe the dashboard…",
   starterPrompts = [],
+  defaultMaxNewTokens = 700,
+  defaultMaxTimeS = 60,
 }) {
   const sid = useMemo(() => ensureSessionId(), []);
   const headers = useMemo(() => {
@@ -81,8 +341,9 @@ export default function DashboardGenAssistantShell({
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
   const [modelInfo, setModelInfo] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState("");
-  const [lastCode, setLastCode] = useState("");
+
+  const [maxNewTokens, setMaxNewTokens] = useState(defaultMaxNewTokens);
+  const [maxTimeS, setMaxTimeS] = useState(defaultMaxTimeS);
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -95,7 +356,7 @@ export default function DashboardGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `📊 Welcome to ${title}. Describe your KPIs, segments, and layout, and I’ll generate a dashboard UI (HTML/CSS/JS).`,
+        text: `📊 Welcome to ${title}. Describe the dashboard you want and I’ll generate React JSX.`,
         time: Date.now(),
       },
     ];
@@ -125,7 +386,7 @@ export default function DashboardGenAssistantShell({
   useEffect(() => {
     (async () => {
       try {
-        const r = await axios.get(INFO_DASH, { headers, timeout: 10000 });
+        const r = await axios.get(INFO_DASH, { headers, timeout: 20000 });
         setModelInfo(r?.data || null);
       } catch {
         setModelInfo(null);
@@ -138,17 +399,12 @@ export default function DashboardGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `🆕 New ${title} session. What dashboard should I design?`,
+        text: `🆕 New ${title} session. What dashboard should I generate?`,
         time: Date.now(),
       },
     ]);
     setInput("");
     setError("");
-    setLastCode("");
-    setPreviewUrl((u) => {
-      if (u) URL.revokeObjectURL(u);
-      return "";
-    });
   }
 
   function addTopic(titleText) {
@@ -156,7 +412,7 @@ export default function DashboardGenAssistantShell({
     if (!t) return;
     const topic = {
       id: cryptoRandomId(8),
-      title: t.slice(0, 80),
+      title: t.slice(0, 90),
       at: Date.now(),
     };
     const next = [topic, ...topics].slice(0, 200);
@@ -172,25 +428,15 @@ export default function DashboardGenAssistantShell({
 
   function pickTopic(t) {
     setInput(t.title);
+    if (sidebarOpen) setSidebarOpen(false);
   }
 
   function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).catch(() => {});
+    navigator.clipboard.writeText(String(text || "")).catch(() => {});
   }
 
-  function openPreview(code) {
-    try {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-      const blob = new Blob([code], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      setPreviewUrl(url);
-    } catch (e) {
-      console.warn("preview failed:", e);
-    }
-  }
-
-  function downloadHtml(code, filename = "dashboard_snippet.html") {
-    const blob = new Blob([code], { type: "text/html" });
+  function downloadJSX(text, filename = "Dashboard.jsx") {
+    const blob = new Blob([String(text || "")], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -203,17 +449,26 @@ export default function DashboardGenAssistantShell({
 
   async function reloadModel() {
     try {
-      await axios.post(RELOAD_DASH, {}, { headers, timeout: 60000 });
-      const info = await axios.get(INFO_DASH, { headers, timeout: 10000 });
+      setError("");
+      await axios.post(RELOAD_DASH, {}, { headers, timeout: 120000 });
+      const info = await axios.get(INFO_DASH, { headers, timeout: 20000 });
       setModelInfo(info?.data || null);
     } catch (e) {
-      setError(e?.response?.data?.message || "Reload failed");
+      setError(
+        safeString(
+          e?.response?.data?.errorText ||
+            e?.response?.data?.error ||
+            e?.message ||
+            "Reload failed"
+        )
+      );
     }
   }
 
   async function send() {
     const task = input.trim();
     if (!task || busy) return;
+
     setBusy(true);
     setError("");
 
@@ -227,62 +482,68 @@ export default function DashboardGenAssistantShell({
     setInput("");
     addTopic(task);
 
-    let code = "";
+    let jsx = "";
+    let metaLine = "";
+
     try {
-      let payload = { task, max_new_tokens: 1024, use_retrieval: true };
-      let resp = await axios.post(ASK_DASH, payload, {
+      const payload = {
+        prompt: task,
+        max_new_tokens: Number(maxNewTokens) || defaultMaxNewTokens,
+        max_time_s: Number(maxTimeS) || defaultMaxTimeS,
+      };
+
+      const timeoutMs = Math.min(180000, (payload.max_time_s + 20) * 1000);
+
+      const resp = await axios.post(ASK_DASH, payload, {
         headers,
-        timeout: 120000,
+        timeout: timeoutMs,
       });
-      let data = resp?.data?.data || resp?.data || {};
 
-      const notHtml =
-        !data?.code ||
-        !looksLikeHtmlOrJsx(String(data.code)) ||
-        data?.status === "low_confidence" ||
-        /low confidence/i.test(String(data.code || ""));
+      const raw = resp?.data || {};
+      jsx = sanitizeAll(safeString(raw.completion));
 
-      if (notHtml) {
-        payload = { task, max_new_tokens: 1400, use_retrieval: false };
-        resp = await axios.post(ASK_DASH, payload, {
-          headers,
-          timeout: 120000,
-        });
-        data = resp?.data?.data || resp?.data || {};
+      if (raw.latencyMs != null)
+        metaLine = `\n\n// meta: latencyMs=${raw.latencyMs}`;
+
+      if (raw.ok === false) {
+        const msg = safeString(
+          raw.errorText || raw.message || raw.error || "Generation failed."
+        );
+        setError(msg);
+        if (!jsx.trim()) jsx = `⚠️ ${msg}`;
+      } else {
+        if (!looksLikeJSX(jsx))
+          setError("Output may not be JSX (still showing).");
       }
-
-      code = data?.code ?? "<!-- No code returned -->";
     } catch (e) {
-      setError(
-        e?.response?.data?.message || "Dashboard generator is unavailable."
+      const msg = safeString(
+        e?.response?.data?.errorText ||
+          e?.response?.data?.error ||
+          e?.message ||
+          "Dashboard generator unavailable."
       );
+      setError(msg);
+      jsx = `⚠️ ${msg}`;
     }
 
     const aiMsg = {
       id: "a_" + cryptoRandomId(8),
       role: "ai",
-      text: code || "No output.",
+      text: (jsx || "No output.") + metaLine,
       time: Date.now(),
     };
     setMessages((m) => [...m, aiMsg]);
-    setLastCode(code || "");
-
-    if (looksLikeHtmlOrJsx(code)) {
-      openPreview(code);
-    }
-
     setBusy(false);
   }
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
-      {/* Top bar (mobile) */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white sticky top-0 z-10">
         <button
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50"
           onClick={() => setSidebarOpen(true)}
         >
-          <FiMenu /> Topics
+          <FiMenu /> Prompts
         </button>
         <div className="text-base font-semibold">{title}</div>
         <button
@@ -294,7 +555,6 @@ export default function DashboardGenAssistantShell({
       </div>
 
       <div className="mx-auto max-w-7xl grid md:grid-cols-[280px,1fr]">
-        {/* Sidebar */}
         <aside
           className={`${
             sidebarOpen
@@ -305,10 +565,10 @@ export default function DashboardGenAssistantShell({
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
-            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4 overflow-y-auto`}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold">{title} Topics</div>
+              <div className="text-sm font-semibold">{title} Prompts</div>
               <button
                 onClick={newChat}
                 className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 bg-gray-50"
@@ -316,12 +576,47 @@ export default function DashboardGenAssistantShell({
                 <FiPlus /> New
               </button>
             </div>
-            <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
+
+            <div className="mb-3 rounded-xl border bg-white p-3">
+              <div className="text-xs font-semibold text-gray-900">
+                Generation settings
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-[11px] text-gray-600">
+                  Max tokens
+                  <input
+                    className="mt-1 w-full rounded-lg border px-2 py-1 text-sm"
+                    type="number"
+                    min={64}
+                    max={1100}
+                    value={maxNewTokens}
+                    onChange={(e) => setMaxNewTokens(e.target.value)}
+                  />
+                </label>
+                <label className="text-[11px] text-gray-600">
+                  Max time (s)
+                  <input
+                    className="mt-1 w-full rounded-lg border px-2 py-1 text-sm"
+                    type="number"
+                    min={5}
+                    max={90}
+                    value={maxTimeS}
+                    onChange={(e) => setMaxTimeS(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="mt-2 text-[10px] text-gray-500">
+                Recommended: 700 tokens / 60s for fast results.
+              </div>
+            </div>
+
+            <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-22rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
-                  No topics yet. Describe a dashboard to start!
+                  No prompts yet. Start by describing a dashboard.
                 </li>
               )}
+
               {topics.map((t) => (
                 <li
                   key={t.id}
@@ -349,11 +644,12 @@ export default function DashboardGenAssistantShell({
                 </li>
               ))}
             </ul>
+
             {sidebarOpen && (
               <button
                 className="absolute top-3 right-3 text-white"
                 onClick={() => setSidebarOpen(false)}
-                aria-label="Close topics"
+                aria-label="Close prompts"
               >
                 ✕
               </button>
@@ -361,18 +657,17 @@ export default function DashboardGenAssistantShell({
           </div>
         </aside>
 
-        {/* Main */}
         <main className="min-h-[70vh] flex flex-col">
-          {/* Header (desktop) */}
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+
               <button
                 onClick={async () => {
                   try {
                     const r = await axios.get(INFO_DASH, {
                       headers,
-                      timeout: 10000,
+                      timeout: 20000,
                     });
                     setModelInfo(r?.data || null);
                   } catch {
@@ -380,31 +675,24 @@ export default function DashboardGenAssistantShell({
                   }
                 }}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Fetch model info"
               >
                 <FiInfo /> Model info
               </button>
+
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload adapters / retrieval"
               >
                 <FiRefreshCw /> Reload
               </button>
-              {modelInfo && (
+
+              {modelInfo?.dataset_csv && (
                 <div className="text-[11px] text-gray-600">
-                  device: <code>{String(modelInfo.device)}</code>
-                  {Array.isArray(modelInfo.adapters) && (
-                    <>
-                      {" "}
-                      · adapters: <code>{modelInfo.adapters.length}</code>
-                    </>
-                  )}
-                  {" · allowCDN: "}
-                  <code>{String(modelInfo.allow_cdn)}</code>
+                  dataset: <code>{String(modelInfo.dataset_csv)}</code>
                 </div>
               )}
             </div>
+
             <button
               onClick={newChat}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
@@ -413,7 +701,6 @@ export default function DashboardGenAssistantShell({
             </button>
           </div>
 
-          {/* Messages */}
           <div
             ref={listRef}
             className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-white"
@@ -423,25 +710,26 @@ export default function DashboardGenAssistantShell({
                 <div
                   key={m.id}
                   className={`mb-5 ${
-                    m.role === "user" ? "text-right" : "text-left"
+                    m.role === "user"
+                      ? "flex justify-end"
+                      : "flex justify-start"
                   }`}
                 >
                   <div
-                    className={`inline-block rounded-2xl px-4 py-3 text-sm shadow ${
+                    className={`rounded-2xl px-4 py-3 shadow ${
                       m.role === "user"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-50 text-gray-900 border"
+                        ? "bg-indigo-600 text-white w-full md:w-[70%]"
+                        : "bg-gray-50 text-gray-900 border w-full"
                     }`}
                   >
-                    {m.role === "ai" && /<\/?[a-z][\s\S]*>/i.test(m.text) ? (
-                      <pre className="whitespace-pre-wrap break-words text-xs">
-                        {m.text}
-                      </pre>
-                    ) : (
-                      <div className="whitespace-pre-wrap break-words">
-                        {m.text}
-                      </div>
-                    )}
+                    <div
+                      className={`whitespace-pre-wrap break-words text-xs md:text-sm ${
+                        m.role === "ai" ? "font-mono" : ""
+                      }`}
+                    >
+                      {String(m.text || "")}
+                    </div>
+
                     <div
                       className={`text-[10px] mt-1 ${
                         m.role === "user"
@@ -451,89 +739,45 @@ export default function DashboardGenAssistantShell({
                     >
                       {new Date(m.time).toLocaleTimeString()}
                     </div>
-                  </div>
 
-                  {m.role === "ai" && m.text && (
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <button
-                        onClick={() => copyToClipboard(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Copy code"
-                      >
-                        <FiCopy /> Copy
-                      </button>
-                      <button
-                        onClick={() =>
-                          looksLikeHtmlOrJsx(m.text) && openPreview(m.text)
-                        }
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Open preview below"
-                        disabled={!looksLikeHtmlOrJsx(m.text)}
-                      >
-                        <FiExternalLink /> Preview
-                      </button>
-                      <button
-                        onClick={() => downloadHtml(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Download .html"
-                      >
-                        <FiDownload /> Download
-                      </button>
-                    </div>
-                  )}
+                    {m.role === "ai" && m.text && (
+                      <>
+                        <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                          <button
+                            onClick={() => copyToClipboard(m.text)}
+                            className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                          >
+                            <FiCopy /> Copy
+                          </button>
+                          <button
+                            onClick={() => downloadJSX(m.text, "Dashboard.jsx")}
+                            className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                          >
+                            <FiDownload /> Download JSX
+                          </button>
+                        </div>
+
+                        {isProbablyValidDashboardJSX(m.text) && (
+                          <JSXPreview jsxCode={m.text} />
+                        )}
+                      </>
+                    )}
+                  </div>
                 </div>
               ))}
+
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <FiLoader className="animate-spin" /> generating…
+                  <FiLoader className="animate-spin" /> generating dashboard…
                 </div>
               )}
+
               {error && (
                 <div className="mt-2 text-xs text-red-600">{error}</div>
               )}
             </div>
           </div>
 
-          {/* Live preview */}
-          {previewUrl && (
-            <div className="border-t bg-gray-50">
-              <div className="mx-auto max-w-5xl px-4 md:px-6 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <div className="text-xs text-gray-600">
-                    Live Dashboard Preview
-                  </div>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() =>
-                        window.open(previewUrl, "_blank", "noopener,noreferrer")
-                      }
-                      className="inline-flex items-center gap-1 border rounded px-2 py-1 text-xs bg-white hover:bg-gray-50"
-                    >
-                      <FiExternalLink /> Open in new tab
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (lastCode) openPreview(lastCode);
-                      }}
-                      className="inline-flex items-center gap-1 border rounded px-2 py-1 text-xs bg-white hover:bg-gray-50"
-                    >
-                      <FiRefreshCw /> Refresh
-                    </button>
-                  </div>
-                </div>
-                <div className="rounded-lg overflow-hidden border bg-white">
-                  <iframe
-                    title="dashboard-gen-preview"
-                    src={previewUrl}
-                    className="w-full h-[480px]"
-                    sandbox="allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Starter prompts */}
           {starterPrompts?.length > 0 && (
             <div className="px-4 md:px-6">
               <div className="mx-auto max-w-4xl flex flex-wrap gap-2 pb-2">
@@ -550,7 +794,6 @@ export default function DashboardGenAssistantShell({
             </div>
           )}
 
-          {/* Composer */}
           <div className="border-t bg-white px-4 md:px-6 py-3">
             <div className="mx-auto max-w-4xl">
               <div className="flex items-end gap-2">

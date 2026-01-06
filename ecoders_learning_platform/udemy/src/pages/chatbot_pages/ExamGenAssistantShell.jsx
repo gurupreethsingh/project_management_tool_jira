@@ -1,5 +1,3 @@
-// src/components/ai_components/ExamGenAssistantShell.jsx
-
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -22,11 +20,16 @@ import { getAuthorizationHeader } from "../../components/auth_components/AuthMan
 const API = globalBackendRoute; // e.g., http://localhost:3011
 const EXAM_BASE = `${API}/api/exam-gen`;
 const ASK_EXAM = `${EXAM_BASE}/generate`;
-// Optional future endpoints if you add Node wrappers:
-// const INFO_EXAM = `${EXAM_BASE}/model-info`;
-// const RELOAD_EXAM = `${EXAM_BASE}/reload`;
+const INFO_EXAM = `${EXAM_BASE}/model-info`;
+const RELOAD_EXAM = `${EXAM_BASE}/reload`;
 
 const SID_KEY = "exam_gen_workspace_sid_v1";
+
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
 
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
@@ -37,27 +40,41 @@ function ensureSessionId() {
   return sid;
 }
 
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
-}
-
 function lsKey(scope, suffix) {
   return `exam_${scope}_${suffix}_v1`;
 }
 
-// Simple heuristic to recognise exam-paper-ish text
 function looksLikeExamPaper(text) {
   if (!text || typeof text !== "string") return false;
   const t = text.trim();
-  if (t.length < 40) return false;
+  if (t.length < 80) return false;
   if (/max marks\s*:\s*\d+/i.test(t)) return true;
   if (/end semester examination/i.test(t)) return true;
   if (/section\s*-\s*[abc]/i.test(t)) return true;
   if (/\bQ[1-5]\./.test(t)) return true;
   return false;
 }
+
+const PRESETS = [
+  {
+    title: "Python ESA 100M (5×20) A/B/C",
+    task_type: "python_exam_paper",
+    prompt:
+      "Generate a university style Python exam: 100 marks, 5x20, sections A/B/C, only 2/4/5 mark sub-questions.",
+  },
+  {
+    title: "DBMS ESA 100M (5×20) A/B/C",
+    task_type: "dbms_exam_paper",
+    prompt:
+      "Generate an End Semester Examination paper for DBMS: Max Marks 100, 5 compulsory questions each 20 marks. Use SECTION-A/B/C with 2/4/5 marks sub-questions. Include SQL, normalization, ER, transactions, indexing topics. Include header + instructions.",
+  },
+  {
+    title: "DSA ESA 100M (5×20) A/B/C",
+    task_type: "ds_exam_paper",
+    prompt:
+      "Generate an End Semester Examination paper for Data Structures: Max Marks 100, 5 compulsory questions each 20 marks. Use SECTION-A/B/C with 2/4/5 marks sub-questions. Include stacks, queues, trees, graphs, hashing. Include header + instructions.",
+  },
+];
 
 export default function ExamGenAssistantShell({
   title = "Exam Question Paper Generator",
@@ -77,7 +94,10 @@ export default function ExamGenAssistantShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
-  const [modelInfo, setModelInfo] = useState(null); // if you wire /model-info later
+  const [modelInfo, setModelInfo] = useState(null);
+
+  const [taskType, setTaskType] = useState("python_exam_paper");
+  const [forceAdapter, setForceAdapter] = useState("");
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -90,7 +110,7 @@ export default function ExamGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `📄 Welcome to ${title}. Describe the subject, marks pattern (e.g., 100 marks, 5x20 with 2/4/5 marks sub-questions), and I’ll generate a full exam paper.`,
+        text: `📄 Welcome to ${title}. Describe the subject, marks pattern (e.g., 100 marks, 5×20 with 2/4/5 marks sub-questions), and I’ll generate a full exam paper.`,
         time: Date.now(),
       },
     ];
@@ -117,16 +137,11 @@ export default function ExamGenAssistantShell({
     );
   }, [messages, scope]);
 
-  // If later you create /api/exam-gen/model-info that proxies to Flask:
   useEffect(() => {
     (async () => {
       try {
-        // const r = await axios.get(`${EXAM_BASE}/model-info`, {
-        //   headers,
-        //   timeout: 10000,
-        // });
-        // setModelInfo(r?.data || null);
-        setModelInfo(null); // placeholder: avoid 404 until backend is ready
+        const r = await axios.get(INFO_EXAM, { headers, timeout: 15000 });
+        setModelInfo(r?.data || null);
       } catch {
         setModelInfo(null);
       }
@@ -185,24 +200,27 @@ export default function ExamGenAssistantShell({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // If you build backend /reload, wire here
   async function reloadModel() {
     try {
-      // await axios.post(`${EXAM_BASE}/reload`, {}, { headers, timeout: 60000 });
-      // const info = await axios.get(`${EXAM_BASE}/model-info`, {
-      //   headers,
-      //   timeout: 10000,
-      // });
-      // setModelInfo(info?.data || null);
-      setError("Reload endpoint for exam-gen is not configured yet.");
+      setError("");
+      await axios.post(RELOAD_EXAM, {}, { headers, timeout: 60000 });
+      const info = await axios.get(INFO_EXAM, { headers, timeout: 15000 });
+      setModelInfo(info?.data || null);
     } catch (e) {
-      setError(e?.response?.data?.message || "Reload failed");
+      setError(e?.response?.data?.error || e?.message || "Reload failed");
     }
+  }
+
+  function applyPreset(p) {
+    setInput(p.prompt);
+    setTaskType(p.task_type);
+    setForceAdapter("");
   }
 
   async function send() {
     const task = input.trim();
     if (!task || busy) return;
+
     setBusy(true);
     setError("");
 
@@ -212,44 +230,76 @@ export default function ExamGenAssistantShell({
       text: task,
       time: Date.now(),
     };
+
     setMessages((m) => [...m, userMsg]);
     setInput("");
     addTopic(task);
 
     let paper = "";
+    let adapterUsed = "";
+
     try {
       const payload = {
         task,
         max_new_tokens: 1400,
         use_retrieval: true,
+        meta: {
+          task_type: taskType,
+          force_adapter: forceAdapter?.trim() ? forceAdapter.trim() : undefined,
+          sessionId: sid,
+          pageUrl: window.location?.href,
+          userAgent: navigator.userAgent,
+        },
       };
+
       const resp = await axios.post(ASK_EXAM, payload, {
         headers,
         timeout: 120000,
       });
-      const data = resp?.data?.data || resp?.data || {};
-      paper = data.paper ?? "No paper returned.";
+
+      const raw = resp?.data || {};
+      paper = raw.paper ?? "No paper returned.";
+
+      adapterUsed =
+        raw?.meta?.adapter_used || raw?.modelInfo?.active_adapter || "";
+
+      if (raw.ok === false) {
+        setError(raw.error || "Generation failed.");
+      } else if (!looksLikeExamPaper(paper)) {
+        setError(
+          "Output doesn't look like a full exam paper. (Model likely returned poor text; fallback may apply.)"
+        );
+      }
     } catch (e) {
       setError(
-        e?.response?.data?.message || "Exam generator is unavailable right now."
+        e?.response?.data?.error ||
+          e?.message ||
+          "Exam generator is unavailable right now."
       );
       paper = "Exam generator is unavailable. Please try again later.";
     }
 
+    const aiText = paper
+      ? adapterUsed
+        ? `[adapter_used: ${adapterUsed}]\n\n${paper}`
+        : paper
+      : adapterUsed
+      ? `[adapter_used: ${adapterUsed}]`
+      : "No output.";
+
     const aiMsg = {
       id: "a_" + cryptoRandomId(8),
       role: "ai",
-      text: paper || "No output.",
+      text: aiText,
       time: Date.now(),
     };
-    setMessages((m) => [...m, aiMsg]);
 
+    setMessages((m) => [...m, aiMsg]);
     setBusy(false);
   }
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
-      {/* Top bar (mobile) */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white sticky top-0 z-10">
         <button
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50"
@@ -267,7 +317,6 @@ export default function ExamGenAssistantShell({
       </div>
 
       <div className="mx-auto max-w-7xl grid md:grid-cols-[280px,1fr]">
-        {/* Sidebar */}
         <aside
           className={`${
             sidebarOpen
@@ -278,7 +327,7 @@ export default function ExamGenAssistantShell({
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
-            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4 overflow-y-auto`}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">{title} Topics</div>
@@ -289,12 +338,30 @@ export default function ExamGenAssistantShell({
                 <FiPlus /> New
               </button>
             </div>
-            <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
+
+            <div className="mb-4">
+              <div className="text-xs font-semibold mb-2">Quick presets</div>
+              <div className="flex flex-col gap-2">
+                {PRESETS.map((p) => (
+                  <button
+                    key={p.title}
+                    onClick={() => applyPreset(p)}
+                    className="text-left text-xs border rounded-lg px-3 py-2 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200"
+                    title={p.task_type}
+                  >
+                    {p.title}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <ul className="space-y-1 max-h-[60vh] md:max-h-[calc(100vh-24rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
                   No topics yet. Describe an exam pattern to start!
                 </li>
               )}
+
               {topics.map((t) => (
                 <li
                   key={t.id}
@@ -308,6 +375,7 @@ export default function ExamGenAssistantShell({
                     <FiChevronRight className="shrink-0 text-gray-400" />
                     <span className="text-sm line-clamp-1">{t.title}</span>
                   </button>
+
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <FiClock />
                     {new Date(t.at).toLocaleTimeString()}
@@ -322,6 +390,7 @@ export default function ExamGenAssistantShell({
                 </li>
               ))}
             </ul>
+
             {sidebarOpen && (
               <button
                 className="absolute top-3 right-3 text-white"
@@ -334,49 +403,43 @@ export default function ExamGenAssistantShell({
           </div>
         </aside>
 
-        {/* Main */}
         <main className="min-h-[70vh] flex flex-col">
-          {/* Header (desktop) */}
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+
               <button
                 onClick={async () => {
                   try {
-                    // const r = await axios.get(`${EXAM_BASE}/model-info`, {
-                    //   headers,
-                    //   timeout: 10000,
-                    // });
-                    // setModelInfo(r?.data || null);
-                    setModelInfo(null);
+                    const r = await axios.get(INFO_EXAM, {
+                      headers,
+                      timeout: 15000,
+                    });
+                    setModelInfo(r?.data || null);
                   } catch {
                     setModelInfo(null);
                   }
                 }}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Fetch model info (wire backend /model-info to enable)"
               >
                 <FiInfo /> Model info
               </button>
+
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload adapters / retrieval (needs /reload endpoint)"
               >
                 <FiRefreshCw /> Reload
               </button>
-              {modelInfo && (
+
+              {modelInfo?.active?.active_adapter && (
                 <div className="text-[11px] text-gray-600">
-                  device: <code>{String(modelInfo.device)}</code>
-                  {Array.isArray(modelInfo.adapters) && (
-                    <>
-                      {" "}
-                      · adapters: <code>{modelInfo.adapters.length}</code>
-                    </>
-                  )}
+                  active_adapter:{" "}
+                  <code>{String(modelInfo.active.active_adapter)}</code>
                 </div>
               )}
             </div>
+
             <button
               onClick={newChat}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
@@ -385,7 +448,26 @@ export default function ExamGenAssistantShell({
             </button>
           </div>
 
-          {/* Messages */}
+          <div className="px-4 md:px-6 py-3 border-b bg-white">
+            <div className="mx-auto max-w-4xl flex flex-col md:flex-row gap-2 md:items-center">
+              <div className="text-xs text-gray-600">task_type</div>
+              <input
+                value={taskType}
+                onChange={(e) => setTaskType(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-xs w-full md:w-[260px]"
+              />
+              <div className="text-xs text-gray-600 md:ml-4">
+                force_adapter (optional)
+              </div>
+              <input
+                value={forceAdapter}
+                onChange={(e) => setForceAdapter(e.target.value)}
+                className="border rounded-lg px-3 py-2 text-xs w-full md:w-[320px]"
+                placeholder="adapter_python_exam"
+              />
+            </div>
+          </div>
+
           <div
             ref={listRef}
             className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-white"
@@ -395,17 +477,24 @@ export default function ExamGenAssistantShell({
                 <div
                   key={m.id}
                   className={`mb-5 ${
-                    m.role === "user" ? "text-right" : "text-left"
+                    m.role === "user"
+                      ? "flex justify-end"
+                      : "flex justify-start"
                   }`}
                 >
+                  {/* FULL WIDTH FIX */}
                   <div
-                    className={`inline-block rounded-2xl px-4 py-3 text-sm shadow ${
+                    className={`rounded-2xl px-4 py-3 shadow ${
                       m.role === "user"
-                        ? "bg-indigo-600 text-white"
-                        : "bg-gray-50 text-gray-900 border"
+                        ? "bg-indigo-600 text-white w-full md:w-[70%]"
+                        : "bg-gray-50 text-gray-900 border w-full"
                     }`}
                   >
-                    <div className="whitespace-pre-wrap break-words text-xs md:text-sm">
+                    <div
+                      className={`whitespace-pre-wrap break-words text-xs md:text-sm ${
+                        m.role === "ai" ? "font-mono" : ""
+                      }`}
+                    >
                       {m.text}
                     </div>
                     <div
@@ -417,40 +506,39 @@ export default function ExamGenAssistantShell({
                     >
                       {new Date(m.time).toLocaleTimeString()}
                     </div>
-                  </div>
 
-                  {m.role === "ai" && m.text && (
-                    <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                      <button
-                        onClick={() => copyToClipboard(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Copy exam paper"
-                      >
-                        <FiCopy /> Copy
-                      </button>
-                      <button
-                        onClick={() => downloadExam(m.text)}
-                        className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Download .txt"
-                      >
-                        <FiDownload /> Download
-                      </button>
-                    </div>
-                  )}
+                    {m.role === "ai" && m.text && (
+                      <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                        <button
+                          onClick={() => copyToClipboard(m.text)}
+                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                        >
+                          <FiCopy /> Copy
+                        </button>
+                        <button
+                          onClick={() => downloadExam(m.text)}
+                          className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-white"
+                        >
+                          <FiDownload /> Download
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
+
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <FiLoader className="animate-spin" /> generating exam paper…
                 </div>
               )}
+
               {error && (
                 <div className="mt-2 text-xs text-red-600">{error}</div>
               )}
             </div>
           </div>
 
-          {/* Starter prompts */}
           {starterPrompts?.length > 0 && (
             <div className="px-4 md:px-6">
               <div className="mx-auto max-w-4xl flex flex-wrap gap-2 pb-2">
@@ -467,7 +555,6 @@ export default function ExamGenAssistantShell({
             </div>
           )}
 
-          {/* Composer */}
           <div className="border-t bg-white px-4 md:px-6 py-3">
             <div className="mx-auto max-w-4xl">
               <div className="flex items-end gap-2">

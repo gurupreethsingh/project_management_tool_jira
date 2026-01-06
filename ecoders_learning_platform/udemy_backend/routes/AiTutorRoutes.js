@@ -1,11 +1,14 @@
-// api/routes/AiTutorRoutes.js
-
 const express = require("express");
 const router = express.Router();
 
-const { generateTutorAnswer } = require("../controllers/AiTutorController");
+const {
+  generateTutorAnswer,
+  getAiTutorModelInfo,
+  reloadAiTutor,
+} = require("../controllers/AiTutorController");
 
-// POST /api/ai-tutor/generate
 router.post("/generate", generateTutorAnswer);
+router.get("/model-info", getAiTutorModelInfo);
+router.post("/reload", reloadAiTutor);
 
 module.exports = router;
