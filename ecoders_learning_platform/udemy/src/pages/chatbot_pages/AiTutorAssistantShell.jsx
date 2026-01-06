@@ -27,6 +27,12 @@ const RELOAD_AITUTOR = `${AITUTOR_BASE}/reload`;
 
 const SID_KEY = "aitutor_workspace_sid_v1";
 
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
+
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
   if (!sid) {
@@ -34,12 +40,6 @@ function ensureSessionId() {
     localStorage.setItem(SID_KEY, sid);
   }
   return sid;
-}
-
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
 }
 
 function lsKey(scope, suffix) {
@@ -54,6 +54,16 @@ function extractErrMsg(e, fallback = "Request failed") {
     e?.message ||
     fallback
   );
+}
+
+function safeString(x) {
+  if (typeof x === "string") return x;
+  if (x == null) return "";
+  try {
+    return JSON.stringify(x, null, 2);
+  } catch {
+    return String(x);
+  }
 }
 
 export default function AiTutorAssistantShell({
@@ -128,7 +138,7 @@ export default function AiTutorAssistantShell({
     }
   }
 
-  // load model info once (optional)
+  // load model info once
   useEffect(() => {
     fetchModelInfo().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,14 +176,32 @@ export default function AiTutorAssistantShell({
 
   function pickTopic(t) {
     setInput(t.title);
+    setSidebarOpen(false);
   }
 
-  function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).catch(() => {});
+  async function copyToClipboard(text) {
+    const s = safeString(text);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(s);
+        return;
+      }
+    } catch {}
+    // fallback
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = s;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    } catch {}
   }
 
   function downloadAnswer(text, filename = "ai_tutor_answer.txt") {
-    const blob = new Blob([text || ""], { type: "text/plain" });
+    const blob = new Blob([safeString(text)], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -216,7 +244,7 @@ export default function AiTutorAssistantShell({
       const payload = {
         task,
         max_new_tokens: 1024,
-        use_retrieval: true, // safe; Flask ignores it in your current tutor
+        use_retrieval: true, // safe; backend can ignore
       };
       const resp = await axios.post(ASK_AITUTOR, payload, {
         headers,
@@ -224,7 +252,7 @@ export default function AiTutorAssistantShell({
       });
 
       const data = resp?.data || {};
-      answer = data.answer ?? "No answer returned.";
+      answer = safeString(data.answer ?? "No answer returned.");
     } catch (e) {
       setError(extractErrMsg(e, "AI Tutor is unavailable right now."));
       answer = "AI Tutor backend is unavailable. Please try again later.";
@@ -243,7 +271,7 @@ export default function AiTutorAssistantShell({
 
   const adapterName =
     modelInfo?.active?.adapter_name || modelInfo?.active?.adapterName;
-  const device = modelInfo?.device;
+  const device = modelInfo?.device || modelInfo?.active?.device;
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
@@ -272,11 +300,13 @@ export default function AiTutorAssistantShell({
               ? "fixed inset-0 z-40 bg-black/40 md:bg-transparent"
               : ""
           } md:static`}
+          onClick={() => sidebarOpen && setSidebarOpen(false)}
         >
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
             } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">{title} Topics</div>
@@ -352,7 +382,7 @@ export default function AiTutorAssistantShell({
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload model (unload; reload on next request)"
+                title="Reload model"
               >
                 <FiRefreshCw /> Reload
               </button>
@@ -453,11 +483,12 @@ export default function AiTutorAssistantShell({
           {starterPrompts?.length > 0 && (
             <div className="px-4 md:px-6">
               <div className="mx-auto max-w-4xl flex flex-wrap gap-2 pb-2">
-                {starterPrompts.map((p) => (
+                {starterPrompts.map((p, idx) => (
                   <button
-                    key={p}
+                    key={`${idx}_${p.slice(0, 40)}`}
                     onClick={() => setInput(p)}
                     className="text-xs border rounded-full px-3 py-1 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200"
+                    title={p}
                   >
                     {p}
                   </button>

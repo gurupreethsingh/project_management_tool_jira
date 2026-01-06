@@ -1,4 +1,3 @@
-// models/DashboardGenModel.js
 const mongoose = require("mongoose");
 
 const DashboardGenSchema = new mongoose.Schema(
@@ -8,9 +7,10 @@ const DashboardGenSchema = new mongoose.Schema(
 
     prompt: { type: String, required: true, trim: true },
 
-    // ✅ Only params that the new Flask API supports
     params: {
-      max_new_tokens: { type: Number, default: 900 },
+      max_new_tokens: { type: Number, default: 700 },
+      max_time_s: { type: Number, default: 60 },
+      prefer: { type: String, default: "" },
     },
 
     completion: { type: String, default: "" },

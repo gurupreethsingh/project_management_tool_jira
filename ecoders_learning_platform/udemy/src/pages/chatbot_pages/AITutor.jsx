@@ -7,14 +7,23 @@ export default function AiTutor() {
     <AiTutorAssistantShell
       title="AI Tutor"
       scope="ai-tutor"
-      placeholder="Ask your AI Tutor anything (e.g., 'Explain Python decorators with examples', 'Help me understand SQL joins with diagrams')…"
+      placeholder="Ask only the trained topics for now (Inheritance / Polymorphism / Encapsulation)…"
       starterPrompts={[
-        "Explain Python lists, tuples, sets and dictionaries with simple examples.",
-        "Teach me object-oriented programming in Python with classes, objects, inheritance and polymorphism.",
-        "Help me understand SQL joins (INNER, LEFT, RIGHT, FULL) with small tables and clear diagrams.",
-        "Explain time complexity of common data structures and algorithms in a simple way.",
-        "Guide me step-by-step to build a small Flask API project as a beginner.",
-        "Explain multithreading vs multiprocessing in Python with real-world examples.",
+        // ✅ Inheritance (trained)
+        "What is inheritance in Python? Give definition, explanation, applications/uses, and example code.",
+        "Explain inheritance in Python with a simple parent class and child class example code.",
+        "Difference between single inheritance and multiple inheritance in Python with examples.",
+        "What is method overriding in inheritance? Explain with Python code example.",
+
+        // ✅ Polymorphism (trained)
+        "What is polymorphism in Python? Give definition, explanation, applications/uses, and example code.",
+        "Explain polymorphism in Python using the same method name in different classes with code.",
+        "Explain duck typing in Python as polymorphism with a simple example.",
+
+        // ✅ Encapsulation (trained)
+        "What is encapsulation in Python? Give definition, explanation, applications/uses, and example code.",
+        "Explain public, protected, and private members in Python with examples.",
+        "Explain getters and setters in Python with encapsulation example code.",
       ]}
     />
   );

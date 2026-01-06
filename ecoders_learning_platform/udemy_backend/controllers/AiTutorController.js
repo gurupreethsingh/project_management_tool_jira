@@ -1,5 +1,3 @@
-// api/controllers/AiTutorController.js
-
 const axios = require("axios");
 const {
   AiTutorInteraction,
@@ -7,10 +5,9 @@ const {
   CHANNEL,
 } = require("../models/AiTutorInteractionModel");
 
-// Flask base for AI Tutor
-// Example: AITUTOR_FLASK_BASE=http://127.0.0.1:5071/aitutor/v1
-const AITUTOR_FLASK_BASE =
-  process.env.AITUTOR_FLASK_BASE || "http://127.0.0.1:5071/aitutor/v1";
+const AITUTOR_FLASK_BASE = (
+  process.env.AITUTOR_FLASK_BASE || "http://127.0.0.1:5081"
+).replace(/\/+$/, "");
 
 function getClientIp(req) {
   const xfwd = req.headers["x-forwarded-for"];
@@ -18,14 +15,20 @@ function getClientIp(req) {
   return req.ip || req.connection?.remoteAddress || undefined;
 }
 
-/**
- * POST /api/ai-tutor/generate
- * Body: { task, max_new_tokens?, use_retrieval?, meta?, channel?, tags?, language? }
- *
- * NOTE:
- * - Your Flask AI Tutor is single-adapter. Do NOT pass adapter here.
- * - use_retrieval exists in payload for compatibility; Flask ignores it.
- */
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
+}
+
+function nint(v, fb) {
+  const x = Number(v);
+  return Number.isFinite(x) ? Math.trunc(x) : fb;
+}
+
+function nfloat(v, fb) {
+  const x = Number(v);
+  return Number.isFinite(x) ? x : fb;
+}
+
 const generateTutorAnswer = async (req, res) => {
   const startedAt = Date.now();
 
@@ -36,8 +39,9 @@ const generateTutorAnswer = async (req, res) => {
       tags = [],
       channel = "widget",
       meta = {},
-      use_retrieval = true,
+      use_retrieval = true, // compatibility only
       max_new_tokens,
+      temperature,
     } = req.body || {};
 
     if (!task || typeof task !== "string" || !task.trim()) {
@@ -46,12 +50,17 @@ const generateTutorAnswer = async (req, res) => {
 
     const cleanTask = task.trim();
 
+    const reqMax = max_new_tokens ?? process.env.AITUTOR_MAX_NEW_TOKENS ?? 650;
+    const reqTemp = temperature ?? process.env.AITUTOR_TEMPERATURE ?? 0.3;
+
     const requestPayload = {
       task: cleanTask,
-      // kept for forward compatibility; Flask currently ignores it
-      use_retrieval: !!use_retrieval,
+      use_retrieval: !!use_retrieval, // Flask ignores (safe)
+      max_new_tokens: clamp(nint(reqMax, 650), 200, 1200),
+      temperature: clamp(nfloat(reqTemp, 0.3), 0, 1),
+      do_sample: false,
+      num_beams: 3,
     };
-    if (max_new_tokens) requestPayload.max_new_tokens = max_new_tokens;
 
     const flaskUrl = `${AITUTOR_FLASK_BASE}/generate`;
     const askedAt = new Date();
@@ -59,7 +68,13 @@ const generateTutorAnswer = async (req, res) => {
     let flaskResp;
     try {
       flaskResp = await axios.post(flaskUrl, requestPayload, {
-        timeout: 1000 * 120, // 120s
+        timeout: 1000 * Number(process.env.AITUTOR_REQUEST_TIMEOUT_S || 120),
+        headers: {
+          "Content-Type": "application/json",
+          "X-Session-Id": meta.sessionId || req.headers["x-session-id"] || "",
+          "X-Channel": channel,
+        },
+        validateStatus: () => true,
       });
     } catch (err) {
       const latency = Date.now() - startedAt;
@@ -94,9 +109,7 @@ const generateTutorAnswer = async (req, res) => {
 
       try {
         await interactionError.save();
-      } catch (saveErr) {
-        console.error("[AiTutor] failed to save error interaction:", saveErr);
-      }
+      } catch {}
 
       return res.status(502).json({
         ok: false,
@@ -108,19 +121,14 @@ const generateTutorAnswer = async (req, res) => {
     const latency = Date.now() - startedAt;
     const data = flaskResp.data || {};
 
-    const okFlag = !!data.ok;
+    const okFlag =
+      flaskResp.status >= 200 && flaskResp.status < 300 && !!data.ok;
     const answer = data.answer || "";
     const source = data.source || "model";
-
-    const copyRatio =
-      typeof data.copy_ratio === "number" ? data.copy_ratio : null;
-
-    // status mapping
-    let status = "ok";
-    if (!okFlag) status = "error";
-    if (!STATUS.includes(status)) status = "ok";
-
     const modelInfo = data.active || null;
+
+    let status = okFlag ? "ok" : "error";
+    if (!STATUS.includes(status)) status = "ok";
 
     const interactionDoc = new AiTutorInteraction({
       user: req.user?._id || null,
@@ -131,11 +139,10 @@ const generateTutorAnswer = async (req, res) => {
         contentType: "text",
         status,
         source,
-        confidence: null, // single-adapter tutor doesn't emit confidence
-        copyRatio,
-        model: modelInfo?.type || "single_adapter",
-        modelVersion: modelInfo?.base_path || undefined,
-        chosenAdapter: modelInfo?.adapter_name || undefined,
+        confidence: null,
+        copyRatio: null,
+        model: modelInfo?.type || "adapter",
+        modelVersion: modelInfo?.base_model || undefined,
         errorCode: data.errorCode || undefined,
         errorMessage: data.error || undefined,
         latencyMs: latency,
@@ -155,14 +162,15 @@ const generateTutorAnswer = async (req, res) => {
       },
     });
 
-    await interactionDoc.save();
+    try {
+      await interactionDoc.save();
+    } catch {}
 
-    return res.status(200).json({
+    return res.status(okFlag ? 200 : 502).json({
       ok: okFlag,
       answer,
       source,
       status,
-      copyRatio,
       latencyMs: latency,
       id: interactionDoc._id,
       modelInfo,
@@ -177,10 +185,6 @@ const generateTutorAnswer = async (req, res) => {
   }
 };
 
-/**
- * GET /api/ai-tutor/model-info
- * Proxies Flask /aitutor/v1/model-info
- */
 const getAiTutorModelInfo = async (_req, res) => {
   try {
     const url = `${AITUTOR_FLASK_BASE}/model-info`;
@@ -195,10 +199,6 @@ const getAiTutorModelInfo = async (_req, res) => {
   }
 };
 
-/**
- * POST /api/ai-tutor/reload
- * Proxies Flask /aitutor/v1/reload
- */
 const reloadAiTutor = async (_req, res) => {
   try {
     const url = `${AITUTOR_FLASK_BASE}/reload`;

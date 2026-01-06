@@ -19,9 +19,8 @@ import {
 import globalBackendRoute from "../../config/Config";
 import { getAuthorizationHeader } from "../../components/auth_components/AuthManager";
 
-const API = globalBackendRoute; // e.g. http://localhost:3011
+const API = globalBackendRoute;
 
-// ✅ Node endpoints (Node → Flask)
 const DASH_BASE = `${API}/api/dashboard-gen`;
 const ASK_DASH = `${DASH_BASE}/generate`;
 const INFO_DASH = `${DASH_BASE}/model-info`;
@@ -58,7 +57,6 @@ function safeString(x) {
   }
 }
 
-/** Remove ``` fences if model ever returns them */
 function stripFences(text) {
   const t = String(text || "").trim();
   return t
@@ -67,14 +65,51 @@ function stripFences(text) {
     .trim();
 }
 
-/**
- * Extract first React component-like block so preview doesn't die
- * when model appends junk or starts a second JSX section.
- */
+function looksLikeJSX(text) {
+  const t = stripFences(text);
+  if (t.length < 60) return false;
+  if (t.includes("return") && (t.includes("<div") || t.includes("className=")))
+    return true;
+  if (t.includes("export default") && t.includes("return")) return true;
+  return false;
+}
+
+function sanitizeMultilineClassName(code) {
+  const s = safeString(code);
+
+  const dq = s.replace(/className="([\s\S]*?)"/g, (_m, inner) => {
+    const fixed = String(inner).replace(/\s+/g, " ").trim();
+    return `className="${fixed}"`;
+  });
+
+  const sq = dq.replace(/className='([\s\S]*?)'/g, (_m, inner) => {
+    const fixed = String(inner).replace(/\s+/g, " ").trim();
+    return `className='${fixed}'`;
+  });
+
+  return sq;
+}
+
+// ✅ Fix: style={height:"..", ...} -> style={{ height:"..", ... }}
+function sanitizeBadStyleObject(code) {
+  let s = safeString(code);
+  s = s.replace(/style=\{(\s*[^{}][\s\S]*?)\}/g, (m, inner) => {
+    if (inner.trim().startsWith("{")) return m;
+    return `style={{ ${inner.trim()} }}`;
+  });
+  return s;
+}
+
+function sanitizeAll(code) {
+  let s = safeString(code);
+  s = sanitizeMultilineClassName(s);
+  s = sanitizeBadStyleObject(s);
+  return s;
+}
+
 function extractFirstComponentBlock(raw) {
   let code = stripFences(raw);
 
-  // Remove leaked system text lines
   code = code
     .split("\n")
     .filter((ln) => {
@@ -90,20 +125,11 @@ function extractFirstComponentBlock(raw) {
     .join("\n")
     .trim();
 
-  // If it contains "JSX:" markers, keep only content after the LAST marker
   const last = code.lastIndexOf("JSX:");
-  if (last !== -1) {
-    code = code.slice(last + "JSX:".length).trim();
-  }
+  if (last !== -1) code = code.slice(last + "JSX:".length).trim();
 
-  // If model repeats second JSX block, cut it
-  const second = code.indexOf("\nJSX:");
-  if (second !== -1) code = code.slice(0, second).trim();
-
-  // Remove import lines (preview runs in isolated context)
   code = code.replace(/^\s*import\s+[\s\S]*?;\s*$/gm, "").trim();
 
-  // Try to start from export default / function / const
   const starters = ["export default function", "function ", "const "];
   let startIndex = -1;
   for (const s of starters) {
@@ -112,7 +138,6 @@ function extractFirstComponentBlock(raw) {
   }
   if (startIndex > 0) code = code.slice(startIndex).trim();
 
-  // Now brace-balance to cut incomplete tails
   const firstBrace = code.indexOf("{");
   if (firstBrace === -1) return code;
 
@@ -130,49 +155,32 @@ function extractFirstComponentBlock(raw) {
       esc = false;
       continue;
     }
-
     if (inStr) {
       if (ch === "\\") esc = true;
       else if (ch === strCh) inStr = false;
       continue;
     }
-
     if (ch === "'" || ch === '"' || ch === "`") {
       inStr = true;
       strCh = ch;
       continue;
     }
-
     if (ch === "{") depth++;
     if (ch === "}") depth--;
-
     if (i >= firstBrace && depth === 0) break;
   }
 
   return out.trim();
 }
 
-/**
- * Normalize model output to something previewable:
- * - Remove "export default"
- * - Ensure we end with: window.App = ComponentName
- */
 function normalizeForPreview(codeRaw) {
   let code = extractFirstComponentBlock(codeRaw);
-
-  // remove leading BOM / weird chars
   code = code.replace(/^\uFEFF/, "").trim();
 
-  // export default function X -> function X
   code = code.replace(/export\s+default\s+function\s+/g, "function ");
-
-  // remove trailing export default X;
   code = code.replace(/export\s+default\s+([A-Za-z0-9_]+)\s*;\s*$/gm, "");
-
-  // remove any remaining "export default"
   code = code.replace(/export\s+default\s+/g, "");
 
-  // detect component name
   let compName = null;
   const m1 = code.match(/function\s+([A-Za-z0-9_]+)\s*\(/);
   if (m1?.[1]) compName = m1[1];
@@ -189,28 +197,11 @@ function normalizeForPreview(codeRaw) {
   return code;
 }
 
-function looksLikeJSX(text) {
-  const t = stripFences(text);
-  if (t.length < 60) return false;
-  if (t.includes("<div") && t.includes("return")) return true;
-  if (
-    t.includes("className=") &&
-    (t.includes("function") || t.includes("const"))
-  )
-    return true;
-  if (t.includes("export default") && t.includes("return")) return true;
-  return false;
-}
-
 function isProbablyValidDashboardJSX(text) {
   const t = stripFences(text);
+  if (!looksLikeJSX(t)) return false;
   if (/\bdef\b|\blambda\b|\bprint\s*\(/i.test(t)) return false;
-  if (
-    t.includes("return (") &&
-    (t.includes("<div") || t.includes("className="))
-  )
-    return true;
-  return false;
+  return true;
 }
 
 function ensureScript(src) {
@@ -245,16 +236,6 @@ async function ensureBabelLoaded() {
   return true;
 }
 
-async function ensureRechartsLoaded() {
-  if (window.Recharts && window.Recharts.ResponsiveContainer) return true;
-  try {
-    await ensureScript("https://unpkg.com/recharts/umd/Recharts.min.js");
-  } catch {
-    return false;
-  }
-  return !!(window.Recharts && window.Recharts.ResponsiveContainer);
-}
-
 function JSXPreview({ jsxCode }) {
   const mountRef = useRef(null);
   const [status, setStatus] = useState("");
@@ -264,7 +245,9 @@ function JSXPreview({ jsxCode }) {
 
     async function run() {
       setStatus("");
-      const code = normalizeForPreview(jsxCode);
+
+      const cleaned = sanitizeAll(jsxCode);
+      const code = normalizeForPreview(cleaned);
 
       if (!mountRef.current) return;
       mountRef.current.innerHTML = "";
@@ -272,11 +255,9 @@ function JSXPreview({ jsxCode }) {
 
       try {
         await ensureBabelLoaded();
-        await ensureRechartsLoaded();
 
         if (cancelled) return;
 
-        // expose React/ReactDOM to generated code
         window.__REACT__ = React;
         window.__REACTDOM__ = ReactDOM;
 
@@ -284,7 +265,6 @@ function JSXPreview({ jsxCode }) {
           (function(){
             const React = window.__REACT__;
             const ReactDOM = window.__REACTDOM__;
-            const Recharts = window.Recharts || {};
             ${code}
           })();
         `;
@@ -294,7 +274,6 @@ function JSXPreview({ jsxCode }) {
         }).code;
 
         window.App = null;
-
         // eslint-disable-next-line no-new-func
         new Function(compiled)();
 
@@ -346,6 +325,8 @@ export default function DashboardGenAssistantShell({
   scope = "dashboard-gen",
   placeholder = "Describe the dashboard…",
   starterPrompts = [],
+  defaultMaxNewTokens = 700,
+  defaultMaxTimeS = 60,
 }) {
   const sid = useMemo(() => ensureSessionId(), []);
   const headers = useMemo(() => {
@@ -360,6 +341,9 @@ export default function DashboardGenAssistantShell({
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
   const [modelInfo, setModelInfo] = useState(null);
+
+  const [maxNewTokens, setMaxNewTokens] = useState(defaultMaxNewTokens);
+  const [maxTimeS, setMaxTimeS] = useState(defaultMaxTimeS);
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -466,7 +450,7 @@ export default function DashboardGenAssistantShell({
   async function reloadModel() {
     try {
       setError("");
-      await axios.post(RELOAD_DASH, {}, { headers, timeout: 180000 });
+      await axios.post(RELOAD_DASH, {}, { headers, timeout: 120000 });
       const info = await axios.get(INFO_DASH, { headers, timeout: 20000 });
       setModelInfo(info?.data || null);
     } catch (e) {
@@ -499,21 +483,27 @@ export default function DashboardGenAssistantShell({
     addTopic(task);
 
     let jsx = "";
+    let metaLine = "";
+
     try {
-      // ✅ THIS IS WHERE YOU PUT IT
       const payload = {
         prompt: task,
-        max_new_tokens: 1400,
-        max_time_s: 240, // matches backend safety cap
+        max_new_tokens: Number(maxNewTokens) || defaultMaxNewTokens,
+        max_time_s: Number(maxTimeS) || defaultMaxTimeS,
       };
+
+      const timeoutMs = Math.min(180000, (payload.max_time_s + 20) * 1000);
 
       const resp = await axios.post(ASK_DASH, payload, {
         headers,
-        timeout: 420000,
+        timeout: timeoutMs,
       });
 
       const raw = resp?.data || {};
-      jsx = safeString(raw.completion);
+      jsx = sanitizeAll(safeString(raw.completion));
+
+      if (raw.latencyMs != null)
+        metaLine = `\n\n// meta: latencyMs=${raw.latencyMs}`;
 
       if (raw.ok === false) {
         const msg = safeString(
@@ -539,7 +529,7 @@ export default function DashboardGenAssistantShell({
     const aiMsg = {
       id: "a_" + cryptoRandomId(8),
       role: "ai",
-      text: jsx || "No output.",
+      text: (jsx || "No output.") + metaLine,
       time: Date.now(),
     };
     setMessages((m) => [...m, aiMsg]);
@@ -548,7 +538,6 @@ export default function DashboardGenAssistantShell({
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
-      {/* Mobile header */}
       <div className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white sticky top-0 z-10">
         <button
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50"
@@ -566,7 +555,6 @@ export default function DashboardGenAssistantShell({
       </div>
 
       <div className="mx-auto max-w-7xl grid md:grid-cols-[280px,1fr]">
-        {/* Sidebar */}
         <aside
           className={`${
             sidebarOpen
@@ -589,7 +577,40 @@ export default function DashboardGenAssistantShell({
               </button>
             </div>
 
-            <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
+            <div className="mb-3 rounded-xl border bg-white p-3">
+              <div className="text-xs font-semibold text-gray-900">
+                Generation settings
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <label className="text-[11px] text-gray-600">
+                  Max tokens
+                  <input
+                    className="mt-1 w-full rounded-lg border px-2 py-1 text-sm"
+                    type="number"
+                    min={64}
+                    max={1100}
+                    value={maxNewTokens}
+                    onChange={(e) => setMaxNewTokens(e.target.value)}
+                  />
+                </label>
+                <label className="text-[11px] text-gray-600">
+                  Max time (s)
+                  <input
+                    className="mt-1 w-full rounded-lg border px-2 py-1 text-sm"
+                    type="number"
+                    min={5}
+                    max={90}
+                    value={maxTimeS}
+                    onChange={(e) => setMaxTimeS(e.target.value)}
+                  />
+                </label>
+              </div>
+              <div className="mt-2 text-[10px] text-gray-500">
+                Recommended: 700 tokens / 60s for fast results.
+              </div>
+            </div>
+
+            <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-22rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
                   No prompts yet. Start by describing a dashboard.
@@ -609,7 +630,6 @@ export default function DashboardGenAssistantShell({
                     <FiChevronRight className="shrink-0 text-gray-400" />
                     <span className="text-sm line-clamp-1">{t.title}</span>
                   </button>
-
                   <div className="flex items-center gap-2 text-xs text-gray-500">
                     <FiClock />
                     {new Date(t.at).toLocaleTimeString()}
@@ -637,9 +657,7 @@ export default function DashboardGenAssistantShell({
           </div>
         </aside>
 
-        {/* Main */}
         <main className="min-h-[70vh] flex flex-col">
-          {/* Desktop header */}
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
@@ -668,9 +686,9 @@ export default function DashboardGenAssistantShell({
                 <FiRefreshCw /> Reload
               </button>
 
-              {modelInfo?.model_dir && (
+              {modelInfo?.dataset_csv && (
                 <div className="text-[11px] text-gray-600">
-                  model: <code>{String(modelInfo.model_dir)}</code>
+                  dataset: <code>{String(modelInfo.dataset_csv)}</code>
                 </div>
               )}
             </div>
@@ -683,7 +701,6 @@ export default function DashboardGenAssistantShell({
             </button>
           </div>
 
-          {/* Messages */}
           <div
             ref={listRef}
             className="flex-1 overflow-y-auto px-4 md:px-6 py-4 bg-white"
@@ -761,7 +778,6 @@ export default function DashboardGenAssistantShell({
             </div>
           </div>
 
-          {/* Starter prompts */}
           {starterPrompts?.length > 0 && (
             <div className="px-4 md:px-6">
               <div className="mx-auto max-w-4xl flex flex-wrap gap-2 pb-2">
@@ -778,7 +794,6 @@ export default function DashboardGenAssistantShell({
             </div>
           )}
 
-          {/* Input */}
           <div className="border-t bg-white px-4 md:px-6 py-3">
             <div className="mx-auto max-w-4xl">
               <div className="flex items-end gap-2">
