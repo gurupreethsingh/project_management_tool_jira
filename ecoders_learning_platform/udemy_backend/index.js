@@ -1,3 +1,4 @@
+// index.js
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
@@ -15,6 +16,7 @@ const cartRoutes = require("./routes/cartRoutes");
 const categoryRoutes = require("./routes/CategoryRoutes");
 const contactRoutes = require("./routes/ContactRoutes");
 const courseRoutes = require("./routes/CourseRoutes");
+const DashboardGenRoutes = require("./routes/DashboardGenRoutes");
 const examRoutes = require("./routes/ExamRoutes");
 const notificationRoutes = require("./routes/NotificationRoutes");
 const orderRoutes = require("./routes/OrderRoutes");
@@ -33,9 +35,8 @@ const activityRoutes = require("./routes/ActivityRoutes");
 const chatRoutes = require("./routes/ChatInteractionRoutes");
 const simpleChatBotRoutes = require("./routes/SimpleChatBotRoutes");
 const uiGenRoutes = require("./routes/UiGenRoutes");
-const dashboardGenRoutes = require("./routes/DashboardGenRoutes");
 const roadmapGenRoutes = require("./routes/RoadmapGenRoutes");
-const examGenRoutes = require("./routes/ExamGenRoutes");
+const ExamGenRoutes = require("./routes/ExamGenRoutes");
 const aiTutorRoutes = require("./routes/AiTutorRoutes");
 const textCodeRoutes = require("./routes/TextCodeRoutes");
 
@@ -48,6 +49,7 @@ const allowedOrigins = new Set([
   "http://localhost:5175",
   "http://localhost:5176",
 ]);
+
 if (process.env.FRONTEND_ORIGIN) {
   allowedOrigins.add(process.env.FRONTEND_ORIGIN);
 }
@@ -69,6 +71,7 @@ app.use(
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    // ✅ KEEP THIS EXACTLY (this is what enables your custom headers)
     allowedHeaders: [
       "Authorization",
       "Content-Type",
@@ -117,9 +120,12 @@ app.use("/api/instructors", instructorRoutes);
 app.use("/api", activityRoutes);
 app.use("/api", uiGenRoutes);
 app.use("/api", simpleChatBotRoutes);
-app.use("/api", dashboardGenRoutes);
+
+// ✅ Dashboard generator route
+app.use("/api/dashboard-gen", DashboardGenRoutes);
+
 app.use("/api/roadmap-gen", roadmapGenRoutes);
-app.use("/api/exam-gen", examGenRoutes);
+app.use("/api/exam-gen", ExamGenRoutes);
 app.use("/api/ai-tutor", aiTutorRoutes);
 app.use("/api/text-code", textCodeRoutes);
 
@@ -127,12 +133,8 @@ app.use("/api/text-code", textCodeRoutes);
 const DATABASE_URI = process.env.DATABASE;
 mongoose
   .connect(DATABASE_URI)
-  .then(() => {
-    console.log("Connected to MongoDB.");
-  })
-  .catch((err) => {
-    console.error("MongoDB connection failed:", err);
-  });
+  .then(() => console.log("Connected to MongoDB."))
+  .catch((err) => console.error("MongoDB connection failed:", err));
 
 // ---- Server ----
 const PORT = process.env.PORT || 3011;

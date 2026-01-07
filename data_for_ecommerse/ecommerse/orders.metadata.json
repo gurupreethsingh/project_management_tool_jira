@@ -1,5 +1,1 @@
-<<<<<<< HEAD
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"d918126bd43a4556b7c1dd4ca307abdf","collectionName":"orders","type":"collection"}
-=======
-{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"efb06fe0e89045cb8d1402bfb7fd93e6","collectionName":"orders","type":"collection"}
->>>>>>> 9c4396370a549c6dce6b3616f5315cafa1c6d50d
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"}],"uuid":"b57b728a04c24ae79e6646fd35a6d87d","collectionName":"orders","type":"collection"}

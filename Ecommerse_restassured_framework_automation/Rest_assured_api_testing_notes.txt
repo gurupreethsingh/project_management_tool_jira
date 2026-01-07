@@ -1,3 +1,0 @@
-Topic 1 : set up a maven project. 
-
-Topic 2 : add all the dependencies needed into the pom.xml file inside the project.

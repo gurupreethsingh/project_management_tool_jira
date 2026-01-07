@@ -1,15 +1,18 @@
-// api/routes/DashboardGenRoutes.js
+const express = require("express");
+const router = express.Router();
 
-const router = require("express").Router();
-const C = require("../controllers/DashboardGenController");
+const {
+  generateDashboard,
+  getModelInfo,
+  reloadModel,
+} = require("../controllers/DashboardGenController");
 
-// Dashboard generator endpoints
-router.get("/dashboard-gen/model-info", C.modelInfo);
-router.post("/dashboard-gen/reload", C.reload);
-router.post("/dashboard-gen/ask", C.ask);
+router.get("/health", (_req, res) => {
+  res.json({ ok: true, service: "dashboard-gen" });
+});
 
-// Optional: history
-router.get("/dashboard-gen/interactions/:id", C.getById);
-router.get("/dashboard-gen/interactions", C.list);
+router.get("/model-info", getModelInfo);
+router.post("/reload", reloadModel);
+router.post("/generate", generateDashboard);
 
 module.exports = router;

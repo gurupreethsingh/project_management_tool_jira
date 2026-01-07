@@ -14,8 +14,9 @@
 ########################################
 # Test outputs (all modules)
 ########################################
-**/test-output/
+# TestNG / reports (generated)
 test-output/
+**/test-output/
 surefire-reports/
 failsafe-reports/
 test-results/
