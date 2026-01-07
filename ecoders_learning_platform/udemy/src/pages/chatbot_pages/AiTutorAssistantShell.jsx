@@ -22,11 +22,16 @@ import { getAuthorizationHeader } from "../../components/auth_components/AuthMan
 const API = globalBackendRoute; // e.g., http://localhost:3011
 const AITUTOR_BASE = `${API}/api/ai-tutor`;
 const ASK_AITUTOR = `${AITUTOR_BASE}/generate`;
-// Optional future endpoints if you add Node wrappers:
-// const INFO_AITUTOR = `${AITUTOR_BASE}/model-info`;
-// const RELOAD_AITUTOR = `${AITUTOR_BASE}/reload`;
+const INFO_AITUTOR = `${AITUTOR_BASE}/model-info`;
+const RELOAD_AITUTOR = `${AITUTOR_BASE}/reload`;
 
 const SID_KEY = "aitutor_workspace_sid_v1";
+
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
 
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
@@ -37,14 +42,28 @@ function ensureSessionId() {
   return sid;
 }
 
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
-}
-
 function lsKey(scope, suffix) {
   return `aitutor_${scope}_${suffix}_v1`;
+}
+
+function extractErrMsg(e, fallback = "Request failed") {
+  return (
+    e?.response?.data?.error ||
+    e?.response?.data?.message ||
+    e?.response?.data?.detail ||
+    e?.message ||
+    fallback
+  );
+}
+
+function safeString(x) {
+  if (typeof x === "string") return x;
+  if (x == null) return "";
+  try {
+    return JSON.stringify(x, null, 2);
+  } catch {
+    return String(x);
+  }
 }
 
 export default function AiTutorAssistantShell({
@@ -65,7 +84,7 @@ export default function AiTutorAssistantShell({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [input, setInput] = useState("");
-  const [modelInfo, setModelInfo] = useState(null); // if you wire /model-info later
+  const [modelInfo, setModelInfo] = useState(null);
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -105,21 +124,25 @@ export default function AiTutorAssistantShell({
     );
   }, [messages, scope]);
 
-  // If later you create /api/ai-tutor/model-info that proxies to Flask:
   useEffect(() => {
-    (async () => {
-      try {
-        // const r = await axios.get(`${AITUTOR_BASE}/model-info`, {
-        //   headers,
-        //   timeout: 10000,
-        // });
-        // setModelInfo(r?.data || null);
-        setModelInfo(null); // placeholder: avoid 404 until backend is ready
-      } catch {
-        setModelInfo(null);
-      }
-    })();
-  }, [headers]);
+    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(topics));
+  }, [topics, scope]);
+
+  async function fetchModelInfo() {
+    try {
+      const r = await axios.get(INFO_AITUTOR, { headers, timeout: 20000 });
+      setModelInfo(r?.data || null);
+    } catch (e) {
+      setModelInfo(null);
+      setError(extractErrMsg(e, "Model info unavailable"));
+    }
+  }
+
+  // load model info once
+  useEffect(() => {
+    fetchModelInfo().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function newChat() {
     setMessages([
@@ -144,25 +167,41 @@ export default function AiTutorAssistantShell({
     };
     const next = [topic, ...topics].slice(0, 200);
     setTopics(next);
-    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(next));
   }
 
   function removeTopic(id) {
     const next = topics.filter((t) => t.id !== id);
     setTopics(next);
-    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(next));
   }
 
   function pickTopic(t) {
     setInput(t.title);
+    setSidebarOpen(false);
   }
 
-  function copyToClipboard(text) {
-    navigator.clipboard.writeText(text).catch(() => {});
+  async function copyToClipboard(text) {
+    const s = safeString(text);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(s);
+        return;
+      }
+    } catch {}
+    // fallback
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = s;
+      ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    } catch {}
   }
 
   function downloadAnswer(text, filename = "ai_tutor_answer.txt") {
-    const blob = new Blob([text || ""], { type: "text/plain" });
+    const blob = new Blob([safeString(text)], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -173,24 +212,20 @@ export default function AiTutorAssistantShell({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  // If you build backend /reload, wire here
   async function reloadModel() {
     try {
-      // await axios.post(`${AITUTOR_BASE}/reload`, {}, { headers, timeout: 60000 });
-      // const info = await axios.get(`${AITUTOR_BASE}/model-info`, {
-      //   headers,
-      //   timeout: 10000,
-      // });
-      // setModelInfo(info?.data || null);
-      setError("Reload endpoint for ai-tutor is not configured yet.");
+      setError("");
+      await axios.post(RELOAD_AITUTOR, {}, { headers, timeout: 60000 });
+      await fetchModelInfo();
     } catch (e) {
-      setError(e?.response?.data?.message || "Reload failed");
+      setError(extractErrMsg(e, "Reload failed"));
     }
   }
 
   async function send() {
     const task = input.trim();
     if (!task || busy) return;
+
     setBusy(true);
     setError("");
 
@@ -209,18 +244,17 @@ export default function AiTutorAssistantShell({
       const payload = {
         task,
         max_new_tokens: 1024,
-        use_retrieval: true,
+        use_retrieval: true, // safe; backend can ignore
       };
       const resp = await axios.post(ASK_AITUTOR, payload, {
         headers,
         timeout: 120000,
       });
-      const data = resp?.data?.data || resp?.data || {};
-      answer = data.answer ?? "No answer returned.";
+
+      const data = resp?.data || {};
+      answer = safeString(data.answer ?? "No answer returned.");
     } catch (e) {
-      setError(
-        e?.response?.data?.message || "AI Tutor is unavailable right now."
-      );
+      setError(extractErrMsg(e, "AI Tutor is unavailable right now."));
       answer = "AI Tutor backend is unavailable. Please try again later.";
     }
 
@@ -234,6 +268,10 @@ export default function AiTutorAssistantShell({
 
     setBusy(false);
   }
+
+  const adapterName =
+    modelInfo?.active?.adapter_name || modelInfo?.active?.adapterName;
+  const device = modelInfo?.device || modelInfo?.active?.device;
 
   return (
     <div className="w-full min-h-[calc(100vh-8rem)] sm:min-h-[calc(100vh-10rem)]">
@@ -262,11 +300,13 @@ export default function AiTutorAssistantShell({
               ? "fixed inset-0 z-40 bg-black/40 md:bg-transparent"
               : ""
           } md:static`}
+          onClick={() => sidebarOpen && setSidebarOpen(false)}
         >
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
             } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            onClick={(e) => e.stopPropagation()}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">{title} Topics</div>
@@ -277,6 +317,7 @@ export default function AiTutorAssistantShell({
                 <FiPlus /> New
               </button>
             </div>
+
             <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
@@ -310,6 +351,7 @@ export default function AiTutorAssistantShell({
                 </li>
               ))}
             </ul>
+
             {sidebarOpen && (
               <button
                 className="absolute top-3 right-3 text-white"
@@ -328,43 +370,40 @@ export default function AiTutorAssistantShell({
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
             <div className="flex items-center gap-3">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+
               <button
-                onClick={async () => {
-                  try {
-                    // const r = await axios.get(`${AITUTOR_BASE}/model-info`, {
-                    //   headers,
-                    //   timeout: 10000,
-                    // });
-                    // setModelInfo(r?.data || null);
-                    setModelInfo(null);
-                  } catch {
-                    setModelInfo(null);
-                  }
-                }}
+                onClick={fetchModelInfo}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Fetch model info (wire backend /model-info to enable)"
+                title="Fetch model info"
               >
                 <FiInfo /> Model info
               </button>
+
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload adapters / retrieval (needs /reload endpoint)"
+                title="Reload model"
               >
                 <FiRefreshCw /> Reload
               </button>
-              {modelInfo && (
+
+              {(device || adapterName) && (
                 <div className="text-[11px] text-gray-600">
-                  device: <code>{String(modelInfo.device)}</code>
-                  {Array.isArray(modelInfo.adapters) && (
+                  {device && (
+                    <>
+                      device: <code>{String(device)}</code>
+                    </>
+                  )}
+                  {adapterName && (
                     <>
                       {" "}
-                      · adapters: <code>{modelInfo.adapters.length}</code>
+                      · adapter: <code>{String(adapterName)}</code>
                     </>
                   )}
                 </div>
               )}
             </div>
+
             <button
               onClick={newChat}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
@@ -427,11 +466,13 @@ export default function AiTutorAssistantShell({
                   )}
                 </div>
               ))}
+
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <FiLoader className="animate-spin" /> generating answer…
                 </div>
               )}
+
               {error && (
                 <div className="mt-2 text-xs text-red-600">{error}</div>
               )}
@@ -442,11 +483,12 @@ export default function AiTutorAssistantShell({
           {starterPrompts?.length > 0 && (
             <div className="px-4 md:px-6">
               <div className="mx-auto max-w-4xl flex flex-wrap gap-2 pb-2">
-                {starterPrompts.map((p) => (
+                {starterPrompts.map((p, idx) => (
                   <button
-                    key={p}
+                    key={`${idx}_${p.slice(0, 40)}`}
                     onClick={() => setInput(p)}
                     className="text-xs border rounded-full px-3 py-1 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200"
+                    title={p}
                   >
                     {p}
                   </button>
