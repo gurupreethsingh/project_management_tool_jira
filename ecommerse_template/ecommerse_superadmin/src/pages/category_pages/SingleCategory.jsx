@@ -7,6 +7,7 @@ import axios from "axios";
 import globalBackendRoute from "../../config/Config";
 import ModernFileInput from "../../components/common_components/ModernFileInput";
 import ModernTextInput from "../../components/common_components/MordernTextInput";
+import { getAuthorizationHeader } from "../../components/auth_components/AuthManager";
 
 export default function SingleCategory() {
   const [categoryData, setCategoryData] = useState(null);
@@ -22,7 +23,7 @@ export default function SingleCategory() {
           `${globalBackendRoute}/api/single-category/${id}`
         );
         setCategoryData(response.data);
-        setUpdatedCategoryName(response.data.category_name);
+        setUpdatedCategoryName(response.data.category_name || "");
       } catch (error) {
         console.error("Error fetching category data:", error);
       }
@@ -37,7 +38,7 @@ export default function SingleCategory() {
     }
 
     const formData = new FormData();
-    formData.append("category_name", updatedCategoryName);
+    formData.append("category_name", updatedCategoryName.trim());
     if (newCategoryImage) {
       formData.append("category_image", newCategoryImage);
     }
@@ -48,21 +49,30 @@ export default function SingleCategory() {
         formData,
         {
           headers: {
-            "Content-Type": "multipart/form-data",
+            ...getAuthorizationHeader(), // ✅ IMPORTANT (Bearer token)
+            // ✅ DO NOT set Content-Type manually for FormData (browser sets boundary)
           },
+          withCredentials: true, // harmless if you use JWT header; required if cookies auth
         }
       );
+
       alert("Category updated successfully!");
       window.location.reload();
     } catch (error) {
       console.error("Error updating category:", error);
-      alert("Failed to update the category. Please try again.");
+      alert(
+        error?.response?.data?.message ||
+          "Failed to update the category. Please try again."
+      );
     }
   };
 
   const getImageUrl = (imagePath) => {
-    if (!imagePath) return "https://via.placeholder.com/150";
-    return `${globalBackendRoute}/${imagePath.replace(/\\/g, "/")}`;
+    if (!imagePath) return "/images/default-category.jpg";
+    const normalized = String(imagePath)
+      .replace(/\\/g, "/")
+      .replace(/^\/+/g, "");
+    return `${globalBackendRoute}/${normalized}`;
   };
 
   if (!categoryData) return <div className="text-center py-8">Loading...</div>;
@@ -81,15 +91,14 @@ export default function SingleCategory() {
           animate={{ scale: 1, opacity: 1 }}
           className="w-auto h-full sm:w-48 sm:h-48"
         >
-         <img
-  src={
-    categoryData.category_image
-      ? getImageUrl(categoryData.category_image)
-      : "https://via.placeholder.com/150"
-  }
-  alt={categoryData.category_name || "Category"}
-  className="w-full h-full object-cover rounded-xl border"
-/>
+          <img
+            src={getImageUrl(categoryData.category_image)}
+            alt={categoryData.category_name || "Category"}
+            onError={(e) =>
+              (e.currentTarget.src = "/images/default-category.jpg")
+            }
+            className="w-full h-full object-cover rounded-xl border"
+          />
         </motion.div>
 
         {/* Category Details */}
