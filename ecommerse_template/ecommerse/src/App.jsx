@@ -18,8 +18,10 @@ function App() {
         <CartProvider>
           <WishlistProvider>
             <Router>
-              <MainLayout />
-               <TopArrow scrollTargetId="app-scroll" />
+              <div>
+                <MainLayout />
+              </div>
+              <TopArrow scrollTargetId="app-scroll" />
             </Router>
           </WishlistProvider>
         </CartProvider>

@@ -212,6 +212,7 @@ const getCategoryProductCounts = async (req, res) => {
       categories.map(async (category) => {
         const productCount = await Product.countDocuments({
           category: category._id,
+          isDeleted: false,
         });
 
         return {

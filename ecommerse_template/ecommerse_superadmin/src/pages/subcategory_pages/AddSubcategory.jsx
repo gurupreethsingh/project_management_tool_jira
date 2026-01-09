@@ -12,7 +12,6 @@ export default function AddSubCategory() {
 
   const navigate = useNavigate();
 
-  // Fetch categories on load
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -27,6 +26,7 @@ export default function AddSubCategory() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setMessage("");
 
     if (!subcategoryName || !selectedCategory) {
       setMessage("Please fill in all fields.");
@@ -34,19 +34,25 @@ export default function AddSubCategory() {
     }
 
     try {
-      await axios.post(`${globalBackendRoute}/api/add-sub-category`, {
-        subcategory_name: subcategoryName,
-        category: selectedCategory,
-      });
+      const resp = await axios.post(
+        `${globalBackendRoute}/api/add-sub-category`,
+        {
+          subcategory_name: subcategoryName,
+          category: selectedCategory,
+        }
+      );
 
-      setMessage("Subcategory added successfully!");
-      alert("Subcategory added.");
+      setMessage(resp.data?.message || "Subcategory saved successfully!");
+      alert(resp.data?.message || "Subcategory saved.");
       setSubcategoryName("");
       setSelectedCategory("");
       navigate("/all-sub-categories");
     } catch (error) {
       console.error("Error adding subcategory:", error);
-      setMessage("Failed to add subcategory. Try again.");
+      const serverMsg =
+        error?.response?.data?.message ||
+        "Failed to add subcategory. Try again.";
+      setMessage(serverMsg);
     }
   };
 
@@ -61,7 +67,6 @@ export default function AddSubCategory() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Subcategory Name */}
         <ModernTextInput
           label="Subcategory Name"
           value={subcategoryName}
@@ -69,7 +74,6 @@ export default function AddSubCategory() {
           placeholder="Enter subcategory name"
         />
 
-        {/* Select Category */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Select Main Category
@@ -88,7 +92,6 @@ export default function AddSubCategory() {
           </select>
         </div>
 
-        {/* Submit Button */}
         <div>
           <button
             type="submit"

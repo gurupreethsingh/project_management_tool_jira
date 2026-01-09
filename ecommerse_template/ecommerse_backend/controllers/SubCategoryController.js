@@ -1,32 +1,96 @@
 const SubCategory = require("../models/SubCategoryModel");
 const Category = require("../models/CategoryModel");
+const mongoose = require("mongoose");
 
-// Create a new subcategory
+// small helper
+function normalizeName(name) {
+  return String(name || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// ✅ Create a new subcategory (NO DUPLICATES, revive if soft-deleted)
 const addSubCategory = async (req, res) => {
   try {
     const { subcategory_name, category } = req.body;
 
+    // validations
+    if (!subcategory_name || !String(subcategory_name).trim()) {
+      return res.status(400).json({ message: "subcategory_name is required" });
+    }
+    if (!category || !mongoose.Types.ObjectId.isValid(category)) {
+      return res.status(400).json({ message: "Valid category is required" });
+    }
+
+    const catExists = await Category.findById(category).select("_id");
+    if (!catExists) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const rawName = String(subcategory_name).trim();
+    const normalized = normalizeName(rawName);
+
+    // ✅ Check existing (case-insensitive via normalized)
+    const existing = await SubCategory.findOne({
+      category,
+      subcategory_name_normalized: normalized,
+    });
+
+    // ✅ If exists & active -> block
+    if (existing && existing.isDeleted === false) {
+      return res.status(400).json({
+        message: "Subcategory already exists under this category",
+      });
+    }
+
+    // ✅ If exists but soft-deleted -> revive it
+    if (existing && existing.isDeleted === true) {
+      existing.isDeleted = false;
+      existing.subcategory_name = rawName; // keep latest casing user typed
+      existing.subcategory_name_normalized = normalized;
+      await existing.save();
+
+      return res.status(200).json({
+        message: "Subcategory restored successfully",
+        subcategory: existing,
+      });
+    }
+
+    // ✅ Create new
     const newSubCategory = new SubCategory({
-      subcategory_name,
+      subcategory_name: rawName,
+      subcategory_name_normalized: normalized,
       category,
     });
 
     await newSubCategory.save();
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "Subcategory created successfully",
       subcategory: newSubCategory,
     });
   } catch (error) {
     console.error("Error adding subcategory:", error);
-    res.status(500).json({ message: "Error adding subcategory" });
+
+    // ✅ handle unique index collision
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        message: "Subcategory already exists under this category",
+      });
+    }
+
+    return res.status(500).json({ message: "Error adding subcategory" });
   }
 };
 
-// Get all subcategories
+// ✅ Get all subcategories (active only)
 const getAllSubCategories = async (req, res) => {
   try {
-    const subcategories = await SubCategory.find({ isDeleted: false }).populate("category");
+    const subcategories = await SubCategory.find({ isDeleted: false }).populate(
+      "category"
+    );
     res.status(200).json(subcategories);
   } catch (error) {
     console.error("Error fetching subcategories:", error);
@@ -34,10 +98,12 @@ const getAllSubCategories = async (req, res) => {
   }
 };
 
-// Get single subcategory by ID
+// ✅ Get single subcategory by ID
 const getSubCategoryById = async (req, res) => {
   try {
-    const subcategory = await SubCategory.findById(req.params.id).populate("category");
+    const subcategory = await SubCategory.findById(req.params.id).populate(
+      "category"
+    );
     if (!subcategory || subcategory.isDeleted) {
       return res.status(404).json({ message: "Subcategory not found" });
     }
@@ -48,18 +114,56 @@ const getSubCategoryById = async (req, res) => {
   }
 };
 
-// Update subcategory
+// ✅ Update subcategory (also prevents duplicates)
 const updateSubCategory = async (req, res) => {
   try {
     const { subcategory_name, category } = req.body;
+
     const subcategory = await SubCategory.findById(req.params.id);
     if (!subcategory || subcategory.isDeleted) {
       return res.status(404).json({ message: "Subcategory not found" });
     }
 
-    subcategory.subcategory_name = subcategory_name || subcategory.subcategory_name;
-    subcategory.category = category || subcategory.category;
-    subcategory.updatedAt = Date.now();
+    // if category update provided, validate it
+    let nextCategory = subcategory.category;
+    if (category) {
+      if (!mongoose.Types.ObjectId.isValid(category)) {
+        return res.status(400).json({ message: "Valid category is required" });
+      }
+      const catExists = await Category.findById(category).select("_id");
+      if (!catExists) {
+        return res.status(404).json({ message: "Category not found" });
+      }
+      nextCategory = category;
+    }
+
+    // if name update provided, normalize & check duplicates
+    let nextName = subcategory.subcategory_name;
+    let nextNorm = subcategory.subcategory_name_normalized;
+
+    if (subcategory_name && String(subcategory_name).trim()) {
+      nextName = String(subcategory_name).trim();
+      nextNorm = normalizeName(nextName);
+    }
+
+    // ✅ duplicate check (exclude itself)
+    const duplicate = await SubCategory.findOne({
+      _id: { $ne: subcategory._id },
+      category: nextCategory,
+      subcategory_name_normalized: nextNorm,
+    });
+
+    if (duplicate && duplicate.isDeleted === false) {
+      return res.status(400).json({
+        message:
+          "Another subcategory with this name already exists in this category",
+      });
+    }
+
+    // apply changes
+    subcategory.category = nextCategory;
+    subcategory.subcategory_name = nextName;
+    subcategory.subcategory_name_normalized = nextNorm;
 
     const updated = await subcategory.save();
 
@@ -69,11 +173,18 @@ const updateSubCategory = async (req, res) => {
     });
   } catch (error) {
     console.error("Error updating subcategory:", error);
+
+    if (error?.code === 11000) {
+      return res.status(400).json({
+        message: "Subcategory already exists under this category",
+      });
+    }
+
     res.status(500).json({ message: "Error updating subcategory" });
   }
 };
 
-// Soft delete subcategory
+// ✅ Soft delete subcategory
 const deleteSubCategory = async (req, res) => {
   try {
     const subcategory = await SubCategory.findById(req.params.id);
@@ -111,13 +222,16 @@ const countActiveSubCategories = async (req, res) => {
   }
 };
 
-// Count subcategories per category
+// Count subcategories per category (active only)
 const countSubCategoriesPerCategory = async (req, res) => {
   try {
     const categories = await Category.find();
     const counts = await Promise.all(
       categories.map(async (cat) => {
-        const count = await SubCategory.countDocuments({ category: cat._id });
+        const count = await SubCategory.countDocuments({
+          category: cat._id,
+          isDeleted: false,
+        });
         return {
           categoryId: cat._id,
           categoryName: cat.category_name,
@@ -128,7 +242,9 @@ const countSubCategoriesPerCategory = async (req, res) => {
     res.status(200).json(counts);
   } catch (error) {
     console.error("Error counting subcategories per category:", error);
-    res.status(500).json({ message: "Error counting subcategories per category" });
+    res
+      .status(500)
+      .json({ message: "Error counting subcategories per category" });
   }
 };
 
