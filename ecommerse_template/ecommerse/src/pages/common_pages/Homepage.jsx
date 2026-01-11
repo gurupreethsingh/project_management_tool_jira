@@ -1516,7 +1516,7 @@ const Homepage = () => {
         </section>
 
         {/* === CATEGORY CAROUSEL === */}
-        <section className="mt-8 sm:mt-10">
+        <section className="m-8 sm:mt-10">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
             <div>
               <h2 className="text-[18px] sm:text-[22px] md:text-[26px] lg:text-[32px] font-extrabold text-gray-900 tracking-tight">
@@ -1617,7 +1617,7 @@ const Homepage = () => {
         </section>
 
         {/* ✅ BRANDS SECTION (TRUE smooth, no jerk) */}
-        <section className="mt-10 sm:mt-12">
+        <section className="m-10 sm:mt-12">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-2 mb-4">
             <div>
               <h2 className="text-[18px] sm:text-[22px] md:text-[26px] lg:text-[30px] font-extrabold text-gray-900 tracking-tight">
@@ -1750,7 +1750,7 @@ const Homepage = () => {
 
         {/* === BRAND PRODUCTS GRID === */}
         {brandedProducts.length > 0 && (
-          <section className="mt-10 sm:mt-14 mb-14 sm:mb-16">
+          <section className="m-10 sm:mt-14 mb-14 sm:mb-16">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3 mb-4">
               <div>
                 <h2 className="text-[18px] sm:text-[22px] md:text-[26px] lg:text-[28px] font-extrabold text-gray-900 tracking-tight">

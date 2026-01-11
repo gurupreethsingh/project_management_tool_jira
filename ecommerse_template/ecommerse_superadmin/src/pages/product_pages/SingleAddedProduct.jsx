@@ -105,7 +105,8 @@ export default function SingleAddedProduct() {
   const safe = (val) =>
     val === null || val === undefined || val === "" ? "NA" : val;
 
-  if (!productData) return <div className="text-center py-8">Loading...</div>;
+  if (!productData)
+    return <div className="text-center py-6 text-sm">Loading...</div>;
 
   const allFields = [
     { icon: <FaUser />, label: "Product Name", key: "product_name" },
@@ -149,103 +150,139 @@ export default function SingleAddedProduct() {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="containerWidth my-6"
+      transition={{ duration: 0.35 }}
+      className="containerWidth my-4"
     >
-      <div className="flex flex-col sm:flex-row sm:items-start items-center gap-6">
+      {/* Compact header */}
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div className="min-w-0">
+          <h3 className="text-sm sm:text-base font-semibold text-gray-900 truncate">
+            {safe(productData.product_name)}
+          </h3>
+          <p className="text-[11px] text-gray-500 mt-0.5 truncate">
+            SKU: {safe(productData.sku)} • Brand: {safe(productData.brand)}
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <button
+            onClick={() => (editMode ? handleUpdate() : setEditMode(true))}
+            className="primaryBtn px-3 py-1.5 rounded-full text-xs flex items-center gap-2"
+          >
+            <MdEdit className="text-sm" /> {editMode ? "Save" : "Edit"}
+          </button>
+
+          <Link
+            to="/all-added-products"
+            className="secondaryBtn px-3 py-1.5 rounded-full text-xs"
+          >
+            Back
+          </Link>
+        </div>
+      </div>
+
+      {/* Dense two-column layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
+        {/* Left: images (sticky on desktop) */}
         <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
+          initial={{ scale: 0.98, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="w-full sm:w-1/3 space-y-4"
+          className="lg:col-span-4"
         >
-          <img
-            src={getImageUrl(productData.product_image)}
-            alt={productData.product_name || "Product"}
-            className="w-full h-48 object-cover rounded-xl border"
-          />
-
-          {editMode && (
-            <>
-              {/* Main Product Image Upload */}
-              <ModernFileInput
-                label="Update Main Product Image"
-                multiple={false}
-                onFileSelect={(file) => setNewMainImage(file)}
-              />
-
-              {/* Gallery Images Upload */}
-              <ModernFileInput
-                label="Update Gallery Images (Max 10)"
-                multiple={true}
-                maxFiles={10}
-                onFileSelect={(files) => setNewGalleryImages(files)}
-              />
-            </>
-          )}
-
-          {/* Existing Gallery Images Preview */}
-          {productData.all_product_images?.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 mt-4">
-              {productData.all_product_images.map((img, i) => (
+          <div className="lg:sticky lg:top-4 space-y-2">
+            {/* Main image */}
+            <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
+              <div className="w-full aspect-[4/3] bg-gray-50">
                 <img
-                  key={i}
-                  src={getImageUrl(img)}
-                  alt={`Gallery ${i}`}
-                  className="w-full h-20 object-cover rounded-lg border"
+                  src={getImageUrl(productData.product_image)}
+                  alt={productData.product_name || "Product"}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+
+              {/* Uploads only in edit mode */}
+              {editMode && (
+                <div className="p-2 space-y-2">
+                  <ModernFileInput
+                    label="Update Main Product Image"
+                    multiple={false}
+                    onFileSelect={(file) => setNewMainImage(file)}
+                  />
+                  <ModernFileInput
+                    label="Update Gallery Images (Max 10)"
+                    multiple={true}
+                    maxFiles={10}
+                    onFileSelect={(files) => setNewGalleryImages(files)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Gallery preview: compact, dense grid */}
+            {productData.all_product_images?.length > 0 && (
+              <div className="bg-white border border-gray-100 rounded-lg p-2">
+                <p className="text-[11px] font-semibold text-gray-700 mb-2">
+                  Gallery ({productData.all_product_images.length})
+                </p>
+
+                <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-5 gap-1.5">
+                  {productData.all_product_images.map((img, i) => (
+                    <div
+                      key={i}
+                      className="aspect-square bg-gray-50 rounded-md overflow-hidden border border-gray-100"
+                      title={`Gallery ${i + 1}`}
+                    >
+                      <img
+                        src={getImageUrl(img)}
+                        alt={`Gallery ${i}`}
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </motion.div>
+
+        {/* Right: details (dense rows) */}
+        <div className="lg:col-span-8">
+          <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-gray-100">
+              <p className="text-xs font-semibold text-gray-800">
+                Product Details
+              </p>
+              <p className="text-[11px] text-gray-500">
+                Compact view (scroll less)
+              </p>
+            </div>
+
+            <div className="divide-y divide-gray-100">
+              {allFields.map((field, idx) => (
+                <ProductFieldCompact
+                  key={idx}
+                  icon={field.icon}
+                  label={field.label}
+                  value={
+                    editMode && field.key ? (
+                      <ModernTextInput
+                        value={updatedFields[field.key] || ""}
+                        onChange={(e) =>
+                          setUpdatedFields((prev) => ({
+                            ...prev,
+                            [field.key]: e.target.value,
+                          }))
+                        }
+                      />
+                    ) : (
+                      safe(updatedFields[field.key])
+                    )
+                  }
                 />
               ))}
             </div>
-          )}
-        </motion.div>
-
-        <div className="w-full sm:w-2/3">
-          <motion.h3
-            className="subHeadingTextMobile lg:subHeadingText mb-4"
-            initial={{ x: -30, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-          >
-            Product Details
-          </motion.h3>
-
-          <div className="border-t border-gray-200 divide-y divide-gray-100">
-            {allFields.map((field, idx) => (
-              <ProductField
-                key={idx}
-                icon={field.icon}
-                label={field.label}
-                value={
-                  editMode && field.key ? (
-                    <ModernTextInput
-                      value={updatedFields[field.key] || ""}
-                      onChange={(e) =>
-                        setUpdatedFields((prev) => ({
-                          ...prev,
-                          [field.key]: e.target.value,
-                        }))
-                      }
-                    />
-                  ) : (
-                    safe(updatedFields[field.key])
-                  )
-                }
-              />
-            ))}
-          </div>
-
-          <div className="mt-6 flex flex-col sm:flex-row gap-3 justify-center">
-            <button
-              onClick={() => (editMode ? handleUpdate() : setEditMode(true))}
-              className="primaryBtn w-fit px-6 py-2 rounded-full flex items-center gap-2"
-            >
-              <MdEdit /> {editMode ? "Save Changes" : "Edit Product"}
-            </button>
-
-            <Link
-              to="/all-added-products"
-              className="secondaryBtn w-fit px-6 py-2 rounded-full"
-            >
-              Back to All Products
-            </Link>
           </div>
         </div>
       </div>
@@ -253,15 +290,27 @@ export default function SingleAddedProduct() {
   );
 }
 
-function ProductField({ icon, label, value }) {
+function ProductFieldCompact({ icon, label, value }) {
   return (
-    <div className="py-3 sm:grid sm:grid-cols-3 sm:gap-4 px-2 sm:px-4">
-      <dt className="flex items-center text-sm font-medium text-gray-700 gap-2">
-        {icon} {label}
-      </dt>
-      <dd className="mt-1 text-sm text-gray-900 sm:col-span-2 sm:mt-0">
-        {value}
-      </dd>
+    <div className="px-3 py-2">
+      <div className="grid grid-cols-12 gap-2 items-start">
+        <div className="col-span-5 sm:col-span-4 flex items-center gap-2 min-w-0">
+          <span className="text-gray-500 text-[12px]">{icon}</span>
+          <span className="text-[12px] font-medium text-gray-700 truncate">
+            {label}
+          </span>
+        </div>
+
+        <div className="col-span-7 sm:col-span-8">
+          <div className="text-[12px] text-gray-900 leading-5">
+            {typeof value === "string" || typeof value === "number" ? (
+              <span className="break-words">{value}</span>
+            ) : (
+              value
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

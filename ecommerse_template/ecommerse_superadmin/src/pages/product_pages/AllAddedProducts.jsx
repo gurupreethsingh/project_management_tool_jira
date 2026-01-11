@@ -1,14 +1,7 @@
-
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
-import {
-  FaThList,
-  FaThLarge,
-  FaTh,
-  FaTrash,
-  FaRupeeSign,
-} from "react-icons/fa";
+import { FaThList, FaThLarge, FaTh, FaTrash } from "react-icons/fa";
 import { toast } from "react-toastify";
 import globalBackendRoute from "../../config/Config";
 import SearchBar from "../../components/common_components/SearchBar";
@@ -84,128 +77,175 @@ const AllAddedProducts = () => {
     : products;
 
   return (
-    <div className="fullWidth py-10">
-      <div className="containerWidth">
-        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+    <div className="fullWidth py-6">
+      <div className="">
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
           <h2 className="headingText">
             All Products
-            <span className="text-sm text-gray-500 ml-2">
+            <span className="text-xs text-gray-500 ml-2">
               Showing {filteredProducts.length} of {totalCount}
             </span>
           </h2>
-          <div className="flex items-center flex-wrap gap-4">
-            <FaThList
-              className={`text-xl cursor-pointer ${
-                view === "list" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => setView("list")}
-            />
-            <FaThLarge
-              className={`text-xl cursor-pointer ${
-                view === "card" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => setView("card")}
-            />
-            <FaTh
-              className={`text-xl cursor-pointer ${
-                view === "grid" ? "text-indigo-600" : "text-gray-600"
-              }`}
-              onClick={() => setView("grid")}
-            />
-            <SearchBar
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search products..."
-            />
+
+          <div className="flex items-center flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <FaThList
+                className={`text-lg cursor-pointer ${
+                  view === "list" ? "text-indigo-600" : "text-gray-500"
+                }`}
+                onClick={() => setView("list")}
+                title="List"
+              />
+              <FaThLarge
+                className={`text-lg cursor-pointer ${
+                  view === "card" ? "text-indigo-600" : "text-gray-500"
+                }`}
+                onClick={() => setView("card")}
+                title="Card"
+              />
+              <FaTh
+                className={`text-lg cursor-pointer ${
+                  view === "grid" ? "text-indigo-600" : "text-gray-500"
+                }`}
+                onClick={() => setView("grid")}
+                title="Grid"
+              />
+            </div>
+
+            <div className="min-w-[220px]">
+              <SearchBar
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products..."
+              />
+            </div>
           </div>
         </div>
 
-        <div className="mt-6">
+        {/* Content */}
+        <div className="mt-4">
           {filteredProducts.length === 0 ? (
-            <p className="text-center text-gray-500">No products found.</p>
+            <p className="text-center text-gray-500 text-sm">
+              No products found.
+            </p>
           ) : view === "grid" ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            // ✅ ULTRA COMPACT GRID (image + name only)
+            <div className="grid grid-cols-3 sm:grid-cols-5 md:grid-cols-7 lg:grid-cols-9 xl:grid-cols-11 2xl:grid-cols-12 gap-2">
               {filteredProducts.map((product) => (
                 <Link
                   key={product._id}
                   to={`/single-added-product/${product._id}`}
-                  className="relative flex flex-col items-start bg-white shadow rounded-lg overflow-hidden"
+                  className="group relative bg-white border border-gray-100 rounded-md overflow-hidden hover:border-gray-200 hover:shadow-sm transition"
+                  title={product.product_name}
                 >
-                  <img
-                    src={getImageUrl(product.product_image)}
-                    alt={product.product_name}
-                    onError={handleImageError}
-                    className="w-full h-48 object-cover"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleDeleteProduct(product._id);
-                    }}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
-                  >
-                    <FaTrash />
-                  </button>
-                  <div className="p-3 space-y-1">
-                    <h3 className="subHeadingTextMobile">
+                  <div className="relative w-full aspect-square bg-gray-50">
+                    <img
+                      src={getImageUrl(product.product_image)}
+                      alt={product.product_name}
+                      onError={handleImageError}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        handleDeleteProduct(product._id);
+                      }}
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition
+                                 bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
+                      title="Delete"
+                    >
+                      <FaTrash className="text-[12px]" />
+                    </button>
+                  </div>
+
+                  <div className="px-1.5 py-1">
+                    <p className="text-[11px] leading-4 font-medium text-gray-800 truncate">
                       {product.product_name}
-                    </h3>
-                    <p className="paragraphTextMobile">{product.sku}</p>
-                    <p className="paragraphTextMobile">{product.brand}</p>
-                    <div className="flex items-center gap-2 text-sm mt-2">
-                      {product.display_price && (
-                        <span className="line-through text-gray-400 flex items-center">
-                          <FaRupeeSign /> {product.display_price}
-                        </span>
-                      )}
-                      <span className="font-bold text-green-600 flex items-center">
-                        <FaRupeeSign /> {product.selling_price}
-                      </span>
-                    </div>
+                    </p>
                   </div>
                 </Link>
               ))}
             </div>
           ) : (
-            <div className="space-y-4">
+            // ✅ COMPACT LIST/CARD VIEWS (image + name only)
+            <div
+              className={
+                view === "card"
+                  ? "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-7 gap-2"
+                  : "space-y-2"
+              }
+            >
               {filteredProducts.map((product) => (
                 <Link
                   key={product._id}
                   to={`/single-added-product/${product._id}`}
-                  className="flex items-center space-x-4 bg-white rounded-lg shadow p-3 relative"
+                  className={
+                    view === "card"
+                      ? "group relative bg-white border border-gray-100 rounded-md overflow-hidden hover:border-gray-200 hover:shadow-sm transition"
+                      : "group relative flex items-center gap-2 bg-white border border-gray-100 rounded-md px-2 py-1.5 hover:border-gray-200 hover:shadow-sm transition"
+                  }
+                  title={product.product_name}
                 >
-                  <img
-                    src={getImageUrl(product.product_image)}
-                    alt={product.product_name}
-                    onError={handleImageError}
-                    className="w-20 h-20 object-cover rounded-lg"
-                  />
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleDeleteProduct(product._id);
-                    }}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
-                  >
-                    <FaTrash />
-                  </button>
-                  <div>
-                    <h3 className="subHeadingTextMobile">
-                      {product.product_name}
-                    </h3>
-                    <p className="paragraphTextMobile">{product.sku}</p>
-                    <p className="paragraphTextMobile">{product.brand}</p>
-                    <div className="flex items-center gap-2 text-sm mt-2">
-                      {product.display_price && (
-                        <span className="line-through text-gray-400 flex items-center">
-                          <FaRupeeSign /> {product.display_price}
-                        </span>
-                      )}
-                      <span className="font-bold text-green-600 flex items-center">
-                        <FaRupeeSign /> {product.selling_price}
-                      </span>
-                    </div>
-                  </div>
+                  {view === "card" ? (
+                    <>
+                      <div className="relative w-full aspect-square bg-gray-50">
+                        <img
+                          src={getImageUrl(product.product_image)}
+                          alt={product.product_name}
+                          onError={handleImageError}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleDeleteProduct(product._id);
+                          }}
+                          className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition
+                                     bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
+                          title="Delete"
+                        >
+                          <FaTrash className="text-[12px]" />
+                        </button>
+                      </div>
+                      <div className="px-1.5 py-1">
+                        <p className="text-[11px] leading-4 font-medium text-gray-800 truncate">
+                          {product.product_name}
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="relative w-10 h-10 rounded-md overflow-hidden bg-gray-50 flex-shrink-0">
+                        <img
+                          src={getImageUrl(product.product_image)}
+                          alt={product.product_name}
+                          onError={handleImageError}
+                          className="w-full h-full object-cover"
+                          loading="lazy"
+                        />
+                      </div>
+
+                      <p className="text-[12px] font-medium text-gray-800 truncate flex-1">
+                        {product.product_name}
+                      </p>
+
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleDeleteProduct(product._id);
+                        }}
+                        className="opacity-80 hover:opacity-100 transition
+                                   bg-red-500 text-white p-1 rounded-full shadow hover:bg-red-600"
+                        title="Delete"
+                      >
+                        <FaTrash className="text-[12px]" />
+                      </button>
+                    </>
+                  )}
                 </Link>
               ))}
             </div>
