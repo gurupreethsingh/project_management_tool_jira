@@ -10,7 +10,7 @@ router.post(
   "/add-product",
   productUpload.fields([
     { name: "product_image", maxCount: 1 },
-    { name: "all_product_images", maxCount: 10 },
+    { name: "all_product_images", maxCount: 5 }, // ✅ max 5
   ]),
   ProductController.createProduct
 );
@@ -36,9 +36,22 @@ router.put(
   "/update-product/:id",
   productUpload.fields([
     { name: "product_image", maxCount: 1 },
-    { name: "all_product_images", maxCount: 10 },
+    { name: "all_product_images", maxCount: 5 }, // ✅ max 5
   ]),
   ProductController.updateProductById
+);
+
+// ✅ NEW: add gallery image one-by-one (single file)
+router.put(
+  "/add-one-gallery-image/:id",
+  productUpload.single("gallery_image"),
+  ProductController.addOneGalleryImage
+);
+
+// ✅ NEW: remove one gallery image (no multer)
+router.put(
+  "/remove-one-gallery-image/:id",
+  ProductController.removeOneGalleryImage
 );
 
 // ========== DELETE ==========
@@ -67,7 +80,7 @@ router.get(
   ProductController.countProductsBySection
 );
 
-// === New Search Route ===
+// === Search ===
 router.get("/search-products", ProductController.searchProducts);
 
 module.exports = router;

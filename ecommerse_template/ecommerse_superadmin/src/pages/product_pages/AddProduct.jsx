@@ -24,8 +24,12 @@ export default function AddProduct() {
     vendor: "",
     outlet: "",
   });
+
   const [productImage, setProductImage] = useState(null);
+
+  // ✅ gallery images selected one-by-one (max 5)
   const [galleryImages, setGalleryImages] = useState([]);
+
   const [categories, setCategories] = useState([]);
   const [subcategoriesAll, setSubcategoriesAll] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
@@ -83,6 +87,30 @@ export default function AddProduct() {
     return true;
   };
 
+  // ✅ add one gallery file at a time (max 5)
+  const handleAddGalleryOneByOne = (file) => {
+    if (!file) return;
+
+    if (galleryImages.length >= 5) {
+      alert("Only 5 gallery images allowed.");
+      return;
+    }
+
+    // prevent duplicates by name+size
+    const sig = `${file.name}_${file.size}`;
+    const exists = galleryImages.some((f) => `${f.name}_${f.size}` === sig);
+    if (exists) {
+      alert("This image is already selected.");
+      return;
+    }
+
+    setGalleryImages((prev) => [...prev, file]);
+  };
+
+  const removeGalleryAt = (idx) => {
+    setGalleryImages((prev) => prev.filter((_, i) => i !== idx));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -107,6 +135,11 @@ export default function AddProduct() {
       return;
     }
 
+    if (galleryImages.length > 5) {
+      setMessage("Only 5 gallery images allowed.");
+      return;
+    }
+
     try {
       const formData = new FormData();
       Object.entries(productData).forEach(([key, val]) => {
@@ -116,6 +149,8 @@ export default function AddProduct() {
       });
 
       if (productImage) formData.append("product_image", productImage);
+
+      // ✅ append gallery images (user selected one-by-one)
       galleryImages.forEach((file) =>
         formData.append("all_product_images", file)
       );
@@ -123,7 +158,9 @@ export default function AddProduct() {
       const res = await axios.post(
         `${globalBackendRoute}/api/add-product`,
         formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
+        {
+          headers: { "Content-Type": "multipart/form-data" },
+        }
       );
 
       if (res.status === 201) {
@@ -144,6 +181,7 @@ export default function AddProduct() {
     <div className="max-w-5xl mx-auto py-10 px-4">
       <h2 className="text-3xl font-bold mb-6">Add New Product</h2>
       {message && <p className="text-red-500 text-center">{message}</p>}
+
       <form
         onSubmit={handleSubmit}
         className="space-y-6"
@@ -164,6 +202,7 @@ export default function AddProduct() {
           value={productData.description}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="SKU *"
           name="sku"
@@ -171,6 +210,7 @@ export default function AddProduct() {
           value={productData.sku}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Slug (URL-friendly) *"
           name="slug"
@@ -196,6 +236,7 @@ export default function AddProduct() {
           value={productData.display_price}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Brand *"
           name="brand"
@@ -203,6 +244,7 @@ export default function AddProduct() {
           value={productData.brand}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Barcode"
           name="barcode"
@@ -210,6 +252,7 @@ export default function AddProduct() {
           value={productData.barcode}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Stock *"
           name="stock"
@@ -218,6 +261,7 @@ export default function AddProduct() {
           value={productData.stock}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Color"
           name="color"
@@ -225,6 +269,7 @@ export default function AddProduct() {
           value={productData.color}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Material"
           name="material"
@@ -232,6 +277,7 @@ export default function AddProduct() {
           value={productData.material}
           onChange={handleChange}
         />
+
         <ModernTextInput
           label="Tags (comma separated)"
           name="tags"
@@ -321,23 +367,58 @@ export default function AddProduct() {
           </div>
         </div>
 
- <input
-  type="file"
-  name="product_image"  // ✅ Important
-  accept="image/*"
-  onChange={(e) => setProductImage(e.target.files[0])}
-  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-gray-300"
-/>
+        {/* Main Image */}
+        <input
+          type="file"
+          name="product_image"
+          accept="image/*"
+          onChange={(e) => setProductImage(e.target.files[0])}
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-gray-300"
+        />
 
-<input
-  type="file"
-  name="all_product_images"  // ✅ Important
-  accept="image/*"
-  multiple
-  onChange={(e) => setGalleryImages([...e.target.files])}
-  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-gray-300"
-/>
+        {/* ✅ Gallery images one-by-one */}
+        <div className="border rounded-lg p-4 bg-white">
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-semibold text-gray-800">
+              Gallery Images (Max 5) — add one by one
+            </p>
+            <p className="text-sm text-gray-500">
+              {galleryImages.length}/5 selected
+            </p>
+          </div>
 
+          <input
+            type="file"
+            name="all_product_images"
+            accept="image/*"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              handleAddGalleryOneByOne(f);
+              e.target.value = ""; // reset so same file can be picked again if needed
+            }}
+            className="mt-3 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border file:border-gray-300"
+          />
+
+          {galleryImages.length > 0 && (
+            <div className="mt-3 space-y-2">
+              {galleryImages.map((f, idx) => (
+                <div
+                  key={`${f.name}_${f.size}_${idx}`}
+                  className="flex items-center justify-between gap-3 text-sm border rounded px-3 py-2"
+                >
+                  <span className="truncate">{f.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeGalleryAt(idx)}
+                    className="text-red-600 font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <button
           type="submit"

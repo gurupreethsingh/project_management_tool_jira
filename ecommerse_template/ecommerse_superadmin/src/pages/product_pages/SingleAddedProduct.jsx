@@ -1,5 +1,4 @@
-// pages/product_pages/SingleAddedProduct.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FaUser,
   FaTags,
@@ -16,6 +15,8 @@ import {
   FaFlag,
   FaGlobe,
   FaCheck,
+  FaTrash,
+  FaImages,
 } from "react-icons/fa";
 import { MdEdit } from "react-icons/md";
 import { motion } from "framer-motion";
@@ -30,7 +31,11 @@ export default function SingleAddedProduct() {
   const [editMode, setEditMode] = useState(false);
   const [updatedFields, setUpdatedFields] = useState({});
   const [newMainImage, setNewMainImage] = useState(null);
-  const [newGalleryImages, setNewGalleryImages] = useState([]);
+
+  // ✅ one-by-one gallery upload
+  const [galleryPick, setGalleryPick] = useState(null);
+  const [galleryUploading, setGalleryUploading] = useState(false);
+
   const { id } = useParams();
 
   useEffect(() => {
@@ -58,7 +63,6 @@ export default function SingleAddedProduct() {
     try {
       const formData = new FormData();
 
-      // Append all updated fields
       Object.entries(updatedFields).forEach(([key, val]) => {
         if (val !== undefined && val !== null) {
           if (Array.isArray(val)) {
@@ -69,16 +73,8 @@ export default function SingleAddedProduct() {
         }
       });
 
-      // Handle new main image
       if (newMainImage) {
         formData.append("product_image", newMainImage);
-      }
-
-      // Handle new gallery images
-      if (newGalleryImages.length > 0) {
-        newGalleryImages.forEach((file) => {
-          formData.append("all_product_images", file);
-        });
       }
 
       await axios.put(
@@ -99,11 +95,81 @@ export default function SingleAddedProduct() {
 
   const getImageUrl = (imagePath) => {
     if (!imagePath) return "https://via.placeholder.com/150";
-    return `${globalBackendRoute}/${imagePath.replace(/\\/g, "/")}`;
+    return `${globalBackendRoute}/${String(imagePath).replace(/\\/g, "/")}`;
   };
 
   const safe = (val) =>
     val === null || val === undefined || val === "" ? "NA" : val;
+
+  // ✅ de-dupe gallery list to avoid repeated rendering
+  const galleryUnique = useMemo(() => {
+    const arr = productData?.all_product_images || [];
+    const seen = new Set();
+    const out = [];
+    for (const p of arr) {
+      const n = String(p || "")
+        .replace(/\\/g, "/")
+        .trim();
+      if (!n) continue;
+      if (!seen.has(n)) {
+        seen.add(n);
+        out.push(n);
+      }
+    }
+    return out;
+  }, [productData?.all_product_images]);
+
+  const addGalleryOneByOne = async () => {
+    if (!galleryPick) return;
+
+    if (galleryUnique.length >= 5) {
+      alert("Maximum 5 gallery images allowed.");
+      return;
+    }
+
+    try {
+      setGalleryUploading(true);
+      const fd = new FormData();
+      fd.append("gallery_image", galleryPick);
+
+      const res = await axios.put(
+        `${globalBackendRoute}/api/add-one-gallery-image/${id}`,
+        fd,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      if (res.data?.product) {
+        setProductData(res.data.product);
+      } else {
+        // fallback refetch
+        const ref = await axios.get(
+          `${globalBackendRoute}/api/get-single-added-product-by-id/${id}`
+        );
+        setProductData(ref.data);
+      }
+
+      setGalleryPick(null);
+      alert("Gallery image added!");
+    } catch (err) {
+      console.error("Add gallery image error:", err);
+      alert(err.response?.data?.message || "Failed to add gallery image.");
+    } finally {
+      setGalleryUploading(false);
+    }
+  };
+
+  const removeGalleryImage = async (imgPath) => {
+    try {
+      const res = await axios.put(
+        `${globalBackendRoute}/api/remove-one-gallery-image/${id}`,
+        { imagePath: imgPath }
+      );
+      if (res.data?.product) setProductData(res.data.product);
+    } catch (err) {
+      console.error("Remove gallery image error:", err);
+      alert(err.response?.data?.message || "Failed to remove image.");
+    }
+  };
 
   if (!productData)
     return <div className="text-center py-6 text-sm">Loading...</div>;
@@ -183,7 +249,7 @@ export default function SingleAddedProduct() {
 
       {/* Dense two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
-        {/* Left: images (sticky on desktop) */}
+        {/* Left: images */}
         <motion.div
           initial={{ scale: 0.98, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
@@ -201,7 +267,6 @@ export default function SingleAddedProduct() {
                 />
               </div>
 
-              {/* Uploads only in edit mode */}
               {editMode && (
                 <div className="p-2 space-y-2">
                   <ModernFileInput
@@ -209,36 +274,79 @@ export default function SingleAddedProduct() {
                     multiple={false}
                     onFileSelect={(file) => setNewMainImage(file)}
                   />
-                  <ModernFileInput
-                    label="Update Gallery Images (Max 10)"
-                    multiple={true}
-                    maxFiles={10}
-                    onFileSelect={(files) => setNewGalleryImages(files)}
-                  />
+
+                  {/* ✅ NEW: Gallery one-by-one */}
+                  <div className="border rounded-lg p-2">
+                    <p className="text-[11px] font-semibold text-gray-700 flex items-center gap-2">
+                      <FaImages /> Gallery (max 5) — upload one by one
+                      <span className="text-gray-500">
+                        ({galleryUnique.length}/5)
+                      </span>
+                    </p>
+
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        setGalleryPick(f || null);
+                        e.target.value = "";
+                      }}
+                      className="mt-2 block w-full text-xs text-gray-600"
+                    />
+
+                    <button
+                      type="button"
+                      onClick={addGalleryOneByOne}
+                      disabled={!galleryPick || galleryUploading}
+                      className={`mt-2 w-full rounded-full px-3 py-2 text-xs font-semibold ${
+                        !galleryPick || galleryUploading
+                          ? "bg-gray-200 text-gray-500"
+                          : "bg-black text-white hover:opacity-90"
+                      }`}
+                    >
+                      {galleryUploading
+                        ? "Uploading..."
+                        : galleryPick
+                        ? "Add to Gallery"
+                        : "Pick an image"}
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
 
-            {/* Gallery preview: compact, dense grid */}
-            {productData.all_product_images?.length > 0 && (
+            {/* Gallery preview */}
+            {galleryUnique.length > 0 && (
               <div className="bg-white border border-gray-100 rounded-lg p-2">
                 <p className="text-[11px] font-semibold text-gray-700 mb-2">
-                  Gallery ({productData.all_product_images.length})
+                  Gallery ({galleryUnique.length})
                 </p>
 
                 <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-5 gap-1.5">
-                  {productData.all_product_images.map((img, i) => (
+                  {galleryUnique.map((img) => (
                     <div
-                      key={i}
-                      className="aspect-square bg-gray-50 rounded-md overflow-hidden border border-gray-100"
-                      title={`Gallery ${i + 1}`}
+                      key={img}
+                      className="relative aspect-square bg-gray-50 rounded-md overflow-hidden border border-gray-100"
+                      title="Gallery image"
                     >
                       <img
                         src={getImageUrl(img)}
-                        alt={`Gallery ${i}`}
+                        alt="Gallery"
                         className="w-full h-full object-cover"
                         loading="lazy"
                       />
+
+                      {editMode && (
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(img)}
+                          className="absolute top-1 right-1 bg-white/90 hover:bg-white rounded-full p-1 shadow"
+                          title="Remove"
+                        >
+                          <FaTrash className="text-[11px] text-red-600" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -247,7 +355,7 @@ export default function SingleAddedProduct() {
           </div>
         </motion.div>
 
-        {/* Right: details (dense rows) */}
+        {/* Right: details */}
         <div className="lg:col-span-8">
           <div className="bg-white border border-gray-100 rounded-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100">

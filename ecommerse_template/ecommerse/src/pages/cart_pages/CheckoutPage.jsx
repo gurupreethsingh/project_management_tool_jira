@@ -575,7 +575,7 @@ const CheckoutPage = () => {
       `}</style>
 
       <motion.div
-        className="w-full px-3 sm:px-5 lg:px-10 py-6 max-w-6xl mx-auto"
+        className="w-full px-3 sm:px-5 lg:px-10 py-6 max-w-7xl mx-auto"
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}

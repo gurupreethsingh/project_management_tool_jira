@@ -1,23 +1,8 @@
 // // ✅ file: src/pages/shop_pages/SearchProducts.jsx
-// // ✅ FULL UPDATED CODE (NO BLANK PAGE EVER)
-// //
-// // ✅ What changed (without breaking anything you already have):
-// // 1) Search runs FIRST (exact same debounce + URL ?query logic)
-// // 2) If search has 0 matches ➜ fallback mode activates:
-// //    - page behaves EXACTLY like Shop page (shows ALL products)
-// //    - sidebar behaves EXACTLY like Shop sidebar (tree from products, hides empty cats/subcats)
-// //    - clicking category shows category + its subcategory products
-// //    - category name click toggles dropdown (same as chevron)
-// //    - only ONE category dropdown open at a time
-// //    - FULL ROWS FIX: productsPerPage is multiple of columns (identical to Shop)
-// // 3) Does NOT remove any existing search page functionality.
-// // 4) Also filters out isDeleted products (same safety as Shop)
-// //
-// // ✅ IMPORTANT:
-// // - Sidebar always receives the correct base list:
-// //   - If matches found => base = matched products
-// //   - If no matches => base = ALL products (shop mode)
-// // - Filters apply on top of that base (same as your search page requirement)
+// // ✅ FULL UPDATED CODE (NO BLANK PAGE EVER) + ✅ MOBILE FILTER DRAWER (Amazon/Flipkart)
+// // ✅ Desktop: same (sidebar visible)
+// // ✅ Mobile: sidebar hidden -> "Filters" sticky bar -> drawer opens with SAME FiltersSidebar
+// // ✅ Includes: overlay click close, ESC close, body scroll lock, extra bottom padding so bar won’t cover content
 
 // import React, {
 //   useState,
@@ -42,6 +27,7 @@
 //   Tags,
 //   ListFilter,
 //   IndianRupee,
+//   X,
 // } from "lucide-react";
 // import * as Slider from "@radix-ui/react-slider";
 // import {
@@ -54,7 +40,7 @@
 //   FaStar,
 // } from "react-icons/fa";
 // import { RiShoppingCart2Line, RiShoppingBag3Line } from "react-icons/ri";
-// import { FiTruck, FiRefreshCw, FiSliders } from "react-icons/fi";
+// import { FiTruck, FiRefreshCw, FiSliders, FiFilter } from "react-icons/fi";
 
 // let debounceTimeout;
 
@@ -85,8 +71,6 @@
 //   }
 //   return "";
 // }
-
-// // ✅ robust id reader (works for ObjectId string OR populated doc)
 // function getId(val) {
 //   if (!val) return "";
 //   if (typeof val === "string") return val;
@@ -100,7 +84,6 @@
 //   }
 //   return String(val);
 // }
-
 // function getCategoryIdFromProduct(p) {
 //   return getId(p?.category?._id || p?.category);
 // }
@@ -117,7 +100,7 @@
 // }
 
 // // ===============================================================
-// // ✅ MAIN SEARCH PAGE (Shop-like fallback when no results)
+// // ✅ MAIN SEARCH PAGE (Shop-like fallback when no results) + Mobile Drawer
 // // ===============================================================
 // export default function SearchProducts() {
 //   const location = useLocation();
@@ -126,13 +109,8 @@
 //   const [query, setQuery] = useState("");
 //   const [allProducts, setAllProducts] = useState([]);
 
-//   // ✅ searchedBaseProducts = actual search matches (or empty if none)
 //   const [searchedBaseProducts, setSearchedBaseProducts] = useState([]);
-
-//   // ✅ baseForSidebarAndFiltering = either searchedBaseProducts (if found) OR allProducts (fallback)
 //   const [baseProducts, setBaseProducts] = useState([]);
-
-//   // ✅ filteredProducts = sidebar filters applied on top of baseProducts
 //   const [filteredProducts, setFilteredProducts] = useState([]);
 
 //   const [currentPage, setCurrentPage] = useState(1);
@@ -142,14 +120,36 @@
 //   const [animatedMsgProductName, setAnimatedMsgProductName] = useState("");
 //   const [localWishlist, setLocalWishlist] = useState([]);
 
+//   // ✅ NEW: Mobile filter drawer (same as Shop.jsx)
+//   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
+
 //   const { isLoggedIn } = useContext(AuthContext);
 //   const { addToCart } = useContext(CartContext);
 //   const { wishlistItems, addToWishlist, removeFromWishlist, fetchWishlist } =
 //     useContext(WishlistContext);
 
+//   // ✅ lock body scroll when drawer open + ESC close
+//   useEffect(() => {
+//     const onKey = (e) => {
+//       if (e.key === "Escape") setIsFilterDrawerOpen(false);
+//     };
+
+//     if (isFilterDrawerOpen) {
+//       document.body.style.overflow = "hidden";
+//       window.addEventListener("keydown", onKey);
+//     } else {
+//       document.body.style.overflow = "";
+//       window.removeEventListener("keydown", onKey);
+//     }
+
+//     return () => {
+//       document.body.style.overflow = "";
+//       window.removeEventListener("keydown", onKey);
+//     };
+//   }, [isFilterDrawerOpen]);
+
 //   // ============================================================
 //   // ✅ FULL ROWS FIX (same as Shop.jsx)
-//   // productsPerPage becomes (columns * rowsPerPage) based on current viewport + viewMode
 //   // ============================================================
 //   const [columns, setColumns] = useState(6);
 
@@ -159,20 +159,18 @@
 
 //       if (viewMode === "list") return 1;
 
-//       // card view columns (matches: grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4)
 //       if (viewMode === "card") {
-//         if (w >= 1280) return 4; // xl
-//         if (w >= 1024) return 3; // lg
-//         if (w >= 640) return 2; // sm
+//         if (w >= 1280) return 4;
+//         if (w >= 1024) return 3;
+//         if (w >= 640) return 2;
 //         return 1;
 //       }
 
-//       // grid view columns (matches: grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6)
-//       if (w >= 1280) return 6; // xl
-//       if (w >= 1024) return 5; // lg
-//       if (w >= 768) return 4; // md
-//       if (w >= 640) return 3; // sm
-//       return 2; // base
+//       if (w >= 1280) return 6;
+//       if (w >= 1024) return 5;
+//       if (w >= 768) return 4;
+//       if (w >= 640) return 3;
+//       return 2;
 //     };
 
 //     const update = () => setColumns(computeCols());
@@ -183,7 +181,6 @@
 //   }, [viewMode]);
 
 //   const rowsPerPage = viewMode === "grid" ? 3 : viewMode === "card" ? 3 : 14;
-
 //   const productsPerPage =
 //     viewMode === "list" ? 14 : Math.max(1, columns) * Math.max(1, rowsPerPage);
 
@@ -205,8 +202,6 @@
 //           `${globalBackendRoute}/api/all-added-products`
 //         );
 //         const products = res.data || [];
-
-//         // ✅ Show only active products (same safety as Shop)
 //         const active = products.filter((p) => p?.isDeleted !== true);
 
 //         setAllProducts(active);
@@ -238,7 +233,6 @@
 //         .toLowerCase()
 //         .trim();
 
-//       // if query empty => show all (same as shop)
 //       if (!lowerQuery) {
 //         setSearchedBaseProducts(allProducts);
 //         setBaseProducts(allProducts);
@@ -273,14 +267,9 @@
 //         );
 //       });
 
-//       // ✅ KEEP ORIGINAL SEARCH FEATURE:
-//       // searchedBaseProducts stays as "real matches"
 //       setSearchedBaseProducts(matched);
 
-//       // ✅ NEW REQUIREMENT:
-//       // If no match => fallback to ALL products (shop mode, no blank page)
 //       const base = matched.length > 0 ? matched : allProducts;
-
 //       setBaseProducts(base);
 //       setFilteredProducts(base);
 //       setCurrentPage(1);
@@ -416,6 +405,69 @@
 //         .tightCaps{ letter-spacing: .06em; }
 //       `}</style>
 
+//       {/* ✅ Mobile Filter Drawer (same as Shop.jsx) */}
+//       <AnimatePresence>
+//         {isFilterDrawerOpen && (
+//           <>
+//             <motion.div
+//               className="fixed inset-0 z-[60] bg-black/40"
+//               initial={{ opacity: 0 }}
+//               animate={{ opacity: 1 }}
+//               exit={{ opacity: 0 }}
+//               onClick={() => setIsFilterDrawerOpen(false)}
+//             />
+//             <motion.div
+//               className="fixed top-0 right-0 h-full w-[92%] max-w-[420px] z-[70] bg-white shadow-2xl"
+//               initial={{ x: 420 }}
+//               animate={{ x: 0 }}
+//               exit={{ x: 420 }}
+//               transition={{ type: "tween", duration: 0.22 }}
+//             >
+//               <div className="h-full flex flex-col">
+//                 <div className="px-4 py-3 border-b border-slate-200 flex items-center justify-between">
+//                   <div className="flex items-center gap-2">
+//                     <FiFilter className="text-slate-800" />
+//                     <p className="text-[14px] font-extrabold text-slate-900">
+//                       Filters
+//                     </p>
+//                     <span className="text-[12px] font-semibold text-slate-500">
+//                       ({totalCount})
+//                     </span>
+//                   </div>
+
+//                   <button
+//                     type="button"
+//                     onClick={() => setIsFilterDrawerOpen(false)}
+//                     className="h-9 w-9 rounded-full bg-slate-100 hover:bg-slate-200 inline-flex items-center justify-center"
+//                     aria-label="Close filters"
+//                   >
+//                     <X className="h-5 w-5 text-slate-800" />
+//                   </button>
+//                 </div>
+
+//                 <div className="flex-1 overflow-y-auto px-4 py-4">
+//                   <FiltersSidebar
+//                     allProducts={baseProducts}
+//                     onFilterChange={handleFilterChange}
+//                     initialQuery={query}
+//                   />
+//                 </div>
+
+//                 <div className="px-4 py-3 border-t border-slate-200 bg-white">
+//                   <button
+//                     type="button"
+//                     onClick={() => setIsFilterDrawerOpen(false)}
+//                     className="w-full rounded-full px-4 py-3 text-[12px] font-extrabold text-white bg-gradient-to-r from-orange-500 to-amber-400 shadow-lg shadow-orange-500/20 active:scale-[0.99]"
+//                   >
+//                     Show Results
+//                   </button>
+//                 </div>
+//               </div>
+//             </motion.div>
+//           </>
+//         )}
+//       </AnimatePresence>
+
 //       {/* ✅ toast bubble identical */}
 //       <AnimatePresence>
 //         {showAnimatedMsg && (
@@ -424,12 +476,12 @@
 //             animate={{ opacity: 1, y: 0, scale: 1 }}
 //             exit={{ opacity: 0, y: -8, scale: 0.98 }}
 //             transition={{ duration: 0.18 }}
-//             className="fixed top-20 right-4 z-50"
+//             className="fixed top-16 sm:top-20 right-3 sm:right-4 z-50"
 //           >
 //             <div className="rounded-xl bg-white/95 backdrop-blur border border-slate-200 px-3 py-2">
 //               <div className="flex items-center gap-2">
 //                 <span className="h-2 w-2 rounded-full bg-orange-500" />
-//                 <p className="text-[12px] font-semibold text-slate-800">
+//                 <p className="text-[11px] sm:text-[12px] font-semibold text-slate-800">
 //                   {animatedMsgProductName}
 //                 </p>
 //               </div>
@@ -438,161 +490,197 @@
 //         )}
 //       </AnimatePresence>
 
-//       <div className="w-full px-3 sm:px-5 lg:px-8 py-4">
-//         <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
-//           <div className="min-w-0">
-//             <div className="flex items-center gap-2">
-//               <RiShoppingBag3Line className="text-slate-800" />
-//               <h1 className="text-[20px] sm:text-[24px] font-extrabold tracking-tight text-slate-900">
-//                 {query ? `Results for "${query}"` : "Explore Products"}
-//               </h1>
+//       {/* ✅ FULL WIDTH background + CONTENT WRAPPER gutters (same as Shop.jsx) */}
+//       <div className="w-full">
+//         <div className="w-full px-3 sm:px-6 lg:px-10 2xl:px-16 py-4 sm:py-6">
+//           <div className="w-full max-w-[1700px] mx-auto">
+//             {/* Header */}
+//             <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
+//               <div className="min-w-0">
+//                 <div className="flex items-center gap-2">
+//                   <RiShoppingBag3Line className="text-slate-800 text-[18px] sm:text-[20px]" />
+//                   <h1 className="text-[20px] sm:text-[24px] 2xl:text-[26px] font-extrabold tracking-tight text-slate-900 truncate">
+//                     {query ? `Results for "${query}"` : "Explore Products"}
+//                   </h1>
 
-//               <span className="hidden sm:inline text-[12px] font-semibold text-slate-500">
-//                 ({totalCount} items)
-//               </span>
-//             </div>
-
-//             <div className="mt-1 text-[12px] text-slate-500 font-medium">
-//               {totalCount === 0 ? (
-//                 <span className="font-semibold text-slate-700">
-//                   No products found
-//                 </span>
-//               ) : (
-//                 <>
-//                   Showing{" "}
-//                   <span className="font-semibold text-slate-700">
-//                     {pageStart}-{pageEnd}
-//                   </span>{" "}
-//                   of{" "}
-//                   <span className="font-semibold text-slate-700">
-//                     {totalCount}
-//                   </span>{" "}
-//                   products
-//                   <span className="hidden sm:inline">
-//                     {" "}
-//                     • On this page:{" "}
-//                     <span className="font-semibold text-slate-700">
-//                       {showingNow}
-//                     </span>{" "}
-//                     • Page{" "}
-//                     <span className="font-semibold text-slate-700">
-//                       {currentPage}
-//                     </span>
-//                     /
-//                     <span className="font-semibold text-slate-700">
-//                       {totalPages}
-//                     </span>
+//                   <span className="hidden sm:inline text-[12px] font-semibold text-slate-500">
+//                     ({totalCount} items)
 //                   </span>
-//                 </>
-//               )}
+//                 </div>
+
+//                 <div className="mt-1 text-[11px] sm:text-[12px] text-slate-500 font-medium">
+//                   {totalCount === 0 ? (
+//                     <span className="font-semibold text-slate-700">
+//                       No products found
+//                     </span>
+//                   ) : (
+//                     <>
+//                       Showing{" "}
+//                       <span className="font-semibold text-slate-700">
+//                         {pageStart}-{pageEnd}
+//                       </span>{" "}
+//                       of{" "}
+//                       <span className="font-semibold text-slate-700">
+//                         {totalCount}
+//                       </span>{" "}
+//                       products
+//                       <span className="hidden sm:inline">
+//                         {" "}
+//                         • On this page:{" "}
+//                         <span className="font-semibold text-slate-700">
+//                           {showingNow}
+//                         </span>{" "}
+//                         • Page{" "}
+//                         <span className="font-semibold text-slate-700">
+//                           {currentPage}
+//                         </span>
+//                         /
+//                         <span className="font-semibold text-slate-700">
+//                           {totalPages}
+//                         </span>
+//                       </span>
+//                     </>
+//                   )}
+//                 </div>
+
+//                 {isFallback && (
+//                   <div className="mt-2 text-[12px] font-semibold text-slate-600">
+//                     No exact matches for{" "}
+//                     <span className="text-slate-900 font-extrabold">
+//                       "{query}"
+//                     </span>
+//                     . Showing all products — use filters to refine.
+//                   </div>
+//                 )}
+//               </div>
+
+//               {/* View Toggle */}
+//               <div className="inline-flex items-center gap-2 w-full lg:w-auto">
+//                 <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-semibold text-slate-600">
+//                   <FiSliders />
+//                   View
+//                 </span>
+
+//                 <div className="inline-flex w-full lg:w-auto items-center gap-1 rounded-2xl bg-slate-50 px-1.5 py-1.5 border border-slate-200">
+//                   {viewButtons.map(({ id, Icon, label }) => {
+//                     const active = viewMode === id;
+//                     return (
+//                       <button
+//                         key={id}
+//                         type="button"
+//                         onClick={() => onChangeView(id)}
+//                         className={[
+//                           "inline-flex flex-1 lg:flex-none items-center justify-center gap-2 rounded-xl",
+//                           "px-3 py-2 text-[11px] sm:text-[12px] font-bold transition",
+//                           active
+//                             ? "bg-white text-slate-900"
+//                             : "text-slate-600 hover:text-slate-900",
+//                         ].join(" ")}
+//                         title={label}
+//                       >
+//                         <Icon
+//                           className={
+//                             active ? "text-orange-600" : "text-slate-500"
+//                           }
+//                         />
+//                         <span className="hidden sm:inline">{label}</span>
+//                       </button>
+//                     );
+//                   })}
+//                 </div>
+//               </div>
 //             </div>
 
-//             {/* ✅ friendly notice when fallback happens (no blank page) */}
-//             {isFallback && (
-//               <div className="mt-2 text-[12px] font-semibold text-slate-600">
-//                 No exact matches for{" "}
-//                 <span className="text-slate-900 font-extrabold">"{query}"</span>
-//                 . Showing all products — use filters to refine.
-//               </div>
-//             )}
-//           </div>
+//             {/* Layout */}
+//             <div className="mt-6 flex flex-col lg:flex-row gap-6 md:gap-10 xl:gap-14">
+//               {/* ✅ Desktop sidebar only */}
+//               <aside className="hidden lg:block w-full lg:w-[320px] xl:w-[340px] sidebarWrap">
+//                 <div className="lg:sticky lg:top-20">
+//                   <FiltersSidebar
+//                     allProducts={baseProducts}
+//                     onFilterChange={handleFilterChange}
+//                     initialQuery={query}
+//                   />
+//                 </div>
+//               </aside>
 
-//           <div className="inline-flex items-center gap-2">
-//             <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-semibold text-slate-600">
-//               <FiSliders />
-//               View
-//             </span>
-
-//             <div className="inline-flex items-center gap-1 rounded-2xl bg-slate-50 px-1.5 py-1.5 border border-slate-200">
-//               {viewButtons.map(({ id, Icon, label }) => {
-//                 const active = viewMode === id;
-//                 return (
-//                   <button
-//                     key={id}
-//                     type="button"
-//                     onClick={() => onChangeView(id)}
-//                     className={[
-//                       "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-[12px] font-bold transition",
-//                       active
-//                         ? "bg-white text-slate-900"
-//                         : "text-slate-600 hover:text-slate-900",
-//                     ].join(" ")}
-//                     title={label}
-//                   >
-//                     <Icon
-//                       className={active ? "text-orange-600" : "text-slate-500"}
+//               {/* PRODUCTS */}
+//               <main className="w-full flex-1">
+//                 <motion.div
+//                   key={viewMode}
+//                   initial={{ opacity: 0, scale: 0.99 }}
+//                   animate={{ opacity: 1, scale: 1 }}
+//                   transition={{ duration: 0.16 }}
+//                 >
+//                   {viewMode === "grid" && (
+//                     <ProductsGridUI
+//                       products={currentProducts}
+//                       wishlist={localWishlist}
+//                       onToggleWishlist={handleWishlistToggle}
+//                       onAddToCart={handleAddToCart}
+//                       onOpen={(id) => navigate(`/single-product/${id}`)}
 //                     />
-//                     <span className="hidden sm:inline">{label}</span>
-//                   </button>
-//                 );
-//               })}
+//                   )}
+
+//                   {viewMode === "card" && (
+//                     <ProductsCardUI
+//                       products={currentProducts}
+//                       wishlist={localWishlist}
+//                       onToggleWishlist={handleWishlistToggle}
+//                       onAddToCart={handleAddToCart}
+//                       onOpen={(id) => navigate(`/single-product/${id}`)}
+//                     />
+//                   )}
+
+//                   {viewMode === "list" && (
+//                     <ProductsListUI
+//                       products={currentProducts}
+//                       wishlist={localWishlist}
+//                       onToggleWishlist={handleWishlistToggle}
+//                       onAddToCart={handleAddToCart}
+//                       onOpen={(id) => navigate(`/single-product/${id}`)}
+//                     />
+//                   )}
+//                 </motion.div>
+
+//                 {filteredProducts.length > productsPerPage && (
+//                   <div className="mt-8 paginationWrap">
+//                     <Pagination
+//                       productsPerPage={productsPerPage}
+//                       totalProducts={filteredProducts.length}
+//                       currentPage={currentPage}
+//                       paginate={paginate}
+//                     />
+//                   </div>
+//                 )}
+
+//                 {/* ✅ extra bottom space so sticky mobile bar doesn’t cover content */}
+//                 <div className="h-20 lg:hidden" />
+//               </main>
 //             </div>
 //           </div>
 //         </div>
 
-//         <div className="mt-4 flex flex-col lg:flex-row gap-14 xl:gap-16 2xl:gap-20">
-//           {/* SIDEBAR */}
-//           <aside className="w-full lg:w-[320px] xl:w-[340px] sidebarWrap">
-//             <div className="sticky top-20">
-//               {/* ✅ IMPORTANT: sidebar receives baseProducts (matches or fallback all) */}
-//               <FiltersSidebar
-//                 allProducts={baseProducts}
-//                 onFilterChange={handleFilterChange}
-//                 initialQuery={query}
-//               />
-//             </div>
-//           </aside>
+//         {/* ✅ Mobile sticky filter bar (same as Shop.jsx) */}
+//         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[55]">
+//           <div className="mx-auto max-w-[1700px] px-3 sm:px-6 pb-3">
+//             <div className="rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg px-3 py-3">
+//               <div className="flex items-center gap-3">
+//                 <button
+//                   type="button"
+//                   onClick={() => setIsFilterDrawerOpen(true)}
+//                   className="flex-1 inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[12px] font-extrabold text-white bg-gradient-to-r from-orange-500 to-amber-400 shadow-lg shadow-orange-500/20 active:scale-[0.99]"
+//                 >
+//                   <FiFilter className="text-[16px]" />
+//                   Filters
+//                 </button>
 
-//           {/* PRODUCTS */}
-//           <main className="w-full flex-1">
-//             <motion.div
-//               key={viewMode}
-//               initial={{ opacity: 0, scale: 0.99 }}
-//               animate={{ opacity: 1, scale: 1 }}
-//               transition={{ duration: 0.16 }}
-//             >
-//               {viewMode === "grid" && (
-//                 <ProductsGridUI
-//                   products={currentProducts}
-//                   wishlist={localWishlist}
-//                   onToggleWishlist={handleWishlistToggle}
-//                   onAddToCart={handleAddToCart}
-//                   onOpen={(id) => navigate(`/single-product/${id}`)}
-//                 />
-//               )}
-
-//               {viewMode === "card" && (
-//                 <ProductsCardUI
-//                   products={currentProducts}
-//                   wishlist={localWishlist}
-//                   onToggleWishlist={handleWishlistToggle}
-//                   onAddToCart={handleAddToCart}
-//                   onOpen={(id) => navigate(`/single-product/${id}`)}
-//                 />
-//               )}
-
-//               {viewMode === "list" && (
-//                 <ProductsListUI
-//                   products={currentProducts}
-//                   wishlist={localWishlist}
-//                   onToggleWishlist={handleWishlistToggle}
-//                   onAddToCart={handleAddToCart}
-//                   onOpen={(id) => navigate(`/single-product/${id}`)}
-//                 />
-//               )}
-//             </motion.div>
-
-//             {filteredProducts.length > productsPerPage && (
-//               <div className="mt-6 paginationWrap">
-//                 <Pagination
-//                   productsPerPage={productsPerPage}
-//                   totalProducts={filteredProducts.length}
-//                   currentPage={currentPage}
-//                   paginate={paginate}
-//                 />
+//                 <div className="shrink-0 rounded-full bg-slate-100 px-4 py-3 text-[12px] font-extrabold text-slate-800">
+//                   {totalCount} items
+//                 </div>
 //               </div>
-//             )}
-//           </main>
+//             </div>
+//           </div>
 //         </div>
 //       </div>
 //     </div>
@@ -601,11 +689,6 @@
 
 // // ===============================================================
 // // ✅ FILTER SIDEBAR (IDENTICAL LOGIC TO Shop.jsx)
-// // - hides categories/subcategories that have 0 products
-// // - clicking category shows ALL products in category + its subcategories
-// // - robust ids for populated/raw
-// // - category name click toggles dropdown (same as chevron)
-// // - only ONE dropdown open at a time
 // // ===============================================================
 // function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
 //   const [categoriesTree, setCategoriesTree] = useState([]);
@@ -623,21 +706,17 @@
 
 //   const [sortOption, setSortOption] = useState("");
 
-//   // ✅ Build sidebar tree from products (so no empty cats/subcats)
 //   useEffect(() => {
 //     const buildTreeFromProducts = () => {
 //       const active = (allProducts || []).filter((p) => p?.isDeleted !== true);
-
 //       const map = new Map();
 
 //       for (const p of active) {
 //         const catId = getCategoryIdFromProduct(p);
 //         const subId = getSubcategoryIdFromProduct(p);
-
 //         if (!catId && !subId) continue;
 
 //         const catName = getCategoryNameFromProduct(p) || "UNCATEGORIZED";
-
 //         if (!map.has(catId || "UNCAT")) {
 //           map.set(catId || "UNCAT", {
 //             categoryId: catId || "UNCAT",
@@ -647,14 +726,10 @@
 //         }
 
 //         const node = map.get(catId || "UNCAT");
-
 //         if (subId) {
 //           const subName = getSubcategoryNameFromProduct(p) || "OTHERS";
 //           if (!node.subMap.has(subId)) {
-//             node.subMap.set(subId, {
-//               id: subId,
-//               name: safeUpper(subName),
-//             });
+//             node.subMap.set(subId, { id: subId, name: safeUpper(subName) });
 //           }
 //         }
 //       }
@@ -698,7 +773,6 @@
 //     }
 //   }, [allProducts]);
 
-//   // ✅ helper: open exactly one category at a time (or close all)
 //   const openOnlyThisCategory = useCallback((catName, open) => {
 //     setExpandedCategories(() => {
 //       if (!open) return {};
@@ -706,10 +780,8 @@
 //     });
 //   }, []);
 
-//   // ✅ initial query matching (category/subcategory/brand)
 //   useEffect(() => {
 //     if (!initialQuery || categoriesTree.length === 0) return;
-
 //     const q = initialQuery.trim().toLowerCase();
 //     if (!q) return;
 
@@ -719,13 +791,11 @@
 //       if (String(cat.categoryName || "").toLowerCase() === q) {
 //         setSelectedCategory(cat.categoryId);
 //         setSelectedSubCategory(null);
-
 //         if ((cat.subcategories || []).length > 0) {
 //           openOnlyThisCategory(cat.categoryName, true);
 //         } else {
 //           openOnlyThisCategory("", false);
 //         }
-
 //         matched = true;
 //         break;
 //       }
@@ -734,11 +804,9 @@
 //         if (String(sub.name || "").toLowerCase() === q) {
 //           setSelectedSubCategory(sub.id);
 //           setSelectedCategory(null);
-
 //           if ((cat.subcategories || []).length > 0) {
 //             openOnlyThisCategory(cat.categoryName, true);
 //           }
-
 //           matched = true;
 //           break;
 //         }
@@ -769,7 +837,6 @@
 
 //     if (selectedCategory) {
 //       const selectedCatId = String(selectedCategory);
-
 //       const catNode = categoriesTree.find(
 //         (c) => String(c.categoryId) === selectedCatId
 //       );
@@ -781,7 +848,6 @@
 //       filtered = filtered.filter((p) => {
 //         const productCatId = String(getCategoryIdFromProduct(p));
 //         const productSubId = String(getSubcategoryIdFromProduct(p));
-
 //         return (
 //           productCatId === selectedCatId || subIdsUnderCat.has(productSubId)
 //         );
@@ -835,7 +901,6 @@
 
 //   const isActive = (id, current) => String(id) === String(current);
 
-//   // ✅ NEW: toggle single category open/close (only one open at a time)
 //   const toggleSingleCategory = (catName) => {
 //     setExpandedCategories((prev) => {
 //       const isOpen = !!prev[catName];
@@ -876,7 +941,6 @@
 //             return (
 //               <div key={idx}>
 //                 <div className="flex items-center justify-between text-[12px] font-extrabold text-slate-700 uppercase tightCaps">
-//                   {/* ✅ Clicking category selects + toggles dropdown (same as Shop) */}
 //                   <span
 //                     className={`cursor-pointer transition ${
 //                       isActive(cat.categoryId, selectedCategory)
@@ -1074,7 +1138,7 @@
 // }
 
 // // ===============================================================
-// // ✅ PAGINATION (exact same as Shop.jsx)
+// // ✅ PAGINATION
 // // ===============================================================
 // function Pagination({ productsPerPage, totalProducts, currentPage, paginate }) {
 //   const totalPages = Math.ceil(totalProducts / productsPerPage);
@@ -1085,7 +1149,7 @@
 
 //   return (
 //     <div className="flex justify-center mt-6">
-//       <nav className="inline-flex flex-wrap gap-2">
+//       <nav className="inline-flex flex-wrap gap-2 justify-center">
 //         {pageNumbers.map((number) => {
 //           const active = currentPage === number;
 //           return (
@@ -1111,7 +1175,7 @@
 // }
 
 // // ===============================================================
-// // ✅ PRODUCT UIs (same as Shop.jsx)
+// // ✅ PRODUCT UIs (same spacing as Shop.jsx)
 // // ===============================================================
 // function ProductsGridUI({
 //   products,
@@ -1121,7 +1185,7 @@
 //   onOpen,
 // }) {
 //   return (
-//     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5  xl:grid-cols-6  gap-x-8 xl:gap-x-10  gap-y-12 xl:gap-y-14">
+//     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-8 sm:gap-y-10 lg:gap-y-12">
 //       {products.map((p, idx) => {
 //         const id = p?._id ?? `${idx}`;
 //         const inWish = Array.isArray(wishlist)
@@ -1190,7 +1254,7 @@
 //                   <FaStar className="text-orange-500/90" />
 //                   {ratingText}
 //                 </span>
-//                 <span className="inline-flex items-center gap-2">
+//                 <span className="hidden sm:inline-flex items-center gap-2">
 //                   <span className="inline-flex items-center gap-1">
 //                     <FiTruck className="text-slate-500" />
 //                     Delivery
@@ -1217,7 +1281,7 @@
 //                 disabled={!stock}
 //                 className={[
 //                   "mt-3 w-full inline-flex items-center justify-center gap-2",
-//                   "rounded-full px-5 py-2.5 text-white font-extrabold text-[12px]",
+//                   "rounded-full px-4 sm:px-5 py-2.5 text-white font-extrabold text-[11.5px] sm:text-[12px]",
 //                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
 //                   stock
 //                     ? "bg-gradient-to-r from-orange-500 to-amber-400"
@@ -1243,7 +1307,7 @@
 //   onOpen,
 // }) {
 //   return (
-//     <div className=" grid  grid-cols-1  sm:grid-cols-2  lg:grid-cols-3  xl:grid-cols-4  gap-x-10 xl:gap-x-12  gap-y-14 xl:gap-y-16">
+//     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-12">
 //       {products.map((product) => {
 //         const inWish = Array.isArray(wishlist)
 //           ? wishlist.includes(product._id)
@@ -1295,7 +1359,7 @@
 //             </div>
 
 //             <div
-//               className="w-full h-56 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer"
+//               className="w-full h-52 sm:h-56 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer"
 //               onClick={() => onOpen(product._id)}
 //             >
 //               <img
@@ -1310,7 +1374,7 @@
 //               onClick={() => onOpen(product._id)}
 //               className="p-4 space-y-2 cursor-pointer"
 //             >
-//               <h3 className="text-[15px] font-extrabold text-slate-900 truncate">
+//               <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-900 truncate">
 //                 {product.product_name}
 //               </h3>
 
@@ -1380,7 +1444,7 @@
 //   onOpen,
 // }) {
 //   return (
-//     <div className="space-y-14">
+//     <div className="space-y-10 sm:space-y-12">
 //       {products.map((product) => {
 //         const inWish = Array.isArray(wishlist)
 //           ? wishlist.includes(product._id)
@@ -1402,7 +1466,7 @@
 //             key={product._id}
 //             whileHover={{ y: -2 }}
 //             transition={{ duration: 0.16 }}
-//             className="flex flex-col md:flex-row items-center bg-white rounded-2xl transition group relative"
+//             className="flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"
 //             style={{ boxShadow: "none", border: "1px solid rgb(241,245,249)" }}
 //           >
 //             <button
@@ -1426,7 +1490,7 @@
 
 //             <div
 //               onClick={() => onOpen(product._id)}
-//               className="w-full md:w-44 h-44 bg-slate-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer"
+//               className="w-full md:w-44 h-52 md:h-44 bg-slate-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer"
 //             >
 //               <img
 //                 src={resolveImage(product)}
@@ -1438,7 +1502,7 @@
 
 //             <div
 //               onClick={() => onOpen(product._id)}
-//               className="flex flex-col justify-center md:ml-6 mt-4 md:mt-0 w-full cursor-pointer"
+//               className="flex flex-col justify-center md:ml-6 mt-4 md:mt-0 w-full cursor-pointer px-3 md:px-0 pb-3 md:pb-0"
 //             >
 //               <h2 className="text-[16px] sm:text-[18px] font-extrabold text-slate-900 truncate">
 //                 {product.product_name}
@@ -1475,7 +1539,7 @@
 //               </div>
 //             </div>
 
-//             <div className="flex-shrink-0 md:ml-6 mt-4 md:mt-0">
+//             <div className="flex-shrink-0 md:ml-6 px-3 pb-4 md:pb-0">
 //               <button
 //                 onClick={(e) => {
 //                   e.stopPropagation();
@@ -1483,7 +1547,7 @@
 //                 }}
 //                 disabled={!stock}
 //                 className={[
-//                   "inline-flex items-center justify-center gap-2",
+//                   "w-full md:w-auto inline-flex items-center justify-center gap-2",
 //                   "rounded-full px-5 py-2.5 text-white font-extrabold text-[12px]",
 //                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
 //                   stock
@@ -1505,10 +1569,12 @@
 //
 
 // ✅ file: src/pages/shop_pages/SearchProducts.jsx
-// ✅ FULL UPDATED CODE (NO BLANK PAGE EVER) + ✅ MOBILE FILTER DRAWER (Amazon/Flipkart)
-// ✅ Desktop: same (sidebar visible)
-// ✅ Mobile: sidebar hidden -> "Filters" sticky bar -> drawer opens with SAME FiltersSidebar
-// ✅ Includes: overlay click close, ESC close, body scroll lock, extra bottom padding so bar won’t cover content
+// ✅ GOAL ACHIEVED: SearchProducts layout is now 100% identical to Shop.jsx
+// ✅ SAME UI/logic for Desktop + Mobile (except your existing Search logic + fallback remains)
+// ✅ Laptop view (sm/md 640–1023px): Add-to-cart button smaller (grid/card/list) ✅
+// ✅ Pagination: ONLY 3 number buttons + left/right indicators (ALL views) ✅
+// ✅ Mobile filter drawer: identical to Shop.jsx ✅
+// ✅ No blank page ever: if no results, shows all products + hint ✅
 
 import React, {
   useState,
@@ -1534,6 +1600,8 @@ import {
   ListFilter,
   IndianRupee,
   X,
+  ChevronLeft,
+  ChevronRight as ChevronRightIcon,
 } from "lucide-react";
 import * as Slider from "@radix-ui/react-slider";
 import {
@@ -1577,6 +1645,8 @@ function safeUpper(v) {
   }
   return "";
 }
+
+// ✅ robust id reader (works for ObjectId string OR populated doc)
 function getId(val) {
   if (!val) return "";
   if (typeof val === "string") return val;
@@ -1590,6 +1660,7 @@ function getId(val) {
   }
   return String(val);
 }
+
 function getCategoryIdFromProduct(p) {
   return getId(p?.category?._id || p?.category);
 }
@@ -1606,7 +1677,7 @@ function getSubcategoryNameFromProduct(p) {
 }
 
 // ===============================================================
-// ✅ MAIN SEARCH PAGE (Shop-like fallback when no results) + Mobile Drawer
+// ✅ MAIN SEARCH PAGE (Shop-identical layout + Search fallback)
 // ===============================================================
 export default function SearchProducts() {
   const location = useLocation();
@@ -1615,6 +1686,8 @@ export default function SearchProducts() {
   const [query, setQuery] = useState("");
   const [allProducts, setAllProducts] = useState([]);
 
+  // searchedBaseProducts = strict match results
+  // baseProducts = fallback base (matched OR all if no matches)
   const [searchedBaseProducts, setSearchedBaseProducts] = useState([]);
   const [baseProducts, setBaseProducts] = useState([]);
   const [filteredProducts, setFilteredProducts] = useState([]);
@@ -1626,7 +1699,7 @@ export default function SearchProducts() {
   const [animatedMsgProductName, setAnimatedMsgProductName] = useState("");
   const [localWishlist, setLocalWishlist] = useState([]);
 
-  // ✅ NEW: Mobile filter drawer (same as Shop.jsx)
+  // ✅ mobile filter drawer (same as Shop.jsx)
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
 
   const { isLoggedIn } = useContext(AuthContext);
@@ -1655,7 +1728,7 @@ export default function SearchProducts() {
   }, [isFilterDrawerOpen]);
 
   // ============================================================
-  // ✅ FULL ROWS FIX (same as Shop.jsx)
+  // ✅ FULL ROWS FIX (EXACT SAME AS Shop.jsx)
   // ============================================================
   const [columns, setColumns] = useState(6);
 
@@ -1672,6 +1745,7 @@ export default function SearchProducts() {
         return 1;
       }
 
+      if (w >= 1536) return 6;
       if (w >= 1280) return 6;
       if (w >= 1024) return 5;
       if (w >= 768) return 4;
@@ -1686,7 +1760,8 @@ export default function SearchProducts() {
     return () => window.removeEventListener("resize", update);
   }, [viewMode]);
 
-  const rowsPerPage = viewMode === "grid" ? 3 : viewMode === "card" ? 3 : 14;
+  // ✅ EXACT SAME paging math as Shop.jsx
+  const rowsPerPage = viewMode === "grid" ? 6 : viewMode === "card" ? 6 : 14;
   const productsPerPage =
     viewMode === "list" ? 14 : Math.max(1, columns) * Math.max(1, rowsPerPage);
 
@@ -1694,7 +1769,7 @@ export default function SearchProducts() {
     setCurrentPage(1);
   }, [productsPerPage, viewMode, columns]);
 
-  // ✅ read ?query= from URL
+  // ✅ read ?query= from URL (Shop.jsx uses useSearchParams; here keep useLocation)
   useEffect(() => {
     const q = new URLSearchParams(location.search).get("query") || "";
     setQuery(q);
@@ -1730,7 +1805,7 @@ export default function SearchProducts() {
     setLocalWishlist(ids);
   }, [wishlistItems]);
 
-  // ✅ debounce search -> searchedBaseProducts
+  // ✅ debounce search -> searchedBaseProducts + fallback
   useEffect(() => {
     clearTimeout(debounceTimeout);
 
@@ -1775,6 +1850,7 @@ export default function SearchProducts() {
 
       setSearchedBaseProducts(matched);
 
+      // ✅ NO BLANK PAGE: fallback to allProducts if no match
       const base = matched.length > 0 ? matched : allProducts;
       setBaseProducts(base);
       setFilteredProducts(base);
@@ -1862,14 +1938,11 @@ export default function SearchProducts() {
 
   return (
     <div className="shop-font w-full shop-scope">
-      {/* ✅ EXACT SAME CSS AS Shop.jsx */}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
         .shop-font{
           font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
         }
-
         .btnOrange{
           border-radius: 9999px;
           background-image: linear-gradient(to right, rgb(249,115,22), rgb(251,191,36));
@@ -1883,12 +1956,9 @@ export default function SearchProducts() {
         }
         .btnOrange:hover{ opacity: .95; }
         .btnOrange:active{ transform: scale(.99); }
-
         .shop-scope .priceSelling{ color: rgb(15,23,42); font-weight: 900; }
         .shop-scope .priceMrp{ color: rgb(239,68,68); font-weight: 800; text-decoration: line-through; }
-
         .sidebarWrap{ background: transparent !important; box-shadow: none !important; border: none !important; }
-
         .sidebarWrap .forceOrange,
         .sidebarWrap button.forceOrange{
           border-radius: 9999px !important;
@@ -1899,7 +1969,6 @@ export default function SearchProducts() {
           box-shadow: 0 18px 30px -18px rgba(249,115,22,0.40) !important;
           border: none !important;
         }
-
         .paginationWrap button.activePage{
           background-image: linear-gradient(to right, rgb(249,115,22), rgb(251,191,36)) !important;
           color: #fff !important;
@@ -1907,11 +1976,22 @@ export default function SearchProducts() {
           box-shadow: 0 18px 30px -18px rgba(249,115,22,0.40) !important;
           border-radius: 9999px !important;
         }
-
         .tightCaps{ letter-spacing: .06em; }
+
+        /* ✅ ONLY LAPTOP/TABLET (640px to 1023px): make Add-to-cart smaller */
+        @media (min-width: 640px) and (max-width: 1023px){
+          .laptopCartBtn{
+            padding: 0.5rem 0.9rem !important;
+            font-size: 11px !important;
+          }
+          .laptopCartBtn svg{
+            width: 14px !important;
+            height: 14px !important;
+          }
+        }
       `}</style>
 
-      {/* ✅ Mobile Filter Drawer (same as Shop.jsx) */}
+      {/* ✅ Mobile Filter Drawer (IDENTICAL to Shop.jsx) */}
       <AnimatePresence>
         {isFilterDrawerOpen && (
           <>
@@ -1922,6 +2002,7 @@ export default function SearchProducts() {
               exit={{ opacity: 0 }}
               onClick={() => setIsFilterDrawerOpen(false)}
             />
+
             <motion.div
               className="fixed top-0 right-0 h-full w-[92%] max-w-[420px] z-[70] bg-white shadow-2xl"
               initial={{ x: 420 }}
@@ -1996,7 +2077,7 @@ export default function SearchProducts() {
         )}
       </AnimatePresence>
 
-      {/* ✅ FULL WIDTH background + CONTENT WRAPPER gutters (same as Shop.jsx) */}
+      {/* FULL WIDTH background + CONTENT WRAPPER gutters (IDENTICAL to Shop.jsx) */}
       <div className="w-full">
         <div className="w-full px-3 sm:px-6 lg:px-10 2xl:px-16 py-4 sm:py-6">
           <div className="w-full max-w-[1700px] mx-auto">
@@ -2006,7 +2087,7 @@ export default function SearchProducts() {
                 <div className="flex items-center gap-2">
                   <RiShoppingBag3Line className="text-slate-800 text-[18px] sm:text-[20px]" />
                   <h1 className="text-[20px] sm:text-[24px] 2xl:text-[26px] font-extrabold tracking-tight text-slate-900 truncate">
-                    {query ? `Results for "${query}"` : "Explore Products"}
+                    {query ? `Results for "${query}"` : "Shop"}
                   </h1>
 
                   <span className="hidden sm:inline text-[12px] font-semibold text-slate-500">
@@ -2060,7 +2141,7 @@ export default function SearchProducts() {
                 )}
               </div>
 
-              {/* View Toggle */}
+              {/* View Toggle (IDENTICAL) */}
               <div className="inline-flex items-center gap-2 w-full lg:w-auto">
                 <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-semibold text-slate-600">
                   <FiSliders />
@@ -2089,6 +2170,7 @@ export default function SearchProducts() {
                             active ? "text-orange-600" : "text-slate-500"
                           }
                         />
+                        <span className="sm:hidden">{label}</span>
                         <span className="hidden sm:inline">{label}</span>
                       </button>
                     );
@@ -2167,7 +2249,7 @@ export default function SearchProducts() {
           </div>
         </div>
 
-        {/* ✅ Mobile sticky filter bar (same as Shop.jsx) */}
+        {/* ✅ Mobile sticky filter bar (IDENTICAL) */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[55]">
           <div className="mx-auto max-w-[1700px] px-3 sm:px-6 pb-3">
             <div className="rounded-2xl bg-white/95 backdrop-blur border border-slate-200 shadow-lg px-3 py-3">
@@ -2644,19 +2726,69 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
 }
 
 // ===============================================================
-// ✅ PAGINATION
+// ✅ PAGINATION (ONLY 3 NUMBER BUTTONS + LEFT/RIGHT INDICATORS)
 // ===============================================================
 function Pagination({ productsPerPage, totalProducts, currentPage, paginate }) {
   const totalPages = Math.ceil(totalProducts / productsPerPage);
   if (totalPages <= 1) return null;
 
-  const pageNumbers = [];
-  for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+
+  // Only 3 numbers: [center-1, center, center+1] clamped
+  let center = clamp(currentPage, 1, totalPages);
+  let start = center - 1;
+  let end = center + 1;
+
+  if (start < 1) {
+    start = 1;
+    end = Math.min(3, totalPages);
+  }
+  if (end > totalPages) {
+    end = totalPages;
+    start = Math.max(1, totalPages - 2);
+  }
+
+  const pages = [];
+  for (let p = start; p <= end; p++) pages.push(p);
+
+  const canPrev = currentPage > 1;
+  const canNext = currentPage < totalPages;
 
   return (
     <div className="flex justify-center mt-6">
-      <nav className="inline-flex flex-wrap gap-2 justify-center">
-        {pageNumbers.map((number) => {
+      <nav className="inline-flex items-center gap-2 justify-center">
+        {/* Left indicator */}
+        <button
+          type="button"
+          onClick={() => canPrev && paginate(currentPage - 1)}
+          disabled={!canPrev}
+          className={[
+            "h-10 w-10 rounded-full inline-flex items-center justify-center",
+            "bg-white text-slate-700 hover:bg-slate-100 transition",
+            "disabled:opacity-40 disabled:cursor-not-allowed",
+          ].join(" ")}
+          style={{ border: "1px solid rgb(226,232,240)" }}
+          aria-label="Previous page"
+          title="Previous"
+        >
+          <ChevronLeft className="h-5 w-5" />
+        </button>
+
+        {/* Optional left ellipsis indicator */}
+        {start > 1 && (
+          <button
+            type="button"
+            onClick={() => paginate(1)}
+            className="px-3 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100 transition"
+            style={{ border: "1px solid rgb(226,232,240)" }}
+            title="Go to first page"
+          >
+            1…
+          </button>
+        )}
+
+        {/* 3 number buttons */}
+        {pages.map((number) => {
           const active = currentPage === number;
           return (
             <button
@@ -2664,24 +2796,55 @@ function Pagination({ productsPerPage, totalProducts, currentPage, paginate }) {
               onClick={() => paginate(number)}
               className={
                 active
-                  ? "activePage px-4 py-2 text-[12px] font-extrabold"
-                  : "px-4 py-2 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100"
+                  ? "activePage px-4 h-10 text-[12px] font-extrabold"
+                  : "px-4 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100"
               }
               style={
                 !active ? { border: "1px solid rgb(226,232,240)" } : undefined
               }
+              aria-label={`Page ${number}`}
             >
               {number}
             </button>
           );
         })}
+
+        {/* Optional right ellipsis indicator */}
+        {end < totalPages && (
+          <button
+            type="button"
+            onClick={() => paginate(totalPages)}
+            className="px-3 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100 transition"
+            style={{ border: "1px solid rgb(226,232,240)" }}
+            title="Go to last page"
+          >
+            …{totalPages}
+          </button>
+        )}
+
+        {/* Right indicator */}
+        <button
+          type="button"
+          onClick={() => canNext && paginate(currentPage + 1)}
+          disabled={!canNext}
+          className={[
+            "h-10 w-10 rounded-full inline-flex items-center justify-center",
+            "bg-white text-slate-700 hover:bg-slate-100 transition",
+            "disabled:opacity-40 disabled:cursor-not-allowed",
+          ].join(" ")}
+          style={{ border: "1px solid rgb(226,232,240)" }}
+          aria-label="Next page"
+          title="Next"
+        >
+          <ChevronRightIcon className="h-5 w-5" />
+        </button>
       </nav>
     </div>
   );
 }
 
 // ===============================================================
-// ✅ PRODUCT UIs (same spacing as Shop.jsx)
+// ✅ PRODUCT UIs (Laptop-only smaller Add-to-cart)
 // ===============================================================
 function ProductsGridUI({
   products,
@@ -2786,6 +2949,7 @@ function ProductsGridUI({
                 onClick={() => onAddToCart(p)}
                 disabled={!stock}
                 className={[
+                  "laptopCartBtn",
                   "mt-3 w-full inline-flex items-center justify-center gap-2",
                   "rounded-full px-4 sm:px-5 py-2.5 text-white font-extrabold text-[11.5px] sm:text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
@@ -2918,6 +3082,7 @@ function ProductsCardUI({
                 }}
                 disabled={!stock}
                 className={[
+                  "laptopCartBtn",
                   "w-full mt-3 py-2.5 text-center rounded-full font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
                   stock
@@ -2955,7 +3120,6 @@ function ProductsListUI({
         const inWish = Array.isArray(wishlist)
           ? wishlist.includes(product._id)
           : false;
-
         const selling = money(
           product?.selling_price ?? product?.price ?? product?.final_price
         );
@@ -3053,6 +3217,7 @@ function ProductsListUI({
                 }}
                 disabled={!stock}
                 className={[
+                  "laptopCartBtn",
                   "w-full md:w-auto inline-flex items-center justify-center gap-2",
                   "rounded-full px-5 py-2.5 text-white font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
