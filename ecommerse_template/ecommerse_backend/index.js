@@ -7,6 +7,8 @@ const dotenv = require("dotenv");
 const path = require("path");
 
 const userRoutes = require("./routes/UserRoutes");
+const blogRoutes = require("./routes/BlogRoutes");
+
 const activityRoutes = require("./routes/ActivityRoutes");
 const entityCountRoutes = require("./routes/EntityCountRoutes");
 const categoryRoutes = require("./routes/CategoryRoutes");
@@ -26,7 +28,12 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: ["http://localhost:5173", "http://localhost:5174","http://localhost:5175" , "http://localhost:5176"], // Replace with your frontend's URL
+    origin: [
+      "http://localhost:5173",
+      "http://localhost:5174",
+      "http://localhost:5175",
+      "http://localhost:5176",
+    ], // Replace with your frontend's URL
     credentials: true, // Enable credentials
   })
 );
@@ -38,6 +45,7 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.use("/api", userRoutes);
 app.use("/api", activityRoutes);
+app.use("/api", blogRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", outletRoutes);
 app.use("/api", vendorRoutes);

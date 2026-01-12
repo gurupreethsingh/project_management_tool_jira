@@ -5,7 +5,6 @@ import { jwtDecode } from "jwt-decode";
 import globalBackendRoute from "../../config/Config";
 
 export default function AddBlog() {
-
   const initialFormData = {
     title: "",
     body: "",
@@ -16,6 +15,8 @@ export default function AddBlog() {
     metaDescription: "",
     published: false,
     featuredImage: null,
+    code: "", // NEW
+    explanation: "", // NEW
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -29,7 +30,6 @@ export default function AddBlog() {
       alert("Unauthorized: Login required.");
       return;
     }
-
     try {
       const decoded = jwtDecode(token);
       setAuthorId(decoded.id);
@@ -66,6 +66,11 @@ export default function AddBlog() {
     blogForm.append("metaDescription", formData.metaDescription);
     blogForm.append("published", formData.published);
     blogForm.append("author", authorId);
+
+    // NEW structured fields
+    blogForm.append("code", formData.code || "");
+    blogForm.append("explanation", formData.explanation || "");
+
     if (formData.featuredImage) {
       blogForm.append("featuredImage", formData.featuredImage);
     }
@@ -79,16 +84,17 @@ export default function AddBlog() {
       navigate("/add-blog", { replace: true });
     } catch (error) {
       console.error("Error adding blog:", error);
-      alert("❌ Failed to add blog. Please try again.");
+      alert("Failed to add blog. Please try again.");
     }
   };
 
   return (
     <div className="containerWidth my-8">
-      <div className="bg-white shadow-md rounded-xl p-6 sm:p-8 max-w-4xl mx-auto">
+      <div className="bg-white p-6 sm:p-8 max-w-7xl mx-auto">
         <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
           📢 Add New Blog
         </h2>
+
         <form onSubmit={handleSubmit} className="space-y-5">
           {[
             { label: "Title", name: "title", type: "text" },
@@ -113,15 +119,16 @@ export default function AddBlog() {
 
           <div>
             <label className="formLabel" htmlFor="body">
-              Body
+              Body (normal content)
             </label>
             <textarea
               id="body"
               name="body"
-              rows="5"
+              rows="8"
               value={formData.body}
               onChange={handleChange}
               className="formInput"
+              placeholder={`Write your article here. You can still include Q/A style text if you like.`}
               required
             />
           </div>
@@ -151,6 +158,40 @@ export default function AddBlog() {
               value={formData.metaDescription}
               onChange={handleChange}
               className="formInput"
+            />
+          </div>
+
+          {/* NEW: Optional structured code/explanation fields */}
+          <div>
+            <label className="formLabel" htmlFor="code">
+              Code (optional; will show with a gray background)
+            </label>
+            <textarea
+              id="code"
+              name="code"
+              rows="6"
+              value={formData.code}
+              onChange={handleChange}
+              className="formInput font-mono"
+              placeholder={`// Example
+function add(a, b) {
+  return a + b;
+}`}
+            />
+          </div>
+
+          <div>
+            <label className="formLabel" htmlFor="explanation">
+              Explanation (optional)
+            </label>
+            <textarea
+              id="explanation"
+              name="explanation"
+              rows="3"
+              value={formData.explanation}
+              onChange={handleChange}
+              className="formInput"
+              placeholder="Explain what the code does."
             />
           </div>
 

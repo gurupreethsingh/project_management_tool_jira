@@ -294,6 +294,23 @@ const MainLayout = () => {
           />
 
           <Route
+            path="/all-blogs"
+            element={
+              <PageTitle title="All Blogs">
+                <AllBlogs />
+              </PageTitle>
+            }
+          />
+          <Route
+            path="/single-blog/:slug/:id"
+            element={
+              <PageTitle title="Blog Details">
+                <SingleBlog />
+              </PageTitle>
+            }
+          />
+
+          <Route
             path="/page-not-found"
             element={
               <PageTitle title="404 Not Found">

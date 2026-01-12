@@ -50,6 +50,11 @@ import SingleSubCategory from "../../pages/subcategory_pages/SingleSubCategory";
 import AddProduct from "../../pages/product_pages/AddProduct";
 import AllAddedProducts from "../../pages/product_pages/AllAddedProducts";
 import SingleAddedProduct from "../../pages/product_pages/SingleAddedProduct";
+// blog pages
+import AddBlog from "../../pages/blog_pages/AddBlog";
+import AllBlogs from "../../pages/blog_pages/AllBlogs";
+import SingleBlog from "../../pages/blog_pages/SingleBlog";
+import UpdateBlog from "../../pages/blog_pages/UpdateBlog";
 
 const MainLayout = () => {
   return (
@@ -505,6 +510,49 @@ const MainLayout = () => {
               </PrivateRoute>
             }
           />
+
+          {/* blogs */}
+          <Route
+            path="/add-blog"
+            element={
+              <PrivateRoute allowedRoles={["superadmin"]}>
+                <PageTitle title="Add Blog">
+                  <AddBlog />
+                </PageTitle>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/all-blogs"
+            element={
+              <PrivateRoute allowedRoles={["superadmin"]}>
+                <PageTitle title="All Blogs">
+                  <AllBlogs />
+                </PageTitle>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/single-blog/:slug/:id"
+            element={
+              <PrivateRoute allowedRoles={["superadmin"]}>
+                <PageTitle title="Single Blog">
+                  <SingleBlog />
+                </PageTitle>
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/update-blog/:id"
+            element={
+              <PrivateRoute allowedRoles={["superadmin"]}>
+                <PageTitle title="Update Blog">
+                  <UpdateBlog />
+                </PageTitle>
+              </PrivateRoute>
+            }
+          />
+
           <Route
             path="/page-not-found"
             element={
