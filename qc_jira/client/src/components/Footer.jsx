@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import ecoders_logo from "../assets/ecoders_logo.png";
 
 const Footer = () => {
@@ -8,144 +9,174 @@ const Footer = () => {
       <footer className="bg-gray-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {/* Brand */}
             <div>
               <img
                 src={ecoders_logo}
-                alt="University Logo"
+                alt="Ecoders Logo"
                 className="h-10 w-auto mb-2"
               />
               <p className="text-gray-400 pr-3">
-                Leading the way in software excellence and innovation.
-                Harnessing the power of AI and blockchain technologies to
-                revolutionize the digital landscape and drive transformative
-                solutions.
+                Building modern software with engineering excellence. We deliver
+                web & mobile apps, AI systems, blockchain solutions, and
+                end-to-end QA automation to ship faster with confidence.
               </p>
             </div>
+
+            {/* Company */}
             <div>
               <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">
-                Academics
+                Company
               </h3>
               <ul className="mt-4 space-y-4">
                 <li>
-                  <a
-                    href="/contact"
+                  <Link
+                    to="/about-us"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Courses
-                  </a>
+                    About Us
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="/contact"
+                  <Link
+                    to="/projects"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Faculty
-                  </a>
+                    Projects
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="/contact"
+                  <Link
+                    to="/all-blogs"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Research
-                  </a>
+                    Blogs
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="contact"
-                    className="text-base text-gray-300 hover:text-white"
-                  >
-                    Admissions
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">
-                Community
-              </h3>
-              <ul className="mt-4 space-y-4">
-                <li>
-                  <a
-                    href="/contact"
-                    className="text-base text-gray-300 hover:text-white"
-                  >
-                    Student Life
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/contact-us"
-                    className="text-base text-gray-300 hover:text-white"
-                  >
-                    Events
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/contact-us"
-                    className="text-base text-gray-300 hover:text-white"
-                  >
-                    Alumni
-                  </a>
-                </li>
-                <li>
-                  <a
-                    href="/careers"
+                  <Link
+                    to="/careers"
                     className="text-base text-gray-300 hover:text-white"
                   >
                     Careers
-                  </a>
+                  </Link>
                 </li>
               </ul>
             </div>
+
+            {/* Services (Software + Testing focused) */}
             <div>
               <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">
-                Contact Us
+                Services
               </h3>
               <ul className="mt-4 space-y-4">
                 <li>
-                  <a
-                    href="#"
+                  <Link
+                    to="/explore-solutions"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Address: 193 Hesaraghatta Road, Bagalaguntte, Bangalore
-                    560073
-                  </a>
+                    Explore Solutions
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
+                  <Link
+                    to="/web-apps"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Phone: +91 9538596766
-                  </a>
+                    Web & Mobile Apps
+                  </Link>
                 </li>
                 <li>
-                  <a
-                    href="#"
+                  <Link
+                    to="/qa-automation"
                     className="text-base text-gray-300 hover:text-white"
                   >
-                    Email: igurupreeth@gmail.com
-                  </a>
+                    QA Automation
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/ai-systems"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    AI Systems
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/blockchain"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    Blockchain
+                  </Link>
                 </li>
               </ul>
             </div>
+
+            {/* Support / Legal */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">
+                Support
+              </h3>
+              <ul className="mt-4 space-y-4">
+                <li>
+                  <Link
+                    to="/contact"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    Contact Us
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/privacy-policy"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/login"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    Login
+                  </Link>
+                </li>
+                <li>
+                  <Link
+                    to="/register"
+                    className="text-base text-gray-300 hover:text-white"
+                  >
+                    Register
+                  </Link>
+                </li>
+              </ul>
+
+              {/* Optional quick contact (not routes; kept as plain text) */}
+              <div className="mt-6 text-gray-400 text-sm space-y-2">
+                <p>
+                  Address: 193 Hesaraghatta Road, Bagalaguntte, Bangalore 560073
+                </p>
+                <p>Phone: +91 9538596766</p>
+                <p>Email: igurupreeth@gmail.com</p>
+              </div>
+            </div>
           </div>
+
           <div className="mt-8 border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
             <p>&copy; 2024 Ecoders. All rights reserved.</p>
+
+            {/* Social placeholders (no routes provided in App.jsx, so keeping as #) */}
             <div className="mt-4 flex justify-center space-x-6">
               <a href="#" className="text-gray-400 hover:text-white">
                 <span className="sr-only">Facebook</span>
-                {/* Insert your Facebook icon */}
               </a>
               <a href="#" className="text-gray-400 hover:text-white">
                 <span className="sr-only">Twitter</span>
-                {/* Insert your Twitter icon */}
               </a>
               <a href="#" className="text-gray-400 hover:text-white">
                 <span className="sr-only">Instagram</span>
-                {/* Insert your Instagram icon */}
               </a>
             </div>
           </div>

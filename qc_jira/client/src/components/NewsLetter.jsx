@@ -13,13 +13,12 @@ const NewsLetter = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // ✅ now uses global base + /api
       const response = await axios.post(`${globalBackendRoute}/api/subscribe`, {
         email,
         subscriptionType,
       });
       setMessage(response.data.message);
-      setEmail(""); // Clear the input field
+      setEmail("");
     } catch (error) {
       if (error.response) {
         setMessage(error.response.data.message);
@@ -31,24 +30,27 @@ const NewsLetter = () => {
 
   return (
     <div>
-      <div className="relative isolate overflow-hidden bg-gray-900 py-16 sm:py-24 lg:py-32">
+      <div className="relative isolate overflow-hidden bg-white py-16 sm:py-20 lg:py-24">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-16 lg:max-w-none lg:grid-cols-2">
+          <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-8 gap-y-14 lg:max-w-none lg:grid-cols-2">
+            {/* LEFT */}
             <div className="max-w-xl lg:max-w-lg">
-              <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
+              <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
                 Subscribe to Our Newsletter
               </h2>
-              <p className="mt-4 text-lg leading-8 text-gray-300">
-                Stay informed about the latest developments in our programs,
-                research, and community initiatives.
+              <p className="mt-4 text-lg leading-8 text-gray-600">
+                Stay informed about the latest updates in our software,
+                automation, testing practices, and product improvements.
               </p>
+
               <form
                 onSubmit={handleSubmit}
-                className="mt-6 flex max-w-md gap-x-4"
+                className="mt-6 flex max-w-md gap-x-3"
               >
                 <label htmlFor="email-address" className="sr-only">
                   Email address
                 </label>
+
                 <input
                   id="email-address"
                   name="email"
@@ -58,44 +60,51 @@ const NewsLetter = () => {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="min-w-0 flex-auto rounded-md border-0 bg-white/5 px-3.5 py-2 text-white shadow-sm ring-1 ring-inset ring-white/10 focus:ring-2 focus:ring-inset focus:ring-indigo-500 sm:text-sm sm:leading-6"
+                  className="min-w-0 flex-auto rounded-md border border-gray-300 bg-white px-3.5 py-2 text-gray-900 placeholder:text-gray-400 shadow-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/30 sm:text-sm"
                 />
 
                 <button
                   type="submit"
-                  className="flex-none rounded-md bg-indigo-500 px-3.5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
+                  className="flex-none rounded-md bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                 >
                   Subscribe
                 </button>
               </form>
+
               {message && (
-                <p className="mt-4 text-sm text-green-500">{message}</p>
+                <p className="mt-4 text-sm text-emerald-600">{message}</p>
               )}
             </div>
+
+            {/* RIGHT */}
             <dl className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:pt-2">
               <div className="flex flex-col items-start">
-                <div className="rounded-md bg-white/5 p-2 ring-1 ring-white/10">
+                <div className="rounded-md bg-white p-2 border border-gray-300">
                   <CalendarDaysIcon
                     aria-hidden="true"
-                    className="h-6 w-6 text-white"
+                    className="h-6 w-6 text-gray-800"
                   />
                 </div>
-                <dt className="mt-4 font-semibold text-white">Monthly News</dt>
-                <dd className="mt-2 leading-7 text-gray-400">
-                  Get updates on new courses, faculty achievements, and student
-                  success stories.
+                <dt className="mt-4 font-semibold text-gray-900">
+                  Monthly Updates
+                </dt>
+                <dd className="mt-2 leading-7 text-gray-600">
+                  Receive curated updates on product releases, QA automation,
+                  testing strategies, and engineering progress.
                 </dd>
               </div>
+
               <div className="flex flex-col items-start">
-                <div className="rounded-md bg-white/5 p-2 ring-1 ring-white/10">
+                <div className="rounded-md bg-white p-2 border border-gray-300">
                   <HandRaisedIcon
                     aria-hidden="true"
-                    className="h-6 w-6 text-white"
+                    className="h-6 w-6 text-gray-800"
                   />
                 </div>
-                <dt className="mt-4 font-semibold text-white">No Spam</dt>
-                <dd className="mt-2 leading-7 text-gray-400">
-                  We respect your privacy and promise not to spam your inbox.
+                <dt className="mt-4 font-semibold text-gray-900">No Spam</dt>
+                <dd className="mt-2 leading-7 text-gray-600">
+                  We respect your privacy. Only relevant and meaningful updates
+                  — unsubscribe anytime.
                 </dd>
               </div>
             </dl>

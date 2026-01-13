@@ -34,9 +34,10 @@ import AiSystems from "./pages/common_pages/AiSystems";
 import AllCareersApplications from "./pages/careers_pages/AllCareersApplications";
 import SingleCareersApplication from "./pages/careers_pages/SingleCareersApplication";
 
-// header and footer.
+// header and footer. and other common components
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/common_components/ScrollToTop";
 
 // blog pages.
 import AllBlogs from "./pages/blog_pages/AllBlogs";
@@ -155,6 +156,7 @@ function App() {
 
   return (
     <Router>
+      <ScrollToTop />
       <Header />
       <HeaderSpacer />
       <Routes>
