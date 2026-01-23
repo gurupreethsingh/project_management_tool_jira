@@ -8,7 +8,7 @@ const Footer = () => {
       {/* Footer Section */}
       <footer className="bg-gray-800 py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8">
             {/* Brand */}
             <div>
               <img
@@ -152,20 +152,18 @@ const Footer = () => {
                   </Link>
                 </li>
               </ul>
-
-              {/* Optional quick contact (not routes; kept as plain text) */}
-              <div className="mt-6 text-gray-400 text-sm space-y-2">
-                <p>
-                  Address: 193 Hesaraghatta Road, Bagalaguntte, Bangalore 560073
-                </p>
-                <p>Phone: +91 9538596766</p>
-                <p>Email: igurupreeth@gmail.com</p>
-              </div>
             </div>
-          </div>
 
-          <div className="mt-8 border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
-            <p>&copy; 2024 Ecoders. All rights reserved.</p>
+            {/* Optional quick contact (not routes; kept as plain text) */}
+            <div className="mt-6 text-gray-400 text-sm space-y-2">
+              <h3 className="text-sm font-semibold text-gray-200 tracking-wider uppercase">
+                Address
+              </h3>
+              <p>#193 Hesaraghatta Road, Bagalaguntte, Bangalore 560073.</p>
+              <p>Phone: +91 9538596766</p>
+              <p>Email: gurupreeth@ecoders.co.in , igurupreeth@gmail.com</p>
+              <p>Website: www.ecoders.co.in</p>
+            </div>
 
             {/* Social placeholders (no routes provided in App.jsx, so keeping as #) */}
             <div className="mt-4 flex justify-center space-x-6">
@@ -179,6 +177,10 @@ const Footer = () => {
                 <span className="sr-only">Instagram</span>
               </a>
             </div>
+          </div>
+
+          <div className="mt-8 border-t border-gray-700 pt-8 text-center text-sm text-gray-400">
+            <p>&copy; 2019 Ecoders. All rights reserved.</p>
           </div>
         </div>
       </footer>

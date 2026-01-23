@@ -1,10 +1,7 @@
-// api/models/AiTutorInteractionModel.js
-
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const { Schema, Types } = mongoose;
 
-// Keep status & content types aligned with UiGen / DashboardGen / ExamGen
 const STATUS = Object.freeze(["ok", "low_confidence", "retrieval", "error"]);
 const CHANNEL = Object.freeze(["web", "mobile", "api", "widget"]);
 const CONTENT_TYPE = Object.freeze(["text", "html", "markdown"]);
@@ -15,18 +12,17 @@ const RequestSchema = new Schema(
     language: { type: String, trim: true, default: "en" },
     tags: [{ type: String, trim: true }],
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ResponseSchema = new Schema(
   {
-    // For AI tutor we store plain text explanation / answer
     answer: { type: String, default: "" },
 
     contentType: {
       type: String,
       enum: CONTENT_TYPE,
-      default: "text", // tutor answer is plain text by default
+      default: "text",
     },
     status: {
       type: String,
@@ -34,7 +30,7 @@ const ResponseSchema = new Schema(
       default: "ok",
       index: true,
     },
-    source: { type: String, trim: true }, // model | retrieval | fallback | api
+    source: { type: String, trim: true },
     confidence: { type: Number, min: 0, max: 1 },
     copyRatio: { type: Number, min: 0, max: 1 },
     model: { type: String, trim: true },
@@ -43,7 +39,7 @@ const ResponseSchema = new Schema(
     errorMessage: { type: String, trim: true },
     latencyMs: { type: Number, min: 0 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const MetaSchema = new Schema(
@@ -59,7 +55,7 @@ const MetaSchema = new Schema(
     userAgent: { type: String, trim: true },
     ipHash: { type: String, index: true },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const AiTutorInteractionSchema = new Schema(
@@ -86,7 +82,6 @@ const AiTutorInteractionSchema = new Schema(
     },
     respondedAt: { type: Date },
 
-    // duplicate of response.latencyMs for convenience
     responseTimeMs: { type: Number, min: 0 },
 
     meta: {
@@ -97,10 +92,9 @@ const AiTutorInteractionSchema = new Schema(
   {
     timestamps: true,
     collection: "ai_tutor_interactions",
-  }
+  },
 );
 
-// Auto-calc respondedAt / latency if missing
 AiTutorInteractionSchema.pre("save", function (next) {
   try {
     if (this.response && this.response.answer && !this.respondedAt) {
@@ -126,7 +120,6 @@ AiTutorInteractionSchema.pre("save", function (next) {
   }
 });
 
-// Hash IP exactly like UiGen/DashboardGen/ExamGen, but with its own salt key
 AiTutorInteractionSchema.statics.hashIp = function (ip) {
   if (!ip) return undefined;
   const salt = process.env.AITUTOR_IP_SALT || "rotate-this-aitutor-salt";
@@ -135,7 +128,7 @@ AiTutorInteractionSchema.statics.hashIp = function (ip) {
 
 const AiTutorInteraction = mongoose.model(
   "AiTutorInteraction",
-  AiTutorInteractionSchema
+  AiTutorInteractionSchema,
 );
 
 module.exports = {

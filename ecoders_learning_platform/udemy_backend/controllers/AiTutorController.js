@@ -56,10 +56,10 @@ const generateTutorAnswer = async (req, res) => {
     const requestPayload = {
       task: cleanTask,
       use_retrieval: !!use_retrieval, // Flask ignores (safe)
-      max_new_tokens: clamp(nint(reqMax, 650), 200, 1200),
+      max_new_tokens: clamp(nint(reqMax, 220), 80, 400),
       temperature: clamp(nfloat(reqTemp, 0.3), 0, 1),
       do_sample: false,
-      num_beams: 3,
+      num_beams: 1, // ✅ keep formatting stable (aligned with Flask)
     };
 
     const flaskUrl = `${AITUTOR_FLASK_BASE}/generate`;

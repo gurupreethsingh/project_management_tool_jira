@@ -1,4 +1,4 @@
-// src/components/ai_components/AiTutorAssistantShell.jsx
+// src/pages/chatbot_pages/AiTutorAssistantShell.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
@@ -120,7 +120,7 @@ export default function AiTutorAssistantShell({
     if (el) el.scrollTop = el.scrollHeight;
     localStorage.setItem(
       lsKey(scope, "active_convo"),
-      JSON.stringify(messages)
+      JSON.stringify(messages),
     );
   }, [messages, scope]);
 
@@ -243,7 +243,7 @@ export default function AiTutorAssistantShell({
     try {
       const payload = {
         task,
-        max_new_tokens: 1024,
+        max_new_tokens: 220,
         use_retrieval: true, // safe; backend can ignore
       };
       const resp = await axios.post(ASK_AITUTOR, payload, {

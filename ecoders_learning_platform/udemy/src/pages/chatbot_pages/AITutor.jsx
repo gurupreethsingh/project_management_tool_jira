@@ -1,4 +1,4 @@
-// src/pages/ai_pages/AiTutor.jsx
+// src/pages/chatbot_pages/AiTutor.jsx
 import React from "react";
 import AiTutorAssistantShell from "../chatbot_pages/AiTutorAssistantShell";
 
