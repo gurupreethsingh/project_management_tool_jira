@@ -1,4 +1,4 @@
-// src/pages/chatbot_pages/AiTutorAssistantShell.jsx
+// src/pages/ai_pages/CodeSummaryGenAssistantShell.jsx
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
@@ -20,12 +20,12 @@ import globalBackendRoute from "../../config/Config";
 import { getAuthorizationHeader } from "../../components/auth_components/AuthManager";
 
 const API = globalBackendRoute; // e.g., http://localhost:3011
-const AITUTOR_BASE = `${API}/api/ai-tutor`;
-const ASK_AITUTOR = `${AITUTOR_BASE}/generate`;
-const INFO_AITUTOR = `${AITUTOR_BASE}/model-info`;
-const RELOAD_AITUTOR = `${AITUTOR_BASE}/reload`;
+const CODESUMMARY_BASE = `${API}/api/code-summary`;
+const ASK_CODESUMMARY = `${CODESUMMARY_BASE}/generate`;
+const INFO_CODESUMMARY = `${CODESUMMARY_BASE}/model-info`;
+const RELOAD_CODESUMMARY = `${CODESUMMARY_BASE}/reload`;
 
-const SID_KEY = "aitutor_workspace_sid_v1";
+const SID_KEY = "codesummary_workspace_sid_v1";
 
 function cryptoRandomId(len = 24) {
   const arr = new Uint8Array(len);
@@ -43,7 +43,7 @@ function ensureSessionId() {
 }
 
 function lsKey(scope, suffix) {
-  return `aitutor_${scope}_${suffix}_v1`;
+  return `codesummary_${scope}_${suffix}_v1`;
 }
 
 function extractErrMsg(e, fallback = "Request failed") {
@@ -66,10 +66,10 @@ function safeString(x) {
   }
 }
 
-export default function AiTutorAssistantShell({
-  title = "AI Tutor",
-  scope = "ai-tutor",
-  placeholder = "Ask your AI Tutor a question…",
+export default function CodeSummaryGenAssistantShell({
+  title = "Code Summary",
+  scope = "code-summary",
+  placeholder = "Paste code or a snippet to summarize & explain…",
   starterPrompts = [],
 }) {
   const sid = useMemo(() => ensureSessionId(), []);
@@ -97,7 +97,7 @@ export default function AiTutorAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `🎓 Welcome to ${title}. Ask any programming / CS / tech question, and I’ll explain step-by-step like a friendly tutor.`,
+        text: `🧾 Welcome to ${title}. Paste code (or a snippet) and I’ll summarize what it does, highlight key points, and call out possible edge cases.`,
         time: Date.now(),
       },
     ];
@@ -130,7 +130,7 @@ export default function AiTutorAssistantShell({
 
   async function fetchModelInfo() {
     try {
-      const r = await axios.get(INFO_AITUTOR, { headers, timeout: 20000 });
+      const r = await axios.get(INFO_CODESUMMARY, { headers, timeout: 20000 });
       setModelInfo(r?.data || null);
     } catch (e) {
       setModelInfo(null);
@@ -149,7 +149,7 @@ export default function AiTutorAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `🆕 New ${title} session. What topic do you want help with? (Python, SQL, DSA, projects, etc.)`,
+        text: `🆕 New ${title} session. Paste your code snippet and tell me what kind of summary you want (short / detailed / with complexity / with edge cases).`,
         time: Date.now(),
       },
     ]);
@@ -187,7 +187,6 @@ export default function AiTutorAssistantShell({
         return;
       }
     } catch {}
-    // fallback
     try {
       const ta = document.createElement("textarea");
       ta.value = s;
@@ -200,7 +199,7 @@ export default function AiTutorAssistantShell({
     } catch {}
   }
 
-  function downloadAnswer(text, filename = "ai_tutor_answer.txt") {
+  function downloadAnswer(text, filename = "code_summary.txt") {
     const blob = new Blob([safeString(text)], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -215,7 +214,7 @@ export default function AiTutorAssistantShell({
   async function reloadModel() {
     try {
       setError("");
-      await axios.post(RELOAD_AITUTOR, {}, { headers, timeout: 60000 });
+      await axios.post(RELOAD_CODESUMMARY, {}, { headers, timeout: 60000 });
       await fetchModelInfo();
     } catch (e) {
       setError(extractErrMsg(e, "Reload failed"));
@@ -242,22 +241,28 @@ export default function AiTutorAssistantShell({
     let answer = "";
     try {
       const payload = {
-        task,
-        max_new_tokens: 300,
+        task, // ✅ keep "task" for consistency; backend accepts task/prompt/code/query etc.
+        max_new_tokens: 600,
         do_sample: false,
         temperature: 0.2,
         use_retrieval: true, // safe; backend can ignore
       };
-      const resp = await axios.post(ASK_AITUTOR, payload, {
+
+      const resp = await axios.post(ASK_CODESUMMARY, payload, {
         headers,
         timeout: 120000,
       });
 
       const data = resp?.data || {};
-      answer = safeString(data.answer ?? "No answer returned.");
+      // backend returns answer (file-jsonl) -> keep safe
+      answer = safeString(
+        data.answer ?? data.summary ?? data.output ?? "No summary returned.",
+      );
     } catch (e) {
-      setError(extractErrMsg(e, "AI Tutor is unavailable right now."));
-      answer = "AI Tutor backend is unavailable. Please try again later.";
+      setError(
+        extractErrMsg(e, "Code Summary backend is unavailable right now."),
+      );
+      answer = "Code Summary backend is unavailable. Please try again later.";
     }
 
     const aiMsg = {
@@ -283,7 +288,7 @@ export default function AiTutorAssistantShell({
           className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50"
           onClick={() => setSidebarOpen(true)}
         >
-          <FiMenu /> Questions
+          <FiMenu /> History
         </button>
         <div className="text-base font-semibold">{title}</div>
         <button
@@ -311,7 +316,7 @@ export default function AiTutorAssistantShell({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold">{title} Topics</div>
+              <div className="text-sm font-semibold">{title} History</div>
               <button
                 onClick={newChat}
                 className="inline-flex items-center gap-1 text-xs border rounded px-2 py-1 bg-gray-50"
@@ -323,7 +328,7 @@ export default function AiTutorAssistantShell({
             <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
-                  No questions saved yet. Ask something to start!
+                  No snippets saved yet. Paste code to start!
                 </li>
               )}
               {topics.map((t) => (
@@ -358,7 +363,7 @@ export default function AiTutorAssistantShell({
               <button
                 className="absolute top-3 right-3 text-white"
                 onClick={() => setSidebarOpen(false)}
-                aria-label="Close topics"
+                aria-label="Close history"
               >
                 ✕
               </button>
@@ -453,7 +458,7 @@ export default function AiTutorAssistantShell({
                       <button
                         onClick={() => copyToClipboard(m.text)}
                         className="inline-flex items-center gap-1 border rounded px-2 py-1 hover:bg-gray-50"
-                        title="Copy answer"
+                        title="Copy summary"
                       >
                         <FiCopy /> Copy
                       </button>
@@ -471,7 +476,7 @@ export default function AiTutorAssistantShell({
 
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <FiLoader className="animate-spin" /> generating answer…
+                  <FiLoader className="animate-spin" /> generating summary…
                 </div>
               )}
 
@@ -526,7 +531,7 @@ export default function AiTutorAssistantShell({
                       : "bg-indigo-600 text-white hover:bg-indigo-700"
                   }`}
                 >
-                  <FiSend /> Ask
+                  <FiSend /> Summarize
                 </button>
               </div>
               <div className="mt-1 text-[10px] text-gray-500">

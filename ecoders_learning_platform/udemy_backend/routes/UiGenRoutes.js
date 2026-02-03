@@ -1,12 +1,23 @@
-// routes/uiGenRoutes.js
+// routes/UiGenRoutes.js
 const express = require("express");
 const router = express.Router();
-const ctrl = require("../controllers/UiGenController");
 
-router.post("/ui-gen/ask", ctrl.ask);
-router.get("/ui-gen/model-info", ctrl.modelInfo);
-router.post("/ui-gen/reload", ctrl.reload);
-router.get("/ui-gen/get-by-id/:id", ctrl.getById);
-router.get("/ui-gen/list", ctrl.list);
+const {
+  generateUi,
+  getModelInfo,
+  reloadModel,
+} = require("../controllers/UiGenController");
+
+// ✅ IMPORTANT:
+// index.js mounts: app.use("/api", uiGenRoutes)
+// so to get /api/ui-gen/* we MUST include "/ui-gen" here.
+
+router.get("/ui-gen/health", (_req, res) => {
+  res.json({ ok: true, service: "ui-gen" });
+});
+
+router.get("/ui-gen/model-info", getModelInfo);
+router.post("/ui-gen/reload", reloadModel);
+router.post("/ui-gen/generate", generateUi);
 
 module.exports = router;

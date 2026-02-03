@@ -1,6 +1,4 @@
 // controllers/TextCodeController.js
-// Express controllers that call the TextCodeModel client.
-
 const TextCodeModel = require("../models/TextCodeModel");
 
 exports.getModelInfo = async (req, res) => {
@@ -10,30 +8,27 @@ exports.getModelInfo = async (req, res) => {
   } catch (err) {
     console.error(
       "[TextCodeController.getModelInfo] error:",
-      err?.message || err
+      err?.message || err,
     );
     return res.status(500).json({
       ok: false,
-      error: "Failed to fetch text-to-code model info",
-      details: err?.message || String(err),
+      message: err?.message || "Failed to fetch model-info",
     });
   }
 };
 
 exports.reloadModel = async (req, res) => {
   try {
-    const body = req.body || {};
-    const data = await TextCodeModel.reloadModel(body);
-    return res.status(data?.ok ? 200 : 400).json(data);
+    const data = await TextCodeModel.reload();
+    return res.status(200).json(data);
   } catch (err) {
     console.error(
       "[TextCodeController.reloadModel] error:",
-      err?.message || err
+      err?.message || err,
     );
     return res.status(500).json({
       ok: false,
-      error: "Failed to reload text-to-code model",
-      details: err?.message || String(err),
+      message: err?.message || "Failed to reload text-code model",
     });
   }
 };
@@ -41,39 +36,29 @@ exports.reloadModel = async (req, res) => {
 exports.generate = async (req, res) => {
   try {
     const { task, use_retrieval, max_new_tokens } = req.body || {};
-
     if (!task || typeof task !== "string" || !task.trim()) {
-      return res.status(400).json({
-        ok: false,
-        error: "task is required and must be a non-empty string",
-      });
+      return res.status(400).json({ ok: false, message: "task is required" });
     }
 
-    const payload = {
+    const data = await TextCodeModel.generate({
       task: task.trim(),
-      // optional fields – only send if defined
-      ...(use_retrieval !== undefined && { use_retrieval }),
-      ...(max_new_tokens !== undefined && { max_new_tokens }),
-    };
+      use_retrieval,
+      max_new_tokens,
+    });
 
-    const data = await TextCodeModel.generateCode(payload);
+    // normalize output so your React can always do: data.code
+    const code = data?.code ?? data?.data?.code ?? "// No code returned";
 
-    // Flask always responds with { ok, code, source, ... } on success/fallback
-    if (!data || data.ok === false) {
-      return res.status(502).json({
-        ok: false,
-        error: "Text-to-code backend returned an error",
-        backend: data,
-      });
-    }
-
-    return res.status(200).json(data);
+    return res.status(200).json({
+      ok: true,
+      code,
+      raw: data, // helpful for debugging (remove later if you want)
+    });
   } catch (err) {
     console.error("[TextCodeController.generate] error:", err?.message || err);
     return res.status(500).json({
       ok: false,
-      error: "Failed to generate code from text",
-      details: err?.message || String(err),
+      message: err?.message || "Text-to-code generation failed",
     });
   }
 };

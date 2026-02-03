@@ -1,5 +1,5 @@
 // routes/TextCodeRoutes.js
-// Mount these under /api/text-code in your main Express app.
+// Mount under /api/text-code
 
 const express = require("express");
 const router = express.Router();

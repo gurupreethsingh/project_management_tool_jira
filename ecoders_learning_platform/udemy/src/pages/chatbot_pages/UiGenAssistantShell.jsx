@@ -1,4 +1,4 @@
-// src/components/ai_components/UiGenAssistantShell.jsx
+// UiGenAssistantShell.jsx
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
@@ -21,11 +21,20 @@ import { getAuthorizationHeader } from "../../components/auth_components/AuthMan
 
 const API = globalBackendRoute; // e.g., http://localhost:3011
 const UI_BASE = `${API}/api/ui-gen`;
-const ASK_UI = `${UI_BASE}/ask`;
+
+// ✅ Match backend routes (dashboard-style contract)
+const GEN_UI = `${UI_BASE}/generate`;
 const INFO_UI = `${UI_BASE}/model-info`;
 const RELOAD_UI = `${UI_BASE}/reload`;
 
 const SID_KEY = "ui_gen_workspace_sid_v1";
+
+function cryptoRandomId(len = 24) {
+  const arr = new Uint8Array(len);
+  (window.crypto || window.msCrypto).getRandomValues(arr);
+  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
+}
+
 function ensureSessionId() {
   let sid = localStorage.getItem(SID_KEY);
   if (!sid) {
@@ -33,11 +42,6 @@ function ensureSessionId() {
     localStorage.setItem(SID_KEY, sid);
   }
   return sid;
-}
-function cryptoRandomId(len = 24) {
-  const arr = new Uint8Array(len);
-  (window.crypto || window.msCrypto).getRandomValues(arr);
-  return Array.from(arr, (x) => ("0" + x.toString(16)).slice(-2)).join("");
 }
 
 // --- HTML/JSX validator (prevents junk previews) ---
@@ -49,11 +53,11 @@ function looksLikeHtmlOrJsx(s) {
   if (t.includes("<head") && t.includes("<body")) return true;
   if (
     /(<(div|section|header|footer|main|form|nav|table|button|input|h1|h2)\b)/i.test(
-      t
+      t,
     )
   )
     return true;
-  if (/\bexport\s+default\s+function\b/i.test(s)) return true; // JSX component snippet
+  if (/\bexport\s+default\s+function\b/i.test(s)) return true;
   return false;
 }
 
@@ -62,13 +66,20 @@ function lsKey(scope, suffix) {
   return `ui_${scope}_${suffix}_v1`;
 }
 
+// Detect backend fallback HTML (so you can SEE when it happens)
+function isFallbackHtml(code) {
+  if (!code || typeof code !== "string") return false;
+  return /Fallback page/i.test(code) || /Fallback Template/i.test(code);
+}
+
 export default function UiGenAssistantShell({
   title = "UI Generator",
   scope = "ui-gen",
-  placeholder = "Describe the UI you want (e.g., 'Responsive pricing table with 3 tiers and CTA')…",
+  placeholder = "Describe the UI you want…",
   starterPrompts = [],
 }) {
   const sid = useMemo(() => ensureSessionId(), []);
+
   const headers = useMemo(() => {
     const h = { "X-Session-Id": sid, "X-Channel": "widget" };
     const auth = getAuthorizationHeader?.();
@@ -84,6 +95,7 @@ export default function UiGenAssistantShell({
   const [modelInfo, setModelInfo] = useState(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [lastCode, setLastCode] = useState("");
+  const [lastMeta, setLastMeta] = useState(null);
 
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem(lsKey(scope, "active_convo"));
@@ -96,7 +108,7 @@ export default function UiGenAssistantShell({
       {
         id: "welcome",
         role: "ai",
-        text: `🧩 Welcome to ${title}. Describe a component or layout and I'll generate HTML/CSS/JS.`,
+        text: `🧩 Welcome to ${title}. Describe a component or layout and I'll generate UI code.`,
         time: Date.now(),
       },
     ];
@@ -113,24 +125,32 @@ export default function UiGenAssistantShell({
   });
 
   const listRef = useRef(null);
+
   useEffect(() => {
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
     localStorage.setItem(
       lsKey(scope, "active_convo"),
-      JSON.stringify(messages)
+      JSON.stringify(messages),
     );
   }, [messages, scope]);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const r = await axios.get(INFO_UI, { headers, timeout: 10000 });
-        setModelInfo(r?.data || null);
-      } catch {
-        setModelInfo(null);
-      }
-    })();
+    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(topics));
+  }, [topics, scope]);
+
+  async function fetchModelInfo() {
+    try {
+      const r = await axios.get(INFO_UI, { headers, timeout: 10000 });
+      setModelInfo(r?.data || null);
+    } catch {
+      setModelInfo(null);
+    }
+  }
+
+  useEffect(() => {
+    fetchModelInfo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [headers]);
 
   // ----------------------- Helpers -----------------------
@@ -146,6 +166,7 @@ export default function UiGenAssistantShell({
     setInput("");
     setError("");
     setLastCode("");
+    setLastMeta(null);
     setPreviewUrl((u) => {
       if (u) URL.revokeObjectURL(u);
       return "";
@@ -162,13 +183,11 @@ export default function UiGenAssistantShell({
     };
     const next = [topic, ...topics].slice(0, 200);
     setTopics(next);
-    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(next));
   }
 
   function removeTopic(id) {
     const next = topics.filter((t) => t.id !== id);
     setTopics(next);
-    localStorage.setItem(lsKey(scope, "topics"), JSON.stringify(next));
   }
 
   function pickTopic(t) {
@@ -205,71 +224,116 @@ export default function UiGenAssistantShell({
   async function reloadModel() {
     try {
       await axios.post(RELOAD_UI, {}, { headers, timeout: 60000 });
-      const info = await axios.get(INFO_UI, { headers, timeout: 10000 });
-      setModelInfo(info?.data || null);
+      await fetchModelInfo();
+      setError("");
     } catch (e) {
-      setError(e?.response?.data?.message || "Reload failed");
+      setError(
+        e?.response?.data?.errorText ||
+          e?.response?.data?.error ||
+          "Reload failed",
+      );
     }
   }
 
-  // ----------------------- Send -----------------------
+  // ----------------------- Send (Dashboard-style contract) -----------------------
   async function send() {
-    const task = input.trim();
-    if (!task || busy) return;
+    const prompt = input.trim();
+    if (!prompt || busy) return;
+
     setBusy(true);
     setError("");
 
     const userMsg = {
       id: "u_" + cryptoRandomId(8),
       role: "user",
-      text: task,
+      text: prompt,
       time: Date.now(),
     };
     setMessages((m) => [...m, userMsg]);
     setInput("");
-    addTopic(task);
+    addTopic(prompt);
 
-    let code = "";
+    let completion = "";
+    let meta = null;
+
     try {
-      // First attempt: longer output + retrieval on
-      let payload = { task, max_new_tokens: 1024, use_retrieval: true };
-      let resp = await axios.post(ASK_UI, payload, {
+      const payload = {
+        prompt,
+        prefer: "auto",
+        max_new_tokens: 1200,
+        max_time_s: 60,
+      };
+
+      const resp = await axios.post(GEN_UI, payload, {
         headers,
         timeout: 120000,
+        validateStatus: () => true,
       });
-      let data = resp?.data?.data || resp?.data || {};
 
-      // If low confidence or not HTML/JSX, try one more time (even longer, no retrieval)
-      const notHtml =
-        !data?.code ||
-        !looksLikeHtmlOrJsx(String(data.code)) ||
-        data?.status === "low_confidence" ||
-        /low confidence/i.test(String(data.code));
+      const data = resp?.data || {};
+      const ok =
+        resp.status >= 200 &&
+        resp.status < 300 &&
+        (data.ok === true || data.ok == null);
 
-      if (notHtml) {
-        payload = { task, max_new_tokens: 1400, use_retrieval: false };
-        resp = await axios.post(ASK_UI, payload, { headers, timeout: 120000 });
-        data = resp?.data?.data || resp?.data || {};
+      completion = String(data?.completion || "");
+
+      meta = {
+        http: resp.status,
+        ok,
+        adapter: data?.adapter,
+        resolved_base_model: data?.resolved_base_model,
+        output_mode: data?.output_mode,
+        used_fallback:
+          Boolean(data?.used_fallback) ||
+          Boolean(data?.used_template_fallback) ||
+          isFallbackHtml(completion),
+        fallback_kind: data?.fallback_kind,
+        sanitize_reason: data?.sanitize_reason,
+        errorText: data?.errorText || data?.error || "",
+      };
+
+      setLastMeta(meta);
+
+      if (!ok) {
+        const msg = String(meta.errorText || "UI generation failed");
+        setError(msg);
+        if (!completion) completion = `<!-- ${msg} -->`;
       }
 
-      code = data?.code ?? "<!-- No code returned -->";
+      // If it *is* fallback, show clear warning
+      if (meta.used_fallback) {
+        setError(
+          meta.errorText ||
+            `Backend returned TEMPLATE FALLBACK. (fallback_kind: ${meta.fallback_kind || "unknown"}, sanitize_reason: ${meta.sanitize_reason || "unknown"})`,
+        );
+      }
+
+      if (!completion || completion.trim().length < 5) {
+        const msg = "Empty output from backend.";
+        setError(msg);
+        completion = `<!-- ${msg} -->`;
+      }
     } catch (e) {
-      setError(e?.response?.data?.message || "UI generator is unavailable.");
+      const msg =
+        e?.response?.data?.errorText ||
+        e?.response?.data?.error ||
+        "UI generator is unavailable.";
+      setError(msg);
+      completion = `<!-- ${msg} -->`;
+      setLastMeta({ http: 0, ok: false, used_fallback: true, errorText: msg });
     }
 
     const aiMsg = {
       id: "a_" + cryptoRandomId(8),
       role: "ai",
-      text: code || "No output.",
+      text: completion || "No output.",
       time: Date.now(),
     };
     setMessages((m) => [...m, aiMsg]);
-    setLastCode(code || "");
+    setLastCode(completion || "");
 
-    // Only preview if HTML/JSX-like
-    if (looksLikeHtmlOrJsx(code)) {
-      openPreview(code);
-    }
+    if (looksLikeHtmlOrJsx(completion)) openPreview(completion);
 
     setBusy(false);
   }
@@ -306,8 +370,7 @@ export default function UiGenAssistantShell({
           <div
             className={`${
               sidebarOpen ? "absolute left-0 top-0 bottom-0" : "hidden md:block"
-            }
-                        w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
+            } w-[80%] max-w-[320px] md:w-[280px] h-full md:h-auto bg-white md:bg-transparent border-r md:border-r p-4`}
           >
             <div className="hidden md:flex items-center justify-between mb-3">
               <div className="text-sm font-semibold">{title} Topics</div>
@@ -318,6 +381,7 @@ export default function UiGenAssistantShell({
                 <FiPlus /> New
               </button>
             </div>
+
             <ul className="space-y-1 max-h-[70vh] md:max-h-[calc(100vh-18rem)] overflow-y-auto">
               {topics.length === 0 && (
                 <li className="text-xs text-gray-500">
@@ -351,6 +415,7 @@ export default function UiGenAssistantShell({
                 </li>
               ))}
             </ul>
+
             {sidebarOpen && (
               <button
                 className="absolute top-3 right-3 text-white"
@@ -367,32 +432,25 @@ export default function UiGenAssistantShell({
         <main className="min-h-[70vh] flex flex-col">
           {/* Header (desktop) */}
           <div className="hidden md:flex items-center justify-between px-6 py-4 border-b bg-white sticky top-0 z-10">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-xl font-bold text-gray-900">{title}</h1>
+
               <button
-                onClick={async () => {
-                  try {
-                    const r = await axios.get(INFO_UI, {
-                      headers,
-                      timeout: 10000,
-                    });
-                    setModelInfo(r?.data || null);
-                  } catch {
-                    setModelInfo(null);
-                  }
-                }}
+                onClick={fetchModelInfo}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
                 title="Fetch model info"
               >
                 <FiInfo /> Model info
               </button>
+
               <button
                 onClick={reloadModel}
                 className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs bg-gray-50 hover:bg-gray-100"
-                title="Reload adapters / retrieval"
+                title="Reload"
               >
                 <FiRefreshCw /> Reload
               </button>
+
               {modelInfo && (
                 <div className="text-[11px] text-gray-600">
                   device: <code>{String(modelInfo.device)}</code>
@@ -402,11 +460,18 @@ export default function UiGenAssistantShell({
                       · adapters: <code>{modelInfo.adapters.length}</code>
                     </>
                   )}
-                  {" · allowCDN: "}
-                  <code>{String(modelInfo.allow_cdn)}</code>
+                </div>
+              )}
+
+              {lastMeta && (
+                <div className="text-[11px] text-gray-600">
+                  · http: <code>{String(lastMeta.http)}</code>
+                  {" · usedFallback: "}
+                  <code>{String(Boolean(lastMeta.used_fallback))}</code>
                 </div>
               )}
             </div>
+
             <button
               onClick={newChat}
               className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-sm bg-gray-50 hover:bg-gray-100"
@@ -424,9 +489,7 @@ export default function UiGenAssistantShell({
               {messages.map((m) => (
                 <div
                   key={m.id}
-                  className={`mb-5 ${
-                    m.role === "user" ? "text-right" : "text-left"
-                  }`}
+                  className={`mb-5 ${m.role === "user" ? "text-right" : "text-left"}`}
                 >
                   <div
                     className={`inline-block rounded-2xl px-4 py-3 text-sm shadow ${
@@ -444,6 +507,7 @@ export default function UiGenAssistantShell({
                         {m.text}
                       </div>
                     )}
+
                     <div
                       className={`text-[10px] mt-1 ${
                         m.role === "user"
@@ -483,13 +547,22 @@ export default function UiGenAssistantShell({
                       </button>
                     </div>
                   )}
+
+                  {m.role === "ai" && isFallbackHtml(m.text) && (
+                    <div className="mt-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 inline-block">
+                      ⚠️ Backend returned TEMPLATE FALLBACK. (Model output was
+                      unusable.)
+                    </div>
+                  )}
                 </div>
               ))}
+
               {busy && (
                 <div className="flex items-center gap-2 text-sm text-gray-500">
                   <FiLoader className="animate-spin" /> generating…
                 </div>
               )}
+
               {error && (
                 <div className="mt-2 text-xs text-red-600">{error}</div>
               )}
@@ -521,12 +594,14 @@ export default function UiGenAssistantShell({
                     </button>
                   </div>
                 </div>
+
                 <div className="rounded-lg overflow-hidden border bg-white">
                   <iframe
                     title="ui-gen-preview"
                     src={previewUrl}
                     className="w-full h-[480px]"
-                    sandbox="allow-forms allow-pointer-lock allow-popups allow-same-origin allow-scripts"
+                    // ✅ FIX: remove allow-same-origin to avoid sandbox escape warning
+                    sandbox="allow-forms allow-pointer-lock allow-popups allow-scripts"
                   />
                 </div>
               </div>
@@ -542,6 +617,7 @@ export default function UiGenAssistantShell({
                     key={p}
                     onClick={() => setInput(p)}
                     className="text-xs border rounded-full px-3 py-1 bg-gray-50 hover:bg-indigo-50 hover:border-indigo-200"
+                    title={p}
                   >
                     {p}
                   </button>
