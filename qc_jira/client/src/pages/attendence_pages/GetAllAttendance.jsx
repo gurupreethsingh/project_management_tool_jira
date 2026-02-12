@@ -1,5 +1,12 @@
-// src/pages/attendance/GetAllAttendance.jsx
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
 import axios from "axios";
 import moment from "moment";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,15 +17,15 @@ import {
   FaTh,
   FaArrowLeft,
   FaArrowRight,
-  FaSortAmountDownAlt,
-  FaSortAmountUpAlt,
+  FaSort,
   FaSync,
   FaDownload,
   FaCheckSquare,
   FaSquare,
   FaTrashAlt,
+  FaEye,
 } from "react-icons/fa";
-import * as XLSX from "xlsx"; // for client-side Excel export
+import * as XLSX from "xlsx";
 import globalBackendRoute from "../../config/Config";
 
 const cls = (...a) => a.filter(Boolean).join(" ");
@@ -50,6 +57,16 @@ const getIdStr = (x) => {
   return String(x);
 };
 
+// yyyy-mm-dd in local time
+const toLocalYMD = (d) => {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return "";
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
 export default function GetAllAttendance() {
   const navigate = useNavigate();
 
@@ -76,12 +93,12 @@ export default function GetAllAttendance() {
 
   // View + paging
   const [viewMode, setViewMode] = useState(
-    localStorage.getItem("attendance:viewMode") || "list"
+    localStorage.getItem("attendance:viewMode") || "list",
   );
-  const [sortOrder, setSortOrder] = useState("desc");
+  const [sortOrder, setSortOrder] = useState("asc"); // keep AllScenarios feel (asc/desc toggle)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(
-    Number(localStorage.getItem("attendance:pageSize")) || 10
+    Number(localStorage.getItem("attendance:pageSize")) || 10,
   );
 
   // Filters
@@ -91,6 +108,15 @@ export default function GetAllAttendance() {
   const [quick, setQuick] = useState(""); // "", "today", "week", "month"
   const [employeeFilter, setEmployeeFilter] = useState("");
   const [projectFilter, setProjectFilter] = useState("");
+
+  // ✅ Date filters (kept from your code)
+  const [dateMode, setDateMode] = useState("any"); // any | day | week | month | year | range
+  const [dayValue, setDayValue] = useState(""); // yyyy-mm-dd
+  const [weekValue, setWeekValue] = useState(""); // yyyy-Www
+  const [monthValue, setMonthValue] = useState(""); // yyyy-mm
+  const [yearValue, setYearValue] = useState(String(new Date().getFullYear())); // yyyy
+  const [fromDate, setFromDate] = useState(""); // yyyy-mm-dd
+  const [toDate, setToDate] = useState(""); // yyyy-mm-dd
 
   // Counts
   const [statusCounts, setStatusCounts] = useState([]);
@@ -107,6 +133,100 @@ export default function GetAllAttendance() {
   const [bulkProject, setBulkProject] = useState("");
   const [bulkHours, setBulkHours] = useState("");
 
+  // ✅ Column widths (Excel-like resize) — but make layout like AllScenarios
+  // Columns: [#, Sel, Employee, Project, Task, Date, Hours, Status, Billable, View, Del]
+  const COLS = useMemo(
+    () => [
+      "#",
+      "Sel",
+      "Employee",
+      "Project",
+      "Task",
+      "Date",
+      "Hours",
+      "Status",
+      "Billable",
+      "View",
+      "Del",
+    ],
+    [],
+  );
+
+  const storageKeyColW = "attendance:colW:v2_scenarios_style";
+  const [colW, setColW] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(storageKeyColW) || "null");
+      if (Array.isArray(saved) && saved.length === COLS.length) return saved;
+    } catch {}
+    return [
+      56, // #
+      56, // Sel
+      320, // Employee
+      240, // Project
+      520, // Task
+      160, // Date
+      120, // Hours
+      160, // Status
+      120, // Billable
+      56, // View
+      56, // Del
+    ];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(storageKeyColW, JSON.stringify(colW));
+    } catch {}
+  }, [colW]);
+
+  const dragRef = useRef(null);
+
+  const gridTemplateColumns = useMemo(
+    () => colW.map((w) => `${Math.max(32, Number(w) || 0)}px`).join(" "),
+    [colW],
+  );
+
+  const startColResize = useCallback(
+    (colIndex, e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startX = e.clientX;
+      const startW = colW[colIndex] || 60;
+
+      dragRef.current = { colIndex, startX, startW };
+
+      const onMove = (ev) => {
+        if (!dragRef.current) return;
+        const dx = ev.clientX - dragRef.current.startX;
+        const next = Math.max(32, dragRef.current.startW + dx);
+        setColW((prev) => {
+          const cp = [...prev];
+          cp[colIndex] = next;
+          return cp;
+        });
+      };
+
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        dragRef.current = null;
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [colW],
+  );
+
+  const Resizer = ({ onMouseDown }) => (
+    <span
+      onMouseDown={onMouseDown}
+      className="absolute right-0 top-0 h-full w-2 cursor-col-resize select-none"
+      title="Drag to resize"
+    />
+  );
+
   // ---------- fetch ----------
   const fetchAll = async () => {
     try {
@@ -118,7 +238,7 @@ export default function GetAllAttendance() {
           `${api}/attendance/view-all-attendance?limit=5000&order=desc`,
           {
             headers: authHeader,
-          }
+          },
         ),
         axios.get(`${api}/attendance/counts?groupBy=status`, {
           headers: authHeader,
@@ -209,7 +329,7 @@ export default function GetAllAttendance() {
     };
   }, [rows, projectsList]);
 
-  // ---------- computed helpers ----------
+  // ---------- helpers ----------
   const matchAny = (r, q) => {
     if (!q) return true;
     const lc = q.toLowerCase();
@@ -230,6 +350,7 @@ export default function GetAllAttendance() {
     ]
       .join(" ")
       .toLowerCase();
+
     const terms = lc.split(/\s+/).filter(Boolean);
     return terms.every((t) => fields.includes(t));
   };
@@ -256,71 +377,183 @@ export default function GetAllAttendance() {
     return true;
   };
 
-  // ---------- search + filter + sort ----------
+  const matchDateMode = useCallback(
+    (r) => {
+      if (dateMode === "any") return true;
+      if (!r?.date) return false;
+      const d = new Date(r.date);
+      if (Number.isNaN(d.getTime())) return false;
+
+      const ymd = toLocalYMD(d);
+
+      if (dateMode === "day") {
+        if (!dayValue) return true;
+        return ymd === dayValue;
+      }
+
+      if (dateMode === "week") {
+        if (!weekValue) return true; // YYYY-Www
+        const m = moment(d);
+        const iso = `${m.isoWeekYear()}-W${String(m.isoWeek()).padStart(2, "0")}`;
+        return iso === weekValue;
+      }
+
+      if (dateMode === "month") {
+        if (!monthValue) return true;
+        return moment(d).format("YYYY-MM") === monthValue;
+      }
+
+      if (dateMode === "year") {
+        if (!String(yearValue || "").trim()) return true;
+        return String(d.getFullYear()) === String(yearValue).trim();
+      }
+
+      if (dateMode === "range") {
+        const fromOk = fromDate ? ymd >= fromDate : true;
+        const toOk = toDate ? ymd <= toDate : true;
+        return fromOk && toOk;
+      }
+
+      return true;
+    },
+    [dateMode, dayValue, weekValue, monthValue, yearValue, fromDate, toDate],
+  );
+
+  // ✅ defer heavy filter while typing
+  const dq = useDeferredValue(search);
+  const ds = useDeferredValue(statusFilter);
+  const db = useDeferredValue(billableFilter);
+  const de = useDeferredValue(employeeFilter);
+  const dp = useDeferredValue(projectFilter);
+  const dqk = useDeferredValue(quick);
+  const dso = useDeferredValue(sortOrder);
+
+  // keep these as deps (so UI updates feel instant like AllScenarios)
+  const ddm = useDeferredValue(dateMode);
+  const ddy = useDeferredValue(dayValue);
+  const ddw = useDeferredValue(weekValue);
+  const ddmo = useDeferredValue(monthValue);
+  const ddyr = useDeferredValue(yearValue);
+  const ddf = useDeferredValue(fromDate);
+  const ddt = useDeferredValue(toDate);
+
+  // ---------- filter + sort ----------
   const filtered = useMemo(() => {
     let out = [...rows];
 
-    if (statusFilter) {
-      const s = statusFilter.toLowerCase();
+    if (ds) {
+      const s = ds.toLowerCase();
       out = out.filter(
         (r) =>
           (r.status || "").toLowerCase() === s ||
-          (s === "approved" && (r.status || "").toLowerCase() === "accepted")
+          (s === "approved" && (r.status || "").toLowerCase() === "accepted"),
       );
     }
 
-    if (billableFilter) {
-      const want = billableFilter === "true";
+    if (db) {
+      const want = db === "true";
       out = out.filter((r) => Boolean(r.isBillable) === want);
     }
 
-    if (employeeFilter) {
+    if (de) {
       out = out.filter(
-        (r) => getIdStr(r?.employee?._id || r?.employee?.id) === employeeFilter
+        (r) => getIdStr(r?.employee?._id || r?.employee?.id) === de,
       );
     }
 
-    if (projectFilter) {
+    if (dp) {
       out = out.filter(
-        (r) => getIdStr(r?.project?._id || r?.project?.id) === projectFilter
+        (r) => getIdStr(r?.project?._id || r?.project?.id) === dp,
       );
     }
 
-    if (quick) out = out.filter((r) => inQuickRange(r));
-    if (search.trim()) out = out.filter((r) => matchAny(r, search));
+    if (dqk) out = out.filter((r) => inQuickRange(r));
+    out = out.filter((r) => matchDateMode(r));
 
+    if (String(dq || "").trim()) out = out.filter((r) => matchAny(r, dq));
+
+    // Sort toggle like AllScenarios: asc => latest first, desc => oldest first (kept from your handleSort logic)
     out.sort((a, b) => {
       const aTs = a?.date ? new Date(a.date).getTime() : 0;
       const bTs = b?.date ? new Date(b.date).getTime() : 0;
-      return sortOrder === "desc" ? bTs - aTs : aTs - bTs;
+      return dso === "asc" ? bTs - aTs : aTs - bTs;
     });
 
     return out;
   }, [
     rows,
-    statusFilter,
-    billableFilter,
-    employeeFilter,
-    projectFilter,
-    quick,
-    search,
-    sortOrder,
+    ds,
+    db,
+    de,
+    dp,
+    dqk,
+    dq,
+    dso,
+    matchDateMode,
+    ddm,
+    ddy,
+    ddw,
+    ddmo,
+    ddyr,
+    ddf,
+    ddt,
   ]);
 
   // ---------- paging ----------
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const pageRows = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const computedTotalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const indexOfFirst = (page - 1) * pageSize;
+  const pageSlice = useMemo(
+    () => filtered.slice(indexOfFirst, indexOfFirst + pageSize),
+    [filtered, indexOfFirst, pageSize],
+  );
 
   useEffect(() => {
-    setPage((p) => Math.min(p, totalPages));
-  }, [totalPages]);
+    setPage((p) => Math.min(p, computedTotalPages));
+  }, [computedTotalPages]);
+
+  // ✅ progressive render like AllScenarios
+  const [renderCount, setRenderCount] = useState(60);
+  useEffect(() => {
+    setRenderCount(60);
+  }, [
+    page,
+    pageSize,
+    dq,
+    ds,
+    db,
+    de,
+    dp,
+    dqk,
+    dso,
+    ddm,
+    ddy,
+    ddw,
+    ddmo,
+    ddyr,
+    ddf,
+    ddt,
+    viewMode,
+  ]);
+
+  useEffect(() => {
+    if (renderCount >= pageSlice.length) return;
+    const id = window.requestAnimationFrame(() => {
+      setRenderCount((c) => Math.min(pageSlice.length, c + 80));
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [renderCount, pageSlice.length]);
+
+  const pageRows = useMemo(
+    () => pageSlice.slice(0, renderCount),
+    [pageSlice, renderCount],
+  );
 
   // ---------- single update ----------
   const updateOne = async (id, partial) => {
     try {
       setBusyId(id);
       setRows((prev) =>
-        prev.map((r) => (r._id === id ? { ...r, ...partial } : r))
+        prev.map((r) => (r._id === id ? { ...r, ...partial } : r)),
       );
       await axios.put(`${api}/attendance/${id}`, partial, {
         headers: authHeader,
@@ -350,7 +583,9 @@ export default function GetAllAttendance() {
   // ---------- selection / bulk ----------
   const toggleAllVisible = () => {
     const visibleIds = pageRows.map((r) => r._id);
-    const allSelected = visibleIds.every((id) => selectedIds.includes(id));
+    const allSelected =
+      visibleIds.length > 0 &&
+      visibleIds.every((id) => selectedIds.includes(id));
     if (allSelected) {
       setSelectedIds((ids) => ids.filter((id) => !visibleIds.includes(id)));
     } else {
@@ -360,7 +595,7 @@ export default function GetAllAttendance() {
 
   const toggleOne = (id) =>
     setSelectedIds((ids) =>
-      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]
+      ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id],
     );
 
   const doBulk = async () => {
@@ -372,14 +607,14 @@ export default function GetAllAttendance() {
         await axios.patch(
           `${api}/attendance/bulk/status`,
           { ids: selectedIds, status: bulkStatus },
-          { headers: authHeader }
+          { headers: authHeader },
         );
       } else if (bulkMode === "assignProject") {
         const proj = bulkProject.trim() ? bulkProject.trim() : null;
         await axios.patch(
           `${api}/attendance/bulk/assign-project`,
           { ids: selectedIds, project: proj },
-          { headers: authHeader }
+          { headers: authHeader },
         );
       } else if (bulkMode === "hoursSet") {
         const h = Number(bulkHours);
@@ -388,7 +623,7 @@ export default function GetAllAttendance() {
         await axios.patch(
           `${api}/attendance/bulk/hours`,
           { ids: selectedIds, operation: "set", hours: h },
-          { headers: authHeader }
+          { headers: authHeader },
         );
       } else if (bulkMode === "hoursInc") {
         const h = Number(bulkHours);
@@ -397,7 +632,7 @@ export default function GetAllAttendance() {
         await axios.patch(
           `${api}/attendance/bulk/hours`,
           { ids: selectedIds, operation: "inc", hours: h },
-          { headers: authHeader }
+          { headers: authHeader },
         );
       } else if (bulkMode === "delete") {
         if (!window.confirm("Delete selected records? This cannot be undone."))
@@ -455,7 +690,7 @@ export default function GetAllAttendance() {
       .map((row) =>
         Object.values(row)
           .map((v) => `"${String(v ?? "").replace(/"/g, '""')}"`)
-          .join(",")
+          .join(","),
       )
       .join("\n");
 
@@ -505,27 +740,6 @@ export default function GetAllAttendance() {
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Attendance");
 
-      // Optional widths
-      ws["!cols"] = [
-        { wch: 24 }, // ID
-        { wch: 22 }, // Employee
-        { wch: 28 }, // Email
-        { wch: 22 }, // Project
-        { wch: 12 }, // Date
-        { wch: 12 }, // DayKey
-        { wch: 12 }, // Status
-        { wch: 10 }, // Hours
-        { wch: 60 }, // Task
-        { wch: 10 }, // Billable
-        { wch: 14 }, // Location
-        { wch: 10 }, // Shift
-        { wch: 20 }, // SubmittedAt
-        { wch: 20 }, // ReviewedAt
-        { wch: 16 }, // ReviewedBy
-        { wch: 20 }, // CreatedAt
-        { wch: 20 }, // UpdatedAt
-      ];
-
       const filename = `attendance_${moment().format("YYYYMMDD_HHmm")}.xlsx`;
       XLSX.writeFile(wb, filename);
     } catch (e) {
@@ -545,6 +759,16 @@ export default function GetAllAttendance() {
       if (search) params.set("search", search);
       if (quick) params.set("quick", quick);
 
+      // date filters (if your server supports these keys)
+      if (dateMode === "day" && dayValue) params.set("day", dayValue);
+      if (dateMode === "week" && weekValue) params.set("week", weekValue);
+      if (dateMode === "month" && monthValue) params.set("month", monthValue);
+      if (dateMode === "year" && yearValue) params.set("year", yearValue);
+      if (dateMode === "range") {
+        if (fromDate) params.set("from", fromDate);
+        if (toDate) params.set("to", toDate);
+      }
+
       const url = `${api}/attendance/export.xlsx?${params.toString()}`;
       const res = await axios.get(url, {
         headers: authHeader,
@@ -554,7 +778,7 @@ export default function GetAllAttendance() {
 
       const ct = (res.headers["content-type"] || "").toLowerCase();
       const isXlsx = ct.includes(
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
 
       if (!isXlsx || res.status < 200 || res.status >= 300) {
@@ -585,95 +809,147 @@ export default function GetAllAttendance() {
     }
   };
 
+  const clearAllFilters = () => {
+    setStatusFilter("");
+    setBillableFilter("");
+    setQuick("");
+    setSearch("");
+    setEmployeeFilter("");
+    setProjectFilter("");
+    setDateMode("any");
+    setDayValue("");
+    setWeekValue("");
+    setMonthValue("");
+    setYearValue(String(new Date().getFullYear()));
+    setFromDate("");
+    setToDate("");
+    setPage(1);
+  };
+
+  const handleSort = useCallback(() => {
+    // Keep sort toggle behavior similar to AllScenarios (just toggle)
+    setSortOrder((s) => (s === "asc" ? "desc" : "asc"));
+  }, []);
+
+  // Small memo component for header "Sel" toggle (no UI change)
+  const HeaderSelectAll = memo(function HeaderSelectAll() {
+    const allSelected =
+      pageRows.length > 0 && pageRows.every((r) => selectedIds.includes(r._id));
+    return (
+      <button onClick={toggleAllVisible} title="Select all on page">
+        {allSelected ? <FaCheckSquare /> : <FaSquare />}
+      </button>
+    );
+  });
+
   // ---------- UI ----------
   return (
-    <div className="bg-white py-6 sm:py-8 text-[13px]">
+    <div className="bg-white py-10 sm:py-12">
       <div className="mx-auto container px-2 sm:px-3 lg:px-4">
-        {/* Top bar */}
-        <div className="flex items-center justify-between gap-2 flex-wrap">
-          <div className="min-w-[220px]">
-            <h2 className="font-semibold tracking-tight text-indigo-600 text-[16px]">
+        {/* Header / Controls (match AllScenarios layout + typography) */}
+        <div className="flex justify-between items-center gap-3 flex-wrap">
+          <div>
+            <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
               Attendance — All Users
             </h2>
-            <div className="text-[11px] text-gray-600">
+
+            <p className="text-xs text-gray-600 mt-1">
               {loading
                 ? "Loading…"
                 : `Total: ${rows.length} | Showing: ${filtered.length}`}
-            </div>
+            </p>
+
+            {(search ||
+              statusFilter ||
+              billableFilter ||
+              quick ||
+              employeeFilter ||
+              projectFilter ||
+              dateMode !== "any" ||
+              dayValue ||
+              weekValue ||
+              monthValue ||
+              yearValue ||
+              fromDate ||
+              toDate) && (
+              <p className="text-xs text-gray-600">
+                Showing {filtered.length} result(s)
+                {search ? <> for “{search}”</> : null}
+                {statusFilter ? <> with status “{statusFilter}”</> : null}
+              </p>
+            )}
+
             <button
               onClick={handleBackToDashboard}
-              className="mt-1 text-[11px] underline text-slate-600"
+              className="mt-1 text-xs underline text-slate-600"
             >
               ← Back to Dashboard
             </button>
           </div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            {sortOrder === "desc" ? (
-              <FaSortAmountDownAlt
-                className="text-lg cursor-pointer text-gray-500"
-                onClick={() =>
-                  setSortOrder((s) => (s === "desc" ? "asc" : "desc"))
-                }
-                title="Sort by latest"
-              />
-            ) : (
-              <FaSortAmountUpAlt
-                className="text-lg cursor-pointer text-gray-500"
-                onClick={() =>
-                  setSortOrder((s) => (s === "desc" ? "asc" : "desc"))
-                }
-                title="Sort by oldest"
-              />
-            )}
-
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* View toggles */}
             <FaThList
-              className={cls(
-                "text-lg cursor-pointer",
-                viewMode === "list" ? "text-indigo-600" : "text-gray-500"
-              )}
+              className={`text-lg cursor-pointer ${
+                viewMode === "list" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setViewMode("list")}
-              title="List"
+              title="List view"
             />
             <FaThLarge
-              className={cls(
-                "text-lg cursor-pointer",
-                viewMode === "card" ? "text-indigo-600" : "text-gray-500"
-              )}
+              className={`text-lg cursor-pointer ${
+                viewMode === "card" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setViewMode("card")}
-              title="Card"
+              title="Card view"
             />
             <FaTh
-              className={cls(
-                "text-lg cursor-pointer",
-                viewMode === "grid" ? "text-indigo-600" : "text-gray-500"
-              )}
+              className={`text-lg cursor-pointer ${
+                viewMode === "grid" ? "text-blue-500" : "text-gray-500"
+              }`}
               onClick={() => setViewMode("grid")}
-              title="Grid"
+              title="Grid view"
             />
 
+            {/* Sort toggle */}
+            <FaSort
+              className={`text-lg cursor-pointer ${
+                sortOrder === "desc" ? "text-indigo-600" : "text-gray-500"
+              }`}
+              onClick={handleSort}
+              title={
+                sortOrder === "asc"
+                  ? "Sort by Latest First"
+                  : "Sort by Oldest First"
+              }
+            />
+
+            {/* Search */}
             <div className="relative">
-              <FaSearch className="absolute left-2 top-2.5 text-gray-400" />
+              <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
               <input
-                className="pl-7 pr-2 py-1.5 border rounded-md w-[240px]"
+                type="text"
+                className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
                 placeholder="Search employee, project, task, date…"
                 value={search}
                 onChange={(e) => {
                   setSearch(e.target.value);
                   setPage(1);
                 }}
+                spellCheck={false}
               />
             </div>
 
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] text-slate-600">Rows</span>
+            {/* Rows per page */}
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-600">Rows:</label>
               <select
-                value={pageSize}
+                value={String(pageSize)}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setPage(1);
                 }}
-                className="px-2 py-1.5 border rounded-md"
+                className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
                 title="Rows per page"
               >
                 {[5, 10, 20, 40, 60, 100].map((n) => (
@@ -687,51 +963,48 @@ export default function GetAllAttendance() {
             {/* Export buttons */}
             <button
               onClick={exportXLSX}
-              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              className="px-3 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 text-sm flex items-center gap-2"
               title="Export Excel (filtered on client)"
             >
-              <FaDownload />{" "}
-              <span className="hidden sm:inline">Export (Client)</span>
+              <FaDownload /> Export (Client)
             </button>
 
             <button
               onClick={exportServerXLSX}
-              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              className="px-3 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 text-sm flex items-center gap-2"
               title="Export Excel from server (DB)"
             >
-              <FaDownload />{" "}
-              <span className="hidden sm:inline">Export (Server)</span>
+              <FaDownload /> Export (Server)
             </button>
 
             <button
               onClick={exportCSV}
-              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              className="px-3 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 text-sm flex items-center gap-2"
               title="Export CSV (filtered)"
             >
-              <FaDownload />{" "}
-              <span className="hidden sm:inline">Export CSV</span>
+              <FaDownload /> Export CSV
             </button>
 
             <button
               onClick={fetchAll}
-              className="px-2 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 flex items-center gap-1"
+              className="px-3 py-1.5 border rounded-md bg-slate-50 hover:bg-slate-100 text-sm flex items-center gap-2"
               title="Refresh"
             >
-              <FaSync /> <span className="hidden sm:inline">Refresh</span>
+              <FaSync /> Refresh
             </button>
           </div>
         </div>
 
-        {/* Quick filters + badges */}
-        <div className="mt-3 space-y-2">
-          <div className="flex items-center justify-between">
+        {/* Quick filters + badges (keep ALL content; keep same controls) */}
+        <div className="mt-4 space-y-2">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex gap-2 flex-wrap">
               <button
                 className={cls(
                   "text-[11px] leading-none rounded-full px-2 py-1 border transition",
                   quick === "today"
                     ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                 )}
                 onClick={() => {
                   setQuick((q) => (q === "today" ? "" : "today"));
@@ -741,12 +1014,13 @@ export default function GetAllAttendance() {
               >
                 Today
               </button>
+
               <button
                 className={cls(
                   "text-[11px] leading-none rounded-full px-2 py-1 border transition",
                   quick === "week"
                     ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                 )}
                 onClick={() => {
                   setQuick((q) => (q === "week" ? "" : "week"));
@@ -756,12 +1030,13 @@ export default function GetAllAttendance() {
               >
                 Last 7d
               </button>
+
               <button
                 className={cls(
                   "text-[11px] leading-none rounded-full px-2 py-1 border transition",
                   quick === "month"
                     ? "bg-indigo-600 text-white border-indigo-600"
-                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                    : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                 )}
                 onClick={() => {
                   setQuick((q) => (q === "month" ? "" : "month"));
@@ -785,19 +1060,108 @@ export default function GetAllAttendance() {
                 <option value="true">Billable</option>
                 <option value="false">Non-billable</option>
               </select>
+
+              {/* Date filter controls (kept) */}
+              <select
+                value={dateMode}
+                onChange={(e) => {
+                  setDateMode(e.target.value);
+                  setPage(1);
+                }}
+                className="px-2 py-1 border rounded-md text-[12px]"
+                title="Date filter"
+              >
+                <option value="any">Any Date</option>
+                <option value="day">Day</option>
+                <option value="week">Week</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+                <option value="range">From-To</option>
+              </select>
+
+              {dateMode === "day" && (
+                <input
+                  type="date"
+                  className="px-2 py-1 border rounded-md text-[12px]"
+                  value={dayValue}
+                  onChange={(e) => {
+                    setDayValue(e.target.value);
+                    setPage(1);
+                  }}
+                  title="Select day"
+                />
+              )}
+
+              {dateMode === "week" && (
+                <input
+                  type="week"
+                  className="px-2 py-1 border rounded-md text-[12px]"
+                  value={weekValue}
+                  onChange={(e) => {
+                    setWeekValue(e.target.value);
+                    setPage(1);
+                  }}
+                  title="Select week"
+                />
+              )}
+
+              {dateMode === "month" && (
+                <input
+                  type="month"
+                  className="px-2 py-1 border rounded-md text-[12px]"
+                  value={monthValue}
+                  onChange={(e) => {
+                    setMonthValue(e.target.value);
+                    setPage(1);
+                  }}
+                  title="Select month"
+                />
+              )}
+
+              {dateMode === "year" && (
+                <input
+                  type="number"
+                  min="2000"
+                  max="2100"
+                  className="px-2 py-1 border rounded-md text-[12px] w-[92px]"
+                  value={yearValue}
+                  onChange={(e) => {
+                    setYearValue(e.target.value);
+                    setPage(1);
+                  }}
+                  title="Enter year"
+                />
+              )}
+
+              {dateMode === "range" && (
+                <>
+                  <input
+                    type="date"
+                    className="px-2 py-1 border rounded-md text-[12px]"
+                    value={fromDate}
+                    onChange={(e) => {
+                      setFromDate(e.target.value);
+                      setPage(1);
+                    }}
+                    title="From"
+                  />
+                  <input
+                    type="date"
+                    className="px-2 py-1 border rounded-md text-[12px]"
+                    value={toDate}
+                    onChange={(e) => {
+                      setToDate(e.target.value);
+                      setPage(1);
+                    }}
+                    title="To"
+                  />
+                </>
+              )}
             </div>
 
             <button
               className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
-              onClick={() => {
-                setStatusFilter("");
-                setBillableFilter("");
-                setQuick("");
-                setSearch("");
-                setEmployeeFilter("");
-                setProjectFilter("");
-                setPage(1);
-              }}
+              onClick={clearAllFilters}
             >
               Clear All Filters
             </button>
@@ -821,7 +1185,7 @@ export default function GetAllAttendance() {
                     "text-[11px] leading-none rounded-full px-2 py-1 border transition",
                     active
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                   )}
                   title={`${s} (${count})`}
                 >
@@ -849,7 +1213,7 @@ export default function GetAllAttendance() {
                     "text-[11px] leading-none rounded-full px-2 py-1 border transition cursor-pointer",
                     active
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                   )}
                   title={`${label} (${p.count})`}
                 >
@@ -881,7 +1245,7 @@ export default function GetAllAttendance() {
                     "text-[11px] leading-none rounded-full px-2 py-1 border transition cursor-pointer",
                     active
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
                   )}
                   title={`${label} (${e.count})`}
                 >
@@ -892,8 +1256,8 @@ export default function GetAllAttendance() {
           </div>
         </div>
 
-        {/* Bulk ops */}
-        <div className="mt-3 p-2 border rounded-md bg-amber-50">
+        {/* Bulk ops (keep all content, just AllScenarios spacing) */}
+        <div className="mt-4 p-2 bg-amber-50">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-[12px] font-semibold">Bulk:</span>
             <select
@@ -979,43 +1343,156 @@ export default function GetAllAttendance() {
         ) : loadErr ? (
           <div className="mt-6 text-sm text-red-600">{loadErr}</div>
         ) : viewMode === "list" ? (
-          <div className="mt-4 space-y-2">
-            {/* header */}
-            <div className="grid grid-cols-[36px,24px,1.1fr,1.1fr,1.2fr,0.8fr,0.7fr,0.8fr,0.7fr,80px,90px] items-center text-[12px] font-semibold text-slate-600 px-2 py-2 border-b border-slate-200">
-              <div>#</div>
-              <div className="text-center">
-                <button onClick={toggleAllVisible} title="Select all on page">
-                  {pageRows.length &&
-                  pageRows.every((r) => selectedIds.includes(r._id)) ? (
-                    <FaCheckSquare />
-                  ) : (
-                    <FaSquare />
-                  )}
-                </button>
-              </div>
-              <div>Employee</div>
-              <div>Project</div>
-              <div>Task</div>
-              <div>Date</div>
-              <div>Hours</div>
-              <div>Status</div>
-              <div>Billable</div>
-              <div className="text-center">View</div>
-              <div className="text-center">Delete</div>
-            </div>
-
-            {/* rows */}
-            <div className="divide-y divide-slate-100">
-              {pageRows.map((r, idx) => (
-                <div
-                  key={r._id}
-                  className="grid grid-cols-[36px,24px,1.1fr,1.1fr,1.2fr,0.8fr,0.7fr,0.8fr,0.7fr,80px,90px] items-center text-[12px] px-2 py-2"
-                >
-                  <div className="text-slate-700">
-                    {(page - 1) * pageSize + idx + 1}
+          <div className="mt-5">
+            <div className="overflow-x-auto">
+              {/* Header row (AllScenarios style) */}
+              <div
+                className="relative grid items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200 min-w-max"
+                style={{ gridTemplateColumns }}
+              >
+                {COLS.map((label, i) => (
+                  <div
+                    key={label}
+                    className={cls(
+                      "relative pr-2",
+                      i === 1 || i >= 9 ? "text-center" : "",
+                    )}
+                  >
+                    <span>{label === "Sel" ? <HeaderSelectAll /> : label}</span>
+                    {i < colW.length - 1 ? (
+                      <Resizer onMouseDown={(e) => startColResize(i, e)} />
+                    ) : null}
                   </div>
+                ))}
+              </div>
 
-                  <div className="flex justify-center">
+              {/* Rows (AllScenarios style, with divider, resizable height) */}
+              <div className="divide-y divide-slate-200 min-w-max">
+                {pageRows.map((r, idx) => (
+                  <div
+                    key={r._id}
+                    className="grid items-start text-[12px] px-3 py-2 resize-y overflow-visible"
+                    style={{ gridTemplateColumns, minHeight: 42 }}
+                    title="Drag bottom edge to resize row"
+                  >
+                    <div className="text-slate-700">
+                      {indexOfFirst + idx + 1}
+                    </div>
+
+                    <div className="flex justify-center pt-0.5">
+                      <button onClick={() => toggleOne(r._id)} title="Select">
+                        {selectedIds.includes(r._id) ? (
+                          <FaCheckSquare className="text-emerald-600" />
+                        ) : (
+                          <FaSquare className="text-slate-400" />
+                        )}
+                      </button>
+                    </div>
+
+                    <div className="text-slate-900 font-medium whitespace-normal break-words leading-snug">
+                      {(r.employee?.name || "N/A") +
+                        (r.employee?.email ? ` (${r.employee.email})` : "")}
+                    </div>
+
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {r.project?.project_name || "—"}
+                    </div>
+
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {r.taskDescription || "—"}
+                    </div>
+
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {r.date ? moment(r.date).format("DD/MM/YYYY") : "—"}
+                    </div>
+
+                    <div>
+                      <input
+                        type="number"
+                        step="0.25"
+                        className="border p-1 rounded w-[90px]"
+                        value={Number(r.hoursWorked ?? 0)}
+                        onChange={(e) =>
+                          updateOne(r._id, {
+                            hoursWorked: Number(e.target.value),
+                          })
+                        }
+                        disabled={busyId === r._id}
+                        title="Update hours"
+                      />
+                    </div>
+
+                    <div>
+                      <select
+                        className={cls(
+                          "px-2 py-1 rounded border",
+                          badge(r.status),
+                        )}
+                        value={(r.status || "").toLowerCase()}
+                        onChange={(e) =>
+                          updateOne(r._id, { status: e.target.value })
+                        }
+                        disabled={busyId === r._id}
+                        title="Change status"
+                      >
+                        {STATUS_VALUES.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {r.isBillable ? "Yes" : "No"}
+                    </div>
+
+                    <div className="flex justify-center pt-0.5">
+                      <Link
+                        to={`/get-single-attendance/${r._id}`}
+                        className="text-indigo-600 hover:text-indigo-800"
+                        title="View"
+                      >
+                        <FaEye className="text-sm" />
+                      </Link>
+                    </div>
+
+                    <div className="flex justify-center pt-0.5">
+                      <button
+                        className="text-rose-600 hover:text-rose-800"
+                        title="Delete record"
+                        onClick={() => removeOne(r._id)}
+                      >
+                        <FaTrashAlt className="text-sm" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {!pageRows.length && (
+                  <div className="text-center text-[12px] text-slate-500 py-6">
+                    No records match your filters.
+                  </div>
+                )}
+              </div>
+
+              {renderCount < pageSlice.length && (
+                <div className="text-center text-xs text-slate-500 py-3">
+                  Rendering more…
+                </div>
+              )}
+            </div>
+          </div>
+        ) : viewMode === "grid" ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mt-8">
+            {pageRows.map((r) => (
+              <div
+                key={r._id}
+                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                    <span>{r.employee?.name || "Employee"}</span>
                     <button onClick={() => toggleOne(r._id)} title="Select">
                       {selectedIds.includes(r._id) ? (
                         <FaCheckSquare className="text-emerald-600" />
@@ -1025,151 +1502,54 @@ export default function GetAllAttendance() {
                     </button>
                   </div>
 
-                  <div className="truncate">
-                    {(r.employee?.name || "N/A") +
-                      (r.employee?.email ? ` (${r.employee.email})` : "")}
+                  <div className="mt-1 text-[12px] text-slate-700 break-words whitespace-normal">
+                    {r.taskDescription || "—"}
                   </div>
 
-                  <div className="truncate">
+                  <div className="mt-2 flex items-center justify-between">
+                    <span
+                      className={cls(
+                        "px-2 py-0.5 rounded text-[11px]",
+                        badge(r.status),
+                      )}
+                    >
+                      {r.status || "—"}
+                    </span>
+                    <span className="text-[11px] text-slate-600">
+                      {r.date ? moment(r.date).format("DD/MM") : "—"}
+                    </span>
+                  </div>
+
+                  <div className="mt-2 text-[12px] text-slate-700 break-words whitespace-normal">
                     {r.project?.project_name || "—"}
                   </div>
 
-                  <div className="line-clamp-2">{r.taskDescription || "—"}</div>
-
-                  <div>
-                    {r.date ? moment(r.date).format("DD/MM/YYYY") : "—"}
-                  </div>
-
-                  <div>
-                    <input
-                      type="number"
-                      step="0.25"
-                      className="border p-1 rounded w-[80px]"
-                      value={Number(r.hoursWorked ?? 0)}
-                      onChange={(e) =>
-                        updateOne(r._id, {
-                          hoursWorked: Number(e.target.value),
-                        })
-                      }
-                      disabled={busyId === r._id}
-                      title="Update hours"
-                    />
-                  </div>
-
-                  <div>
-                    <select
-                      className={cls(
-                        "px-2 py-1 rounded border",
-                        badge(r.status)
-                      )}
-                      value={(r.status || "").toLowerCase()}
-                      onChange={(e) =>
-                        updateOne(r._id, { status: e.target.value })
-                      }
-                      disabled={busyId === r._id}
-                      title="Change status"
-                    >
-                      {STATUS_VALUES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className="truncate">{r.isBillable ? "Yes" : "No"}</div>
-
-                  <div className="text-center">
-                    <Link
-                      to={`/get-single-attendance/${r._id}`}
-                      className="text-indigo-600 hover:underline"
-                    >
-                      View
-                    </Link>
-                  </div>
-
-                  <div className="text-center">
-                    <button
-                      className="text-rose-600 hover:text-rose-800 flex items-center gap-1 mx-auto"
-                      title="Delete record"
-                      onClick={() => removeOne(r._id)}
-                    >
-                      <FaTrashAlt /> Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-
-              {!pageRows.length && (
-                <div className="text-center text-[12px] text-slate-500 py-6">
-                  No records match your filters.
-                </div>
-              )}
-            </div>
-          </div>
-        ) : viewMode === "grid" ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 mt-4">
-            {pageRows.map((r) => (
-              <div key={r._id} className="border rounded-lg p-3 shadow-sm">
-                <div className="flex justify-between items-start gap-2">
-                  <div className="font-semibold text-slate-900 truncate">
-                    {r.employee?.name || "Employee"}
-                  </div>
-                  <button onClick={() => toggleOne(r._id)} title="Select">
-                    {selectedIds.includes(r._id) ? (
-                      <FaCheckSquare className="text-emerald-600" />
-                    ) : (
-                      <FaSquare className="text-slate-400" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="mt-1 text-[12px] text-slate-700 line-clamp-2">
-                  {r.taskDescription || "—"}
-                </div>
-
-                <div className="mt-2 flex items-center justify-between">
-                  <span
-                    className={cls(
-                      "px-2 py-0.5 rounded text-[11px]",
-                      badge(r.status)
-                    )}
-                  >
-                    {r.status || "—"}
-                  </span>
-                  <span className="text-[11px] text-slate-600">
-                    {r.date ? moment(r.date).format("DD/MM") : "—"}
-                  </span>
-                </div>
-
-                <div className="mt-2 text-[12px] text-slate-700 truncate">
-                  {r.project?.project_name || "—"}
-                </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
-                  <div>
-                    <div className="text-slate-500">Hours</div>
-                    <div>{Number(r.hoursWorked ?? 0)}</div>
-                  </div>
-                  <div>
-                    <div className="text-slate-500">Billable</div>
-                    <div>{r.isBillable ? "Yes" : "No"}</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
+                    <div>
+                      <div className="text-slate-500">Hours</div>
+                      <div>{Number(r.hoursWorked ?? 0)}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500">Billable</div>
+                      <div>{r.isBillable ? "Yes" : "No"}</div>
+                    </div>
                   </div>
                 </div>
 
-                <div className="mt-2 flex justify-between">
+                <div className="mt-3 flex justify-between">
                   <Link
                     to={`/get-single-attendance/${r._id}`}
-                    className="text-indigo-600 hover:underline text-[12px]"
+                    className="text-indigo-600 hover:text-indigo-800 text-sm"
+                    title="View"
                   >
-                    View
+                    <FaEye className="text-sm" />
                   </Link>
                   <button
-                    className="text-rose-600 hover:text-rose-800 text-[12px] flex items-center gap-1"
+                    className="text-rose-600 hover:text-rose-800 text-sm"
                     title="Delete record"
                     onClick={() => removeOne(r._id)}
                   >
-                    <FaTrashAlt /> Delete
+                    <FaTrashAlt className="text-sm" />
                   </button>
                 </div>
               </div>
@@ -1183,65 +1563,71 @@ export default function GetAllAttendance() {
           </div>
         ) : (
           // Card mode
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8">
             {pageRows.map((r) => (
-              <div key={r._id} className="border rounded-lg p-3 shadow-sm">
-                <div className="flex items-start justify-between">
-                  <div className="font-semibold truncate">
-                    {r.employee?.name || "Employee"}
+              <div
+                key={r._id}
+                className="bg-white rounded-lg shadow p-4 flex flex-col justify-between"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-gray-700 flex items-center justify-between">
+                    <span>{r.employee?.name || "Employee"}</span>
+                    <button onClick={() => toggleOne(r._id)} title="Select">
+                      {selectedIds.includes(r._id) ? (
+                        <FaCheckSquare className="text-emerald-600" />
+                      ) : (
+                        <FaSquare className="text-slate-400" />
+                      )}
+                    </button>
                   </div>
-                  <button onClick={() => toggleOne(r._id)} title="Select">
-                    {selectedIds.includes(r._id) ? (
-                      <FaCheckSquare className="text-emerald-600" />
-                    ) : (
-                      <FaSquare className="text-slate-400" />
-                    )}
-                  </button>
-                </div>
 
-                <div className="text-[12px] text-slate-700 mt-1 line-clamp-3">
-                  {r.taskDescription || "—"}
-                </div>
+                  <div className="mt-1 text-[12px] text-slate-700 break-words whitespace-normal">
+                    {r.taskDescription || "—"}
+                  </div>
 
-                <div className="mt-2 flex items-center gap-2 text-[11px]">
-                  <span className={cls("px-2 py-0.5 rounded", badge(r.status))}>
-                    {r.status || "—"}
-                  </span>
-                  <span className="px-2 py-0.5 rounded border">
-                    {r.isBillable ? "Billable" : "Non-billable"}
-                  </span>
-                </div>
+                  <div className="mt-2 flex items-center gap-2 text-[11px]">
+                    <span
+                      className={cls("px-2 py-0.5 rounded", badge(r.status))}
+                    >
+                      {r.status || "—"}
+                    </span>
+                    <span className="px-2 py-0.5 rounded border">
+                      {r.isBillable ? "Billable" : "Non-billable"}
+                    </span>
+                  </div>
 
-                <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
-                  <div>
-                    <div className="text-slate-500">Date</div>
+                  <div className="mt-2 grid grid-cols-2 gap-2 text-[11px] text-slate-700">
                     <div>
-                      {r.date ? moment(r.date).format("DD/MM/YYYY") : "—"}
+                      <div className="text-slate-500">Date</div>
+                      <div>
+                        {r.date ? moment(r.date).format("DD/MM/YYYY") : "—"}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500">Hours</div>
+                      <div>{Number(r.hoursWorked ?? 0)}</div>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-slate-500">Hours</div>
-                    <div>{Number(r.hoursWorked ?? 0)}</div>
+
+                  <div className="mt-2 text-[12px] text-slate-700 break-words whitespace-normal">
+                    {r.project?.project_name || "—"}
                   </div>
                 </div>
 
-                <div className="mt-2 text-[12px] text-slate-700 truncate">
-                  {r.project?.project_name || "—"}
-                </div>
-
-                <div className="mt-2 flex justify-between">
+                <div className="mt-3 flex justify-between">
                   <Link
                     to={`/get-single-attendance/${r._id}`}
-                    className="text-indigo-600 hover:underline text-[12px]"
+                    className="text-indigo-600 hover:text-indigo-800 text-sm"
+                    title="View"
                   >
-                    View
+                    <FaEye className="text-sm" />
                   </Link>
                   <button
-                    className="text-rose-600 hover:text-rose-800 text-[12px] flex items-center gap-1"
+                    className="text-rose-600 hover:text-rose-800 text-sm"
                     title="Delete record"
                     onClick={() => removeOne(r._id)}
                   >
-                    <FaTrashAlt /> Delete
+                    <FaTrashAlt className="text-sm" />
                   </button>
                 </div>
               </div>
@@ -1255,9 +1641,9 @@ export default function GetAllAttendance() {
           </div>
         )}
 
-        {/* Pagination */}
+        {/* Pagination (AllScenarios spacing) */}
         {!loading && !loadErr && (
-          <div className="flex justify-center items-center gap-2 mt-6">
+          <div className="flex justify-center items-center gap-2 mt-8">
             <button
               className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
               disabled={page === 1}
@@ -1266,13 +1652,15 @@ export default function GetAllAttendance() {
             >
               <FaArrowLeft className="text-lg" />
             </button>
-            <span className="text-[12px]">
-              Page {page} of {totalPages}
+            <span className="text-sm">
+              Page {page} of {computedTotalPages}
             </span>
             <button
               className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
-              disabled={page === totalPages}
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page === computedTotalPages}
+              onClick={() =>
+                setPage((p) => Math.min(computedTotalPages, p + 1))
+              }
               title="Next"
             >
               <FaArrowRight className="text-lg" />

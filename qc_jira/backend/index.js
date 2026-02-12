@@ -24,6 +24,7 @@ const userRoutes = require("./routes/UserRoutes");
 const eventRoutes = require("./routes/EventRoutes");
 const careersRoutes = require("./routes/CareersRoutes");
 const reportRoutes = require("./routes/ReportRoutes");
+const toDoRoutes = require("./routes/ToDoRoutes");
 
 // 2. give a name to your api backend. app = express()
 dotenv.config();
@@ -38,7 +39,7 @@ app.use(
       "http://localhost:5176",
     ], // Replace with your frontend's URL
     credentials: true, // Enable credentials
-  })
+  }),
 );
 
 // ===== MIDDLEWARE =====
@@ -50,11 +51,11 @@ app.use((req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header(
     "Access-Control-Allow-Headers",
-    "Authorization, Origin, X-Requested-With, Content-Type, Accept"
+    "Authorization, Origin, X-Requested-With, Content-Type, Accept",
   );
   res.header(
     "Access-Control-Allow-Methods",
-    "GET,POST,PUT,PATCH,DELETE,OPTIONS"
+    "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   );
   if (req.method === "OPTIONS") return res.sendStatus(200);
   next();
@@ -76,13 +77,13 @@ app.get(
   "/api/attendance/export.xlsx",
   skipCompression,
   nocache,
-  (req, res, next) => next()
+  (req, res, next) => next(),
 );
 app.get(
   "/api/attendance/export.test.xlsx",
   skipCompression,
   nocache,
-  (req, res, next) => next()
+  (req, res, next) => next(),
 );
 
 // ===== ROUTE MOUNTS =====
@@ -101,6 +102,7 @@ app.use("/api", userRoutes);
 app.use("/api", eventRoutes);
 app.use("/api", careersRoutes);
 app.use("/api", reportRoutes);
+app.use("/api/todos", toDoRoutes);
 
 // ===== DB + SERVER ====
 mongoose

@@ -125,6 +125,16 @@ import AllReports from "./pages/report_pages/AllReports";
 import SingleReport from "./pages/report_pages/SingleReport";
 import GenerateReport from "./pages/report_pages/GenerateReport";
 
+// selenium testing pages
+import TextOperationsForSelenium from "./pages/selenium_testing_pages/TextOperationsForSelenium";
+import AddTask from "./pages/todo_task_pages/AddTask";
+import ViewAllTask from "./pages/todo_task_pages/ViewAllTask";
+import AllAlerts from "./pages/selenium_testing_pages/AllAlerts";
+import AllFrames from "./pages/selenium_testing_pages/AllFrames";
+import AllScrollOptions from "./pages/selenium_testing_pages/AllScrollOptions";
+import AllDropdownTypes from "./pages/selenium_testing_pages/AllDropdownTypes";
+import InputFieldOperations from "./pages/selenium_testing_pages/InputFieldOperations";
+import AllClickOperations from "./pages/selenium_testing_pages/AllClickOperations";
 /** Match the “PageTitle” pattern from your sample */
 /** Layout wrapper: sets <title> and shows Breadcrumb for this page */
 const PageTitle = ({ title, children }) => {
@@ -1292,6 +1302,93 @@ function App() {
           }
         />
 
+        {/* to do task module routes  */}
+        <Route
+          path="/create-task"
+          element={
+            <PrivateRoute>
+              <PageTitle title="Create New task">
+                <AddTask />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/view-all-task"
+          element={
+            <PrivateRoute>
+              <PageTitle title="All Task">
+                <ViewAllTask />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* selenium operation pages  */}
+        <Route
+          path="/text-operations"
+          element={
+            <PageTitle title="Text operations">
+              <TextOperationsForSelenium />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/alert-operations"
+          element={
+            <PageTitle title="Alert operations">
+              <AllAlerts />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/frame-operations"
+          element={
+            <PageTitle title="Frame operations">
+              <AllFrames />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/scroll-operations"
+          element={
+            <PageTitle title="Scroll operations">
+              <AllScrollOptions />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/dropdown-operations"
+          element={
+            <PageTitle title="Dropdown operations">
+              <AllDropdownTypes />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/input-field-operations"
+          element={
+            <PageTitle title="Input Field operations">
+              <InputFieldOperations />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/click-operations"
+          element={
+            <PageTitle title="Click operations">
+              <AllClickOperations />
+            </PageTitle>
+          }
+        />
+
         {/* 404s */}
         <Route
           path="/page-not-found"
@@ -1311,7 +1408,6 @@ function App() {
         />
       </Routes>
 
-      {/* keep your existing sections under routes */}
       {/* <WorkWithUs /> */}
       <NewsLetter />
       <Footer />
