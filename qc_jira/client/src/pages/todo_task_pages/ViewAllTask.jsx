@@ -550,43 +550,44 @@ export default function ViewAllTask() {
         <div className="relative container mx-auto px-3 sm:px-6 lg:px-10 py-8 sm:py-10">
           {/* Header (compact) */}
           <div className="rounded-3xl bg-white/90 backdrop-blur-xl shadow-xl border border-slate-200 p-5 sm:p-7">
-            <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-slate-900">
-              View All Tasks
-              <span className="block mt-1 text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
-                Compact Kanban (Row View)
-              </span>
-            </h1>
-
-            <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
-              Drag tasks between columns. Rows are compact for faster scanning.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2">
-              {badge(
-                "New",
-                counts.NEW,
-                "border-sky-200 text-slate-700 bg-sky-50",
-              )}
-              {badge(
-                "In Progress",
-                counts.IN_PROGRESS,
-                "border-amber-200 text-slate-700 bg-amber-50",
-              )}
-              {badge(
-                "Finished",
-                counts.FINISHED,
-                "border-emerald-200 text-slate-700 bg-emerald-50",
-              )}
-              {badge(
-                "Pending",
-                counts.PENDING,
-                "border-rose-200 text-slate-700 bg-rose-50",
-              )}
-              {badge(
-                "Total",
-                counts.TOTAL,
-                "border-slate-200 text-slate-700 bg-white",
-              )}
+            <div className="flex justify-between items-center">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight text-slate-900">
+                View All To-Do List Tasks
+                <span className="mx-2 text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500">
+                  Kanban
+                </span>
+                <p className="mt-2 text-xs sm:text-sm text-slate-600 max-w-3xl leading-relaxed">
+                  Drag tasks between columns. Rows are compact for faster
+                  scanning.
+                </p>
+              </h1>
+              <div className="mt-4 flex flex-wrap gap-2">
+                {badge(
+                  "New",
+                  counts.NEW,
+                  "border-sky-200 text-slate-700 bg-sky-50",
+                )}
+                {badge(
+                  "In Progress",
+                  counts.IN_PROGRESS,
+                  "border-amber-200 text-slate-700 bg-amber-50",
+                )}
+                {badge(
+                  "Finished",
+                  counts.FINISHED,
+                  "border-emerald-200 text-slate-700 bg-emerald-50",
+                )}
+                {badge(
+                  "Pending",
+                  counts.PENDING,
+                  "border-rose-200 text-slate-700 bg-rose-50",
+                )}
+                {badge(
+                  "Total",
+                  counts.TOTAL,
+                  "border-slate-200 text-slate-700 bg-white",
+                )}
+              </div>
             </div>
           </div>
 

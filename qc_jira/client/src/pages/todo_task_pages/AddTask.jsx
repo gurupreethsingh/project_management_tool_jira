@@ -85,7 +85,7 @@ export default function AddTask() {
             </span>
           </h1>
 
-          <div className="mt-8 max-w-3xl">
+          <div className="mt-8 max-w-full">
             <form
               onSubmit={submit}
               className="rounded-3xl bg-white shadow-xl border border-slate-200 p-6 sm:p-8"

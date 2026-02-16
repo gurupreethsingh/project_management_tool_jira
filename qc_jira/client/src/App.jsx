@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import "./App.css";
+import axios from "axios";
 
 import Homepage from "./pages/common_pages/Homepage";
 
@@ -35,6 +36,7 @@ import AllCareersApplications from "./pages/careers_pages/AllCareersApplications
 import SingleCareersApplication from "./pages/careers_pages/SingleCareersApplication";
 
 // header and footer. and other common components
+import TopHeader from "./components/TopHeader";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/common_components/ScrollToTop";
@@ -135,31 +137,72 @@ import AllScrollOptions from "./pages/selenium_testing_pages/AllScrollOptions";
 import AllDropdownTypes from "./pages/selenium_testing_pages/AllDropdownTypes";
 import InputFieldOperations from "./pages/selenium_testing_pages/InputFieldOperations";
 import AllClickOperations from "./pages/selenium_testing_pages/AllClickOperations";
-/** Match the “PageTitle” pattern from your sample */
-/** Layout wrapper: sets <title> and shows Breadcrumb for this page */
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     document.title = title ? `${title} | ECODERS` : "ECODERS";
   }, [title]);
 
+  useEffect(() => {
+    // ✅ 1) Auto logout when app loads if token is expired
+    const token = localStorage.getItem("token");
+    if (token) {
+      try {
+        const payloadPart = token.split(".")[1];
+        const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
+        const payload = JSON.parse(atob(base64));
+
+        const expired = !payload.exp || Date.now() >= payload.exp * 1000;
+        if (expired) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login?reason=token_expired";
+          return;
+        }
+      } catch (e) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        window.location.href = "/login?reason=invalid_token";
+        return;
+      }
+    }
+
+    // ✅ 2) Attach Axios interceptor globally (works for all files using axios)
+    const responseInterceptor = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const status = error?.response?.status;
+        const code = error?.response?.data?.code;
+        const message = error?.response?.data?.message || "";
+
+        // Token expired OR invalid token -> auto logout
+        if (
+          status === 401 &&
+          (code === "TOKEN_EXPIRED" ||
+            code === "TOKEN_INVALID" ||
+            /expired/i.test(message))
+        ) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          window.location.href = "/login?reason=token_expired";
+        }
+
+        return Promise.reject(error);
+      },
+    );
+
+    return () => {
+      axios.interceptors.response.eject(responseInterceptor);
+    };
+  }, []);
+
   return (
     <>
-      {/* Breadcrumb bar (shared across all routes that use PageTitle) */}
-      <div className="bg-slate-50">
-        <div className="mx-auto container px-4 sm:px-6 lg:px-8">
-          <Breadcrumb pageTitle={title} />
-        </div>
-      </div>
-
       {/* Actual page content */}
       {children}
     </>
   );
 };
-
-function HeaderSpacer() {
-  return <div className="h-16 md:h-20" />;
-}
 
 function App() {
   const [unreadMessagesCount, setUnreadMessagesCount] = useState(0);
@@ -168,7 +211,6 @@ function App() {
     <Router>
       <ScrollToTop />
       <Header />
-      <HeaderSpacer />
       <Routes>
         <Route
           path="/"
@@ -1304,10 +1346,10 @@ function App() {
 
         {/* to do task module routes  */}
         <Route
-          path="/create-task"
+          path="/create-todo-list"
           element={
             <PrivateRoute>
-              <PageTitle title="Create New task">
+              <PageTitle title="Create New Todo List">
                 <AddTask />
               </PageTitle>
             </PrivateRoute>
@@ -1315,10 +1357,10 @@ function App() {
         />
 
         <Route
-          path="/view-all-task"
+          path="/view-all-todo-list"
           element={
             <PrivateRoute>
-              <PageTitle title="All Task">
+              <PageTitle title="All Todo Task List">
                 <ViewAllTask />
               </PageTitle>
             </PrivateRoute>
