@@ -1441,7 +1441,7 @@ function App() {
           }
         />
         <Route
-          path="/*"
+          path="*"
           element={
             <PageTitle title="404 Not Found">
               <PageNotFound />

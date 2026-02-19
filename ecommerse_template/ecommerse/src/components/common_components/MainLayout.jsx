@@ -29,8 +29,6 @@ import SingleBlog from "../../pages/blog_pages/SingleBlog";
 // contact pages.
 import ContactUs from "../../pages/contact_pages/ContactUs";
 
-// subscription page.
-import Subscriptions from "../../pages/subscription_pages/Subscriptions";
 import SearchProducts from "../../pages/product_pages/SearchProducts";
 
 // shop page.

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import globalBackendRoute from "../../config/Config";
 
 const Subscriptions = () => {
   const [subscriptions, setSubscriptions] = useState([]);
@@ -8,7 +9,7 @@ const Subscriptions = () => {
     const fetchSubscriptions = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3006/api/all-subscriptions"
+          `${globalBackendRoute}/api/all-subscriptions`,
         );
         setSubscriptions(response.data);
       } catch (error) {
@@ -22,15 +23,15 @@ const Subscriptions = () => {
   const toggleSubscription = async (email, isActive) => {
     if (isActive) {
       const confirmUnsubscribe = window.confirm(
-        "Are you sure you want to unsubscribe?"
+        "Are you sure you want to unsubscribe?",
       );
       if (!confirmUnsubscribe) return;
     }
 
     try {
       const response = await axios.post(
-        `http://localhost:3006/api/${isActive ? "unsubscribe" : "resubscribe"}`,
-        { email }
+        `${globalBackendRoute}/api/${isActive ? "unsubscribe" : "resubscribe"}`,
+        { email },
       );
 
       // Alert user based on action
@@ -107,7 +108,7 @@ const Subscriptions = () => {
                       onClick={() =>
                         toggleSubscription(
                           subscription.email,
-                          subscription.isActive
+                          subscription.isActive,
                         )
                       }
                       className={`px-4 py-2 text-sm font-medium rounded ${

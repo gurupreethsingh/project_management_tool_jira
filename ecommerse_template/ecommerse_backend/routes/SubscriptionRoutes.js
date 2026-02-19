@@ -1,5 +1,4 @@
-// subscriptionRoutes.js
-
+// routes/subscriptionRoutes.js
 const express = require("express");
 const {
   subscribe,

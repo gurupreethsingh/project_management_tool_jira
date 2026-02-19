@@ -55,6 +55,8 @@ import AddBlog from "../../pages/blog_pages/AddBlog";
 import AllBlogs from "../../pages/blog_pages/AllBlogs";
 import SingleBlog from "../../pages/blog_pages/SingleBlog";
 import UpdateBlog from "../../pages/blog_pages/UpdateBlog";
+// subscrition pages
+import Subscriptions from "../../pages/subscription_pages/Subscriptions";
 
 const MainLayout = () => {
   return (
@@ -128,6 +130,17 @@ const MainLayout = () => {
               <PrivateRoute allowedRoles={["superadmin"]}>
                 <PageTitle title="All-replies">
                   <AllReplies />
+                </PageTitle>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/all-subscriptions"
+            element={
+              <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+                <PageTitle title="Subscriptions">
+                  <Subscriptions />
                 </PageTitle>
               </PrivateRoute>
             }

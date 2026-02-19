@@ -12,9 +12,8 @@ const SubscriptionSchema = new mongoose.Schema({
   },
   subscriptionType: {
     type: String,
-    enum: ["daily", "weekly", "monthly", "yearly"],
-    required: true,
-    default: "weekly",
+    trim: true,
+    default: "newsletter",
   },
   isActive: {
     type: Boolean,
