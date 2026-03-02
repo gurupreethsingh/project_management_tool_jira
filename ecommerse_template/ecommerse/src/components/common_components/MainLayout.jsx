@@ -28,9 +28,7 @@ import SingleBlog from "../../pages/blog_pages/SingleBlog";
 
 // contact pages.
 import ContactUs from "../../pages/contact_pages/ContactUs";
-
 import SearchProducts from "../../pages/product_pages/SearchProducts";
-
 // shop page.
 import Shop from "../../pages/shop_pages/Shop";
 import SingleProduct from "../../pages/shop_pages/SingleProduct";
