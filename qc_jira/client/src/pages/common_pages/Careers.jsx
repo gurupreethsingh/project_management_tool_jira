@@ -1631,10 +1631,6 @@ export default function Careers() {
           </div>
         </div>
       </section>
-
-      <footer className="py-6 text-center text-[11px] sm:text-xs text-slate-500">
-        © {new Date().getFullYear()} Ecoders · Careers
-      </footer>
     </div>
   );
 }
