@@ -23,14 +23,14 @@ export default function SingleScenario() {
 
   const authHeaders = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : {}),
-    [token]
+    [token],
   );
 
   const fetchScenario = async () => {
     try {
       const { data } = await axios.get(
         `${globalBackendRoute}/api/single-project/${projectId}/scenario-history/${scenarioId}`,
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       setScenario(data.scenario);
       setChanges(data.changes || []);
@@ -53,7 +53,7 @@ export default function SingleScenario() {
     try {
       const { data } = await axios.get(
         `${globalBackendRoute}/api/single-projects/${projectId}/modules`,
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       setAllModules(Array.isArray(data) ? data : []);
     } catch (err) {
@@ -82,11 +82,11 @@ export default function SingleScenario() {
       await axios.put(
         `${globalBackendRoute}/api/single-project/scenario/${scenarioId}`,
         { scenario_text: updatedText, userId },
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       // optimistic
       setScenario((prev) =>
-        prev ? { ...prev, scenario_text: updatedText } : prev
+        prev ? { ...prev, scenario_text: updatedText } : prev,
       );
       await fetchScenario();
       alert("Scenario updated successfully.");
@@ -115,7 +115,7 @@ export default function SingleScenario() {
       await axios.post(
         `${globalBackendRoute}/api/single-projects/${projectId}/scenarios/transfer`,
         { scenarioIds: [scenarioId], toModuleId: addModuleId },
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       await fetchScenario();
       alert("Module added to scenario.");
@@ -136,7 +136,7 @@ export default function SingleScenario() {
       await axios.put(
         `${globalBackendRoute}/api/single-project/scenario/${scenarioId}`,
         { moduleIds: nextIds, userId }, // full replacement, controller keeps legacy `module` in sync
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       await fetchScenario();
       alert("Module removed from scenario.");
@@ -152,7 +152,7 @@ export default function SingleScenario() {
       await axios.post(
         `${globalBackendRoute}/api/single-projects/${projectId}/scenarios/detach`,
         { scenarioIds: [scenarioId] },
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       await fetchScenario();
       alert("Scenario is now Unassigned.");
@@ -168,7 +168,7 @@ export default function SingleScenario() {
       await axios.put(
         `${globalBackendRoute}/api/single-project/scenario/${scenarioId}`,
         { moduleIds: selectedForReplace, userId },
-        { headers: authHeaders }
+        { headers: authHeaders },
       );
       await fetchScenario();
       alert("Modules updated.");
@@ -180,14 +180,14 @@ export default function SingleScenario() {
 
   const toggleReplaceSelection = (id) => {
     setSelectedForReplace((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
   };
 
   const createdAtText = useMemo(
     () =>
       scenario?.createdAt ? new Date(scenario.createdAt).toLocaleString() : "",
-    [scenario?.createdAt]
+    [scenario?.createdAt],
   );
 
   if (loading)
@@ -255,7 +255,7 @@ export default function SingleScenario() {
           <div className="flex items-center gap-2 flex-wrap">
             <Link
               to={`/single-project/${projectId}/view-all-scenarios`}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm"
             >
               View All Scenarios
             </Link>
@@ -265,19 +265,19 @@ export default function SingleScenario() {
                 scenarioNumber: scenario.scenario_number,
                 scenarioText: scenario.scenario_text,
               }}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm"
             >
               Add Test Case
             </Link>
             <Link
               to={`/single-project/${projectId}/all-test-cases`}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm"
             >
               View All Test Cases
             </Link>
             <Link
               to={`/single-project/${projectId}`}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm"
             >
               Project Dashboard
             </Link>
@@ -303,7 +303,7 @@ export default function SingleScenario() {
             <button
               onClick={handleUpdateScenarioText}
               disabled={saving}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm disabled:opacity-60"
+              className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm disabled:opacity-60"
             >
               {saving ? "Saving…" : "Update Scenario"}
             </button>
@@ -319,7 +319,7 @@ export default function SingleScenario() {
           {/* Quick add to another module */}
           <div className="flex flex-wrap items-center gap-2">
             <select
-              className="border border-slate-300 rounded-md px-2 py-1 text-sm"
+              className="border border-slate-300 rounded-pill px-2 py-1 text-sm"
               value={addModuleId}
               onChange={(e) => setAddModuleId(e.target.value)}
             >
@@ -335,14 +335,14 @@ export default function SingleScenario() {
             <button
               onClick={handleAddModule}
               disabled={!addModuleId}
-              className="px-3 py-1.5 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 text-sm disabled:opacity-60"
+              className="px-3 py-1.5 bg-emerald-600 text-white rounded-pill hover:bg-emerald-700 text-sm disabled:opacity-60"
             >
               Add
             </button>
 
             <button
               onClick={handleMakeUnassigned}
-              className="ml-auto px-3 py-1.5 bg-slate-600 text-white rounded-md hover:bg-slate-700 text-sm"
+              className="ml-auto px-3 py-1.5 bg-slate-600 text-white rounded-pill hover:bg-slate-700 text-sm"
               title="Clear all modules for this scenario"
             >
               Make Unassigned
@@ -388,7 +388,7 @@ export default function SingleScenario() {
             <div className="flex justify-end mt-3">
               <button
                 onClick={handleReplaceModules}
-                className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+                className="px-3 py-1.5 bg-indigo-600 text-white rounded-pill hover:bg-indigo-800 text-sm"
               >
                 Save Modules
               </button>
