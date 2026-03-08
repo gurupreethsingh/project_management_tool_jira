@@ -72,6 +72,22 @@ function ImgOrIcon({
   );
 }
 
+const MAIN_HEADING_STYLE =
+  "text-lg sm:text-xl lg:text-2xl font-semibold text-slate-900 text-uppercase tracking-[0.1em]";
+
+const SUB_HEADING_STYLE = "text-sm sm:text-base font-semibold text-indigo-600";
+
+const BADGE_MAIN_HEADING_STYLE =
+  "text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700";
+
+const PARAGRAPH_STYLE = "text-sm sm:text-base text-slate-600 leading-relaxed";
+
+const SMALL_PARAGRAPH_STYLE =
+  "text-[12px] sm:text-xs text-slate-600 leading-relaxed";
+
+const PRIMARY_GRADIENT_BUTTON_STYLE =
+  "inline-flex items-center rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-2.5 text-xs sm:text-sm font-medium text-white shadow-md hover:shadow-lg hover:brightness-110";
+
 const Blog = () => {
   const { slug, id } = useParams();
   const navigate = useNavigate();
@@ -140,7 +156,7 @@ const Blog = () => {
       setFetchErr("");
       try {
         const { data } = await axios.get(
-          `${globalBackendRoute}/api/single-blogs/${id}`
+          `${globalBackendRoute}/api/single-blogs/${id}`,
         );
         if (cancelled) return;
 
@@ -196,7 +212,7 @@ const Blog = () => {
     }
     const term = searchTerm.toLowerCase();
     setFilteredBlogs(
-      allBlogs.filter((b) => (b?.title || "").toLowerCase().includes(term))
+      allBlogs.filter((b) => (b?.title || "").toLowerCase().includes(term)),
     );
   }, [searchTerm, allBlogs]);
 
@@ -232,7 +248,7 @@ const Blog = () => {
             <p key={i} className="text-gray-800 text-lg mb-4 break-words">
               {item.text}
             </p>
-          )
+          ),
         )}
       </div>
     ));
@@ -372,7 +388,7 @@ const Blog = () => {
       transition={{ duration: 0.5 }}
     >
       <div className="flex justify-between items-center mb-2">
-        <h1 className="text-3xl font-bold break-words">{blog.title}</h1>
+        <h1 className={MAIN_HEADING_STYLE}>{blog.title}</h1>
         <div className="flex space-x-2">
           <FaTh
             onClick={() => setView("wide")}
@@ -398,7 +414,7 @@ const Blog = () => {
         </div>
       </div>
 
-      <p className="text-gray-600 mb-4 text-left">
+      <p className={SUB_HEADING_STYLE}>
         Published on{" "}
         {blog?.publishedDate
           ? new Date(blog.publishedDate).toLocaleDateString()
@@ -439,7 +455,7 @@ const Blog = () => {
               disabled={!prevNext.prev}
             >
               <FaArrowLeft className="mr-2" />
-              <span className="text-sm font-medium text-left break-words">
+              <span className={SUB_HEADING_STYLE}>
                 {prevNext.prev?.title || "Previous"}
               </span>
             </button>
@@ -449,7 +465,7 @@ const Blog = () => {
               className="px-4 py-2 bg-gray-50 hover:bg-gray-100 text-gray-800 rounded-lg flex items-center shadow-md disabled:opacity-50"
               disabled={!prevNext.next}
             >
-              <span className="text-sm font-medium text-right break-words">
+              <span className={SUB_HEADING_STYLE}>
                 {prevNext.next?.title || "Next"}
               </span>
               <FaArrowRight className="ml-2" />

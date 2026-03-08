@@ -137,14 +137,18 @@ import AllScrollOptions from "./pages/selenium_testing_pages/AllScrollOptions";
 import AllDropdownTypes from "./pages/selenium_testing_pages/AllDropdownTypes";
 import InputFieldOperations from "./pages/selenium_testing_pages/InputFieldOperations";
 import AllClickOperations from "./pages/selenium_testing_pages/AllClickOperations";
+import WaitOperationsForAutomation from "./pages/selenium_testing_pages/WaitOperationsForAutomation";
+
+import ServicePageRenderer from "./components/common_components/ServicePageRenderer";
+import BrokenLinksOperations from "./pages/selenium_testing_pages/BrokenLinksOperations";
 
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
+    BrokenLinksOperations;
     document.title = title ? `${title} | ECODERS` : "ECODERS";
   }, [title]);
 
   useEffect(() => {
-    // ✅ 1) Auto logout when app loads if token is expired
     const token = localStorage.getItem("token");
     if (token) {
       try {
@@ -167,7 +171,6 @@ const PageTitle = ({ title, children }) => {
       }
     }
 
-    // ✅ 2) Attach Axios interceptor globally (works for all files using axios)
     const responseInterceptor = axios.interceptors.response.use(
       (response) => response,
       (error) => {
@@ -175,7 +178,6 @@ const PageTitle = ({ title, children }) => {
         const code = error?.response?.data?.code;
         const message = error?.response?.data?.message || "";
 
-        // Token expired OR invalid token -> auto logout
         if (
           status === 401 &&
           (code === "TOKEN_EXPIRED" ||
@@ -198,7 +200,9 @@ const PageTitle = ({ title, children }) => {
 
   return (
     <>
-      {/* Actual page content */}
+      <div className="mx-auto container px-4 sm:px-6 lg:px-10 pt-3">
+        <Breadcrumb pageTitle={title} />
+      </div>
       {children}
     </>
   );
@@ -1427,6 +1431,33 @@ function App() {
           element={
             <PageTitle title="Click operations">
               <AllClickOperations />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/wait-operations"
+          element={
+            <PageTitle title="Wait Operations">
+              <WaitOperationsForAutomation />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/broken-links-operations"
+          element={
+            <PageTitle title="Broken links operations">
+              <BrokenLinksOperations />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/services/:serviceSlug"
+          element={
+            <PageTitle title="ECODERS">
+              <ServicePageRenderer />
             </PageTitle>
           }
         />

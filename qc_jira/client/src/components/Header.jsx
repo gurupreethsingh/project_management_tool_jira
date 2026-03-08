@@ -85,9 +85,19 @@ export default function Header() {
 
   const pageTitle = useMemo(() => {
     const p = (location.pathname || "/").split("?")[0];
-    if (p === "/" || p === "/home") return "Home";
+
+    if (p === "/" || p === "/home" || p === "/homepage") return "Home";
+
     const last = p.split("/").filter(Boolean).slice(-1)[0] || "Page";
-    return last.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+
+    let decoded = last;
+    try {
+      decoded = decodeURIComponent(last);
+    } catch {
+      decoded = last;
+    }
+
+    return decoded.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
   }, [location.pathname]);
 
   const fetchUnreadMessages = async () => {
@@ -620,15 +630,6 @@ export default function Header() {
         </div>
       </header>
 
-      <div
-        className="fixed inset-x-0 z-[45] bg-white/95 backdrop-blur border-b"
-        style={crumbTopStyle}
-      >
-        <div className="max-w-screen-3xl mx-auto sm:px-4">
-          <Breadcrumb pageTitle={pageTitle} />
-        </div>
-      </div>
-
       {/* ✅ MOBILE MENU PANEL */}
       {menuOpen && (
         <>
@@ -824,8 +825,7 @@ export default function Header() {
 
       <div
         style={{
-          height:
-            "calc(var(--topbar-h,48px) + var(--header-h,56px) + var(--crumb-h,36px))",
+          height: "calc(var(--topbar-h,48px) + var(--header-h,56px))",
         }}
       />
     </>

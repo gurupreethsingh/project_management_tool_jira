@@ -1,8 +1,16 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useMemo, useRef } from "react";
 import { Link } from "react-router-dom";
 
 const Breadcrumb = ({ pageTitle }) => {
   const crumbRef = useRef(null);
+
+  const cleanPageTitle = useMemo(() => {
+    try {
+      return decodeURIComponent(pageTitle || "");
+    } catch {
+      return pageTitle || "";
+    }
+  }, [pageTitle]);
 
   // ✅ Keep --crumb-h synced (breadcrumb can wrap on mobile)
   useEffect(() => {
@@ -34,7 +42,7 @@ const Breadcrumb = ({ pageTitle }) => {
       window.removeEventListener("resize", setVar);
       cancelAnimationFrame(raf);
     };
-  }, [pageTitle]);
+  }, [cleanPageTitle]);
 
   return (
     <nav
@@ -42,7 +50,6 @@ const Breadcrumb = ({ pageTitle }) => {
       className="w-full py-2 text-xs sm:text-sm font-medium text-slate-600"
       aria-label="Breadcrumb"
     >
-      {/* ✅ Mobile visible: horizontal scroll if long */}
       <ol className="flex items-center gap-2 overflow-x-auto whitespace-nowrap">
         <li className="shrink-0">
           <Link
@@ -55,7 +62,7 @@ const Breadcrumb = ({ pageTitle }) => {
         <li className="text-slate-500 shrink-0">/</li>
 
         <li className="text-slate-800 truncate max-w-[70vw] sm:max-w-[60vw]">
-          {pageTitle}
+          {cleanPageTitle}
         </li>
       </ol>
     </nav>

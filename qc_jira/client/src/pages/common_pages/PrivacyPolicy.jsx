@@ -1,257 +1,209 @@
+"use client";
+
+import React, { memo } from "react";
 import {
   CloudArrowUpIcon,
   LockClosedIcon,
   ServerIcon,
 } from "@heroicons/react/20/solid";
 
-export default function PrivacyPolicy() {
+function PrivacyPolicy() {
   return (
-    <div className="relative bg-white px-6 py-12 sm:py-12 lg:py-24">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+    <div className="service-page-wrap">
+      <section className="relative overflow-hidden border-b border-slate-100">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-slate-50" />
+        <div className="service-hero-overlay-3" />
+
+        <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-10 sm:py-12 lg:py-14 text-center">
+          <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-slate-900">
             Privacy Policy
-          </h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
+          </h1>
+          <p className="mt-4 max-w-3xl mx-auto text-sm sm:text-base text-slate-600 leading-relaxed">
             Your privacy is important to us. This privacy policy explains what
-            personal data we collect from you, how we use it, and how we protect
-            it.
+            personal data we collect, how we use it, and how we protect it.
           </p>
         </div>
-        <div className="mt-12 grid grid-cols-1 gap-y-12 lg:grid-cols-2 lg:gap-y-8 lg:gap-x-8">
-          <div className="lg:max-w-lg lg:px-8">
-            <h3 className="text-2xl font-bold tracking-tight text-gray-900">
-              Your Data Protection Rights
-            </h3>
-            <p className="mt-4 text-base leading-7 text-gray-700">
-              Depending on your location, you may have the following rights
-              regarding your personal data:
-            </p>
-            <ul role="list" className="mt-6 space-y-6 text-gray-600">
-              <li className="flex gap-x-3">
-                <CloudArrowUpIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Right to Access.
-                  </strong>{" "}
-                  You have the right to request copies of your personal data.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <LockClosedIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Right to Rectification.
-                  </strong>{" "}
-                  You have the right to request that we correct any information
-                  you believe is inaccurate or incomplete.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <ServerIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Right to Erasure.
-                  </strong>{" "}
-                  You have the right to request that we erase your personal
-                  data, under certain conditions.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <CloudArrowUpIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Right to Object to Processing.
-                  </strong>{" "}
-                  You have the right to object to our processing of your
-                  personal data, under certain conditions.
-                </span>
-              </li>
-            </ul>
-            <p className="mt-6 text-base leading-7 text-gray-700">
-              If you make a request, we have one month to respond to you. If you
-              would like to exercise any of these rights, please contact us at
-              our email.
-            </p>
-          </div>
-          <div className="lg:max-w-lg lg:px-8">
-            <h3 className="text-2xl font-bold tracking-tight text-gray-900">
-              Information We Collect
-            </h3>
-            <p className="mt-4 text-base leading-7 text-gray-700">
-              We collect information you provide directly to us. This may
-              include personal data, such as your name, email address, phone
-              number, and other contact details, when you fill out forms, sign
-              up for our services, or otherwise interact with us.
-            </p>
-            <ul role="list" className="mt-6 space-y-6 text-gray-600">
-              <li className="flex gap-x-3">
-                <CloudArrowUpIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Data Collection.
-                  </strong>{" "}
-                  We collect data to operate effectively and provide you the
-                  best experiences with our services.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <LockClosedIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Secure Data.
-                  </strong>{" "}
-                  We prioritize your data security and use encryption and other
-                  measures to protect your information.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <ServerIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Data Storage.
-                  </strong>{" "}
-                  Your data is stored securely in our servers with regular
-                  backups to ensure its availability.
-                </span>
-              </li>
-            </ul>
-          </div>
-          <div className="lg:max-w-lg lg:px-8">
-            <h3 className="text-2xl font-bold tracking-tight text-gray-900">
-              How We Use Your Information
-            </h3>
-            <p className="mt-4 text-base leading-7 text-gray-700">
-              We use the information we collect in various ways, including to:
-            </p>
-            <ul role="list" className="mt-6 space-y-6 text-gray-600">
-              <li className="flex gap-x-3">
-                <CloudArrowUpIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Provide Services.
-                  </strong>{" "}
-                  To provide, operate, and maintain our website and services.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <LockClosedIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Improve Experience.
-                  </strong>{" "}
-                  To improve, personalize, and expand our website and services.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <ServerIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Communicate.
-                  </strong>{" "}
-                  To communicate with you, either directly or through one of our
-                  partners, including for customer service, to provide you with
-                  updates and other information relating to the website, and for
-                  marketing and promotional purposes.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <ServerIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    Process Transactions.
-                  </strong>{" "}
-                  To process your transactions and manage your orders and
-                  subscriptions.
-                </span>
-              </li>
-            </ul>
-          </div>
-          <div className="lg:max-w-lg lg:px-8">
-            <h3 className="text-2xl font-bold tracking-tight text-gray-900">
-              How We Share Your Information
-            </h3>
-            <p className="mt-4 text-base leading-7 text-gray-700">
-              We may share your information in the following situations:
-            </p>
-            <ul role="list" className="mt-6 space-y-6 text-gray-600">
-              <li className="flex gap-x-3">
-                <CloudArrowUpIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    With Service Providers.
-                  </strong>{" "}
-                  We may share your information with our service providers who
-                  assist us in providing our services, such as payment
-                  processors, hosting providers, and analytics services.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <LockClosedIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    For Legal Requirements.
-                  </strong>{" "}
-                  We may disclose your information if required to do so by law
-                  or in response to valid requests by public authorities.
-                </span>
-              </li>
-              <li className="flex gap-x-3">
-                <ServerIcon
-                  aria-hidden="true"
-                  className="mt-1 h-5 w-5 flex-none text-indigo-600"
-                />
-                <span>
-                  <strong className="font-semibold text-gray-900">
-                    In Business Transfers.
-                  </strong>{" "}
-                  If we are involved in a merger, acquisition, or asset sale,
-                  your information may be transferred as a business asset.
-                </span>
-              </li>
-            </ul>
+      </section>
+
+      <main className="service-main-wrap">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-10 py-10 sm:py-12 lg:py-14">
+          <div className="grid grid-cols-1 gap-y-8 lg:grid-cols-2 lg:gap-8">
+            <section className="service-parent-card">
+              <h2 className="service-main-heading">
+                Your data protection rights
+              </h2>
+              <p className="service-paragraph">
+                Depending on your location, you may have the following rights
+                regarding your personal data:
+              </p>
+              <ul className="mt-4 space-y-4 text-slate-600">
+                <li className="flex gap-3">
+                  <CloudArrowUpIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">Right to access.</strong>{" "}
+                    You may request copies of your personal data.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <LockClosedIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Right to rectification.
+                    </strong>{" "}
+                    You may request correction of inaccurate or incomplete data.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <ServerIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Right to erasure.
+                    </strong>{" "}
+                    You may request deletion of your personal data under certain
+                    conditions.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <CloudArrowUpIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Right to object to processing.
+                    </strong>{" "}
+                    You may object to our processing of your personal data under
+                    certain conditions.
+                  </span>
+                </li>
+              </ul>
+            </section>
+
+            <section className="service-parent-card">
+              <h2 className="service-main-heading">Information we collect</h2>
+              <p className="service-paragraph">
+                We collect information you provide directly to us, such as your
+                name, email address, phone number, and related contact details
+                when you submit forms or use our services.
+              </p>
+              <ul className="mt-4 space-y-4 text-slate-600">
+                <li className="flex gap-3">
+                  <CloudArrowUpIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">Data collection.</strong>{" "}
+                    We collect only the information needed to operate
+                    effectively and improve our services.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <LockClosedIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">Secure data.</strong> We
+                    prioritize security and use reasonable safeguards to protect
+                    your information.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <ServerIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">Data storage.</strong>{" "}
+                    Data is stored securely with measures intended to preserve
+                    integrity and availability.
+                  </span>
+                </li>
+              </ul>
+            </section>
+
+            <section className="service-parent-card">
+              <h2 className="service-main-heading">
+                How we use your information
+              </h2>
+              <p className="service-paragraph">
+                We use collected information to operate, improve, and support
+                our services.
+              </p>
+              <ul className="mt-4 space-y-4 text-slate-600">
+                <li className="flex gap-3">
+                  <CloudArrowUpIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Provide services.
+                    </strong>{" "}
+                    To operate, maintain, and deliver our website and services.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <LockClosedIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Improve experience.
+                    </strong>{" "}
+                    To improve, personalize, and expand our services.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <ServerIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">Communicate.</strong> To
+                    send updates, service information, and support-related
+                    communication.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <ServerIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      Process transactions.
+                    </strong>{" "}
+                    To manage orders, payments, and subscriptions where
+                    applicable.
+                  </span>
+                </li>
+              </ul>
+            </section>
+
+            <section className="service-parent-card">
+              <h2 className="service-main-heading">
+                How we share your information
+              </h2>
+              <p className="service-paragraph">
+                We may share information only in limited and appropriate
+                situations.
+              </p>
+              <ul className="mt-4 space-y-4 text-slate-600">
+                <li className="flex gap-3">
+                  <CloudArrowUpIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      With service providers.
+                    </strong>{" "}
+                    We may share data with trusted vendors who help operate our
+                    services.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <LockClosedIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      For legal requirements.
+                    </strong>{" "}
+                    We may disclose information when legally required.
+                  </span>
+                </li>
+                <li className="flex gap-3">
+                  <ServerIcon className="mt-1 h-5 w-5 flex-none text-indigo-600" />
+                  <span>
+                    <strong className="text-slate-900">
+                      In business transfers.
+                    </strong>{" "}
+                    Information may transfer as part of a merger, acquisition,
+                    or asset sale.
+                  </span>
+                </li>
+              </ul>
+            </section>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
+
+export default memo(PrivacyPolicy);
