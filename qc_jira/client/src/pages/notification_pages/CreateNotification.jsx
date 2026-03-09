@@ -1,3 +1,483 @@
+// import React, { useEffect, useMemo, useState } from "react";
+// import axios from "axios";
+// import {
+//   FaPaperPlane,
+//   FaSync,
+//   FaFilter,
+//   FaUsers,
+//   FaUserTag,
+//   FaUser,
+//   FaFlag,
+//   FaBell,
+// } from "react-icons/fa";
+// import { Link, useNavigate } from "react-router-dom";
+// import globalBackendRoute from "../../config/Config";
+
+// const CreateNotification = () => {
+//   const navigate = useNavigate();
+
+//   const token =
+//     localStorage.getItem("userToken") || localStorage.getItem("token");
+//   const authHeader = useMemo(
+//     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
+//     [token]
+//   );
+
+//   const [mode, setMode] = useState("all"); // "all" | "role" | "user"
+//   const [receiverRole, setReceiverRole] = useState("");
+//   const [receiver, setReceiver] = useState("");
+//   const [message, setMessage] = useState("");
+//   const [priority, setPriority] = useState("low");
+//   const [type, setType] = useState("task_update");
+
+//   const [users, setUsers] = useState([]);
+//   const [loadingUsers, setLoadingUsers] = useState(false);
+//   const [fetchError, setFetchError] = useState("");
+
+//   const [submitting, setSubmitting] = useState(false);
+//   const [statusMsg, setStatusMsg] = useState("");
+
+//   const roleOptions = [
+//     "accountant",
+//     "admin",
+//     "alumni_relations",
+//     "business_analyst",
+//     "content_creator",
+//     "course_coordinator",
+//     "customer_support",
+//     "data_scientist",
+//     "dean",
+//     "department_head",
+//     "developer",
+//     "developer_lead",
+//     "event_coordinator",
+//     "exam_controller",
+//     "hr_manager",
+//     "intern",
+//     "legal_advisor",
+//     "librarian",
+//     "maintenance_staff",
+//     "marketing_manager",
+//     "operations_manager",
+//     "product_owner",
+//     "project_manager",
+//     "qa_lead",
+//     "recruiter",
+//     "registrar",
+//     "researcher",
+//     "sales_executive",
+//     "student",
+//     "superadmin",
+//     "support_engineer",
+//     "teacher",
+//     "tech_lead",
+//     "test_engineer",
+//     "test_lead",
+//     "user",
+//     "ux_ui_designer",
+//   ];
+//   const typeOptions = [
+//     "task_update",
+//     "bug_report",
+//     "comment",
+//     "reply",
+//     "alert",
+//   ];
+//   const priorityOptions = ["low", "medium", "high", "urgent"];
+
+//   const endpointForRole = (role) =>
+//     `${globalBackendRoute}/api/users/by-role/${role}`;
+
+//   const resetForm = () => {
+//     setMode("all");
+//     setReceiverRole("");
+//     setReceiver("");
+//     setMessage("");
+//     setPriority("low");
+//     setType("task_update");
+//     setUsers([]);
+//     setFetchError("");
+//     setStatusMsg("");
+//   };
+
+//   useEffect(() => {
+//     let cancelled = false;
+//     const run = async () => {
+//       setUsers([]);
+//       setReceiver("");
+//       setFetchError("");
+
+//       if (!(mode === "user" && receiverRole)) return;
+//       try {
+//         setLoadingUsers(true);
+//         const res = await axios.get(endpointForRole(receiverRole), {
+//           headers: authHeader,
+//         });
+//         const arr = Array.isArray(res?.data) ? res.data : [];
+//         if (!cancelled) setUsers(arr);
+//       } catch (err) {
+//         console.error("Fetch users failed:", err);
+//         if (!cancelled) {
+//           setUsers([]);
+//           setFetchError("Failed to load users for the selected role.");
+//         }
+//       } finally {
+//         if (!cancelled) setLoadingUsers(false);
+//       }
+//     };
+
+//     run();
+//     return () => {
+//       cancelled = true;
+//     };
+//   }, [mode, receiverRole, authHeader]);
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setStatusMsg("");
+
+//     if (!authHeader) {
+//       setStatusMsg("You are not authenticated. Please sign in again.");
+//       return;
+//     }
+
+//     const trimmed = message.trim();
+//     if (trimmed.length < 3) {
+//       setStatusMsg("Please enter a meaningful message (min 3 characters).");
+//       return;
+//     }
+
+//     const basePayload = { message: trimmed, priority, type };
+
+//     try {
+//       setSubmitting(true);
+
+//       if (mode === "all") {
+//         await axios.post(
+//           `${globalBackendRoute}/api/send-notification-to-all-users`,
+//           basePayload,
+//           { headers: authHeader }
+//         );
+//         setStatusMsg("✅ Broadcast created (audience: all).");
+//       } else if (mode === "role") {
+//         if (!receiverRole) {
+//           setStatusMsg("Please select a receiver role.");
+//           return;
+//         }
+//         await axios.post(
+//           `${globalBackendRoute}/api/send-notification-to-all`,
+//           { ...basePayload, receiverRole },
+//           { headers: authHeader }
+//         );
+//         setStatusMsg(`✅ Broadcast created for role: ${receiverRole}.`);
+//       } else if (mode === "user") {
+//         if (!receiverRole || !receiver) {
+//           setStatusMsg("Please select role and user.");
+//           return;
+//         }
+//         await axios.post(
+//           `${globalBackendRoute}/api/send-notification-to-one`,
+//           { ...basePayload, receiver, receiverRole },
+//           { headers: authHeader }
+//         );
+//         setStatusMsg("✅ Notification created for selected user.");
+//       }
+
+//       setMessage("");
+//       setReceiver("");
+//       setReceiverRole("");
+//       setMode("all");
+//       setUsers([]);
+//     } catch (err) {
+//       console.error("Create notification failed:", err);
+//       const msg =
+//         err?.response?.data?.message || "Error creating notification.";
+//       setStatusMsg(msg);
+//     } finally {
+//       setSubmitting(false);
+//     }
+//   };
+
+//   return (
+//     <div className="py-16 sm:py-20">
+//       <div className="mx-auto max-w-7xl px-6 lg:px-8">
+//         {/* Header */}
+//         <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
+//           <h3 className="text-2xl font-bold text-start text-indigo-600">
+//             Create Notification
+//           </h3>
+
+//           <div className="flex items-center gap-4">
+//             <Link
+//               to="/all-notifications"
+//               className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+//             >
+//               View All Notifications
+//             </Link>
+//             <Link
+//               to="/super-admin-dashboard"
+//               className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+//             >
+//               Dashboard
+//             </Link>
+//           </div>
+//         </div>
+
+//         {/* Controls */}
+//         <div className="bg-white border rounded-lg p-4 mb-5">
+//           <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+//             {/* Audience Mode */}
+//             <div>
+//               <label className="block text-xs font-semibold text-gray-600 mb-1">
+//                 Audience
+//               </label>
+//               <div className="flex items-center gap-3">
+//                 <label className="inline-flex items-center text-sm">
+//                   <input
+//                     type="radio"
+//                     name="mode"
+//                     value="all"
+//                     checked={mode === "all"}
+//                     onChange={() => setMode("all")}
+//                     className="mr-2"
+//                   />
+//                   <FaUsers className="mr-2 text-gray-500" />
+//                   All
+//                 </label>
+//                 <label className="inline-flex items-center text-sm">
+//                   <input
+//                     type="radio"
+//                     name="mode"
+//                     value="role"
+//                     checked={mode === "role"}
+//                     onChange={() => setMode("role")}
+//                     className="mr-2"
+//                   />
+//                   <FaUserTag className="mr-2 text-gray-500" />
+//                   Role
+//                 </label>
+//                 <label className="inline-flex items-center text-sm">
+//                   <input
+//                     type="radio"
+//                     name="mode"
+//                     value="user"
+//                     checked={mode === "user"}
+//                     onChange={() => setMode("user")}
+//                     className="mr-2"
+//                   />
+//                   <FaUser className="mr-2 text-gray-500" />
+//                   User
+//                 </label>
+//               </div>
+//             </div>
+
+//             {/* Role */}
+//             {(mode === "role" || mode === "user") && (
+//               <div>
+//                 <label className="block text-xs font-semibold text-gray-600 mb-1">
+//                   Receiver Role
+//                 </label>
+//                 <select
+//                   value={receiverRole}
+//                   onChange={(e) => setReceiverRole(e.target.value)}
+//                   className="w-full px-3 py-2 border rounded-md text-sm"
+//                 >
+//                   <option value="">-- Select Role --</option>
+//                   {roleOptions.map((r) => (
+//                     <option key={r} value={r}>
+//                       {r}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             )}
+
+//             {/* User */}
+//             {mode === "user" && (
+//               <div>
+//                 <label className="block text-xs font-semibold text-gray-600 mb-1">
+//                   Select User
+//                 </label>
+//                 <select
+//                   value={receiver}
+//                   onChange={(e) => setReceiver(e.target.value)}
+//                   className="w-full px-3 py-2 border rounded-md text-sm"
+//                   disabled={!receiverRole || loadingUsers}
+//                 >
+//                   <option value="">
+//                     {loadingUsers
+//                       ? "Loading users..."
+//                       : !receiverRole
+//                       ? "Choose a role first"
+//                       : users.length === 0
+//                       ? "No users found"
+//                       : "-- Select User --"}
+//                   </option>
+//                   {users.map((u) => (
+//                     <option key={u._id} value={u._id}>
+//                       {u.name} ({u.email})
+//                     </option>
+//                   ))}
+//                 </select>
+//                 {fetchError && (
+//                   <p className="text-xs text-red-600 mt-1">{fetchError}</p>
+//                 )}
+//               </div>
+//             )}
+
+//             {/* Priority */}
+//             <div>
+//               <label className="block text-xs font-semibold text-gray-600 mb-1">
+//                 Priority
+//               </label>
+//               <div className="relative">
+//                 <FaFlag className="absolute left-3 top-2.5 text-gray-400" />
+//                 <select
+//                   value={priority}
+//                   onChange={(e) => setPriority(e.target.value)}
+//                   className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
+//                 >
+//                   {priorityOptions.map((p) => (
+//                     <option key={p} value={p}>
+//                       {p}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             </div>
+
+//             {/* Type */}
+//             <div>
+//               <label className="block text-xs font-semibold text-gray-600 mb-1">
+//                 Type
+//               </label>
+//               <div className="relative">
+//                 <FaBell className="absolute left-3 top-2.5 text-gray-400" />
+//                 <select
+//                   value={type}
+//                   onChange={(e) => setType(e.target.value)}
+//                   className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
+//                 >
+//                   {typeOptions.map((t) => (
+//                     <option key={t} value={t}>
+//                       {t}
+//                     </option>
+//                   ))}
+//                 </select>
+//               </div>
+//             </div>
+
+//             {/* Reset / Refresh */}
+//             <div className="flex items-end gap-2">
+//               <button
+//                 type="button"
+//                 onClick={resetForm}
+//                 className="inline-flex items-center px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50"
+//                 title="Reset form"
+//               >
+//                 <FaFilter className="mr-2" />
+//                 Reset
+//               </button>
+//               <button
+//                 type="button"
+//                 onClick={() => {
+//                   if (mode === "user" && receiverRole) {
+//                     const r = receiverRole;
+//                     setReceiverRole("");
+//                     setTimeout(() => setReceiverRole(r), 0);
+//                   }
+//                 }}
+//                 className="inline-flex items-center px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50"
+//                 title="Refresh users list"
+//               >
+//                 <FaSync
+//                   className={`mr-2 ${loadingUsers ? "animate-spin" : ""}`}
+//                 />
+//                 Refresh
+//               </button>
+//             </div>
+//           </div>
+//         </div>
+
+//         {/* Composer */}
+//         <form onSubmit={handleSubmit} className="bg-white border rounded-lg">
+//           <div className="p-4">
+//             <label className="block text-xs font-semibold text-gray-600 mb-2">
+//               Message
+//             </label>
+//             <textarea
+//               value={message}
+//               onChange={(e) => setMessage(e.target.value)}
+//               rows={5}
+//               required
+//               maxLength={2000}
+//               className="w-full px-4 py-3 border rounded-md text-sm"
+//               placeholder="Write the notification message..."
+//             />
+//             <div className="mt-1 text-[11px] text-gray-500">
+//               {message.length}/2000 characters
+//             </div>
+//           </div>
+
+//           <div className="flex items-center justify-between px-4 py-3 border-t">
+//             <div className="text-xs text-gray-600">
+//               {mode === "all" && "Audience: All users"}
+//               {mode === "role" &&
+//                 (receiverRole
+//                   ? `Audience: Role (${receiverRole})`
+//                   : "Audience: Role (select one)")}
+//               {mode === "user" &&
+//                 (receiver
+//                   ? `Audience: User (${receiver})`
+//                   : "Audience: User (select role & user)")}
+//             </div>
+//             <button
+//               type="submit"
+//               disabled={submitting}
+//               className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-semibold text-white ${
+//                 submitting
+//                   ? "bg-indigo-400 cursor-not-allowed"
+//                   : "bg-indigo-600 hover:bg-indigo-700"
+//               }`}
+//             >
+//               <FaPaperPlane className="mr-2" />
+//               {submitting ? "Sending..." : "Send Notification"}
+//             </button>
+//           </div>
+
+//           {statusMsg && (
+//             <div className="px-4 py-3 text-sm">
+//               <span className="font-semibold">Status:</span>{" "}
+//               <span>{statusMsg}</span>
+//             </div>
+//           )}
+//         </form>
+
+//         <div className="mt-6 flex items-center justify-between">
+//           <button
+//             onClick={() => navigate(-1)}
+//             className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+//           >
+//             Go Back
+//           </button>
+//           <Link
+//             to="/all-notifications"
+//             className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+//           >
+//             View All Notifications
+//           </Link>
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default CreateNotification;
+
+//
+
+"use client";
+
 import React, { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import {
@@ -12,6 +492,7 @@ import {
 } from "react-icons/fa";
 import { Link, useNavigate } from "react-router-dom";
 import globalBackendRoute from "../../config/Config";
+import notificationsBanner from "../../assets/images/profile_banner.jpg"; // change if needed
 
 const CreateNotification = () => {
   const navigate = useNavigate();
@@ -20,10 +501,10 @@ const CreateNotification = () => {
     localStorage.getItem("userToken") || localStorage.getItem("token");
   const authHeader = useMemo(
     () => (token ? { Authorization: `Bearer ${token}` } : undefined),
-    [token]
+    [token],
   );
 
-  const [mode, setMode] = useState("all"); // "all" | "role" | "user"
+  const [mode, setMode] = useState("all");
   const [receiverRole, setReceiverRole] = useState("");
   const [receiver, setReceiver] = useState("");
   const [message, setMessage] = useState("");
@@ -36,6 +517,17 @@ const CreateNotification = () => {
 
   const [submitting, setSubmitting] = useState(false);
   const [statusMsg, setStatusMsg] = useState("");
+
+  const HERO_TAGS = [
+    "NOTIFICATIONS",
+    "CREATE",
+    "AUDIENCE",
+    "ROLES",
+    "MESSAGES",
+  ];
+  const HERO_STYLE = {
+    backgroundImage: `url(${notificationsBanner})`,
+  };
 
   const roleOptions = [
     "accountant",
@@ -102,12 +594,14 @@ const CreateNotification = () => {
 
   useEffect(() => {
     let cancelled = false;
+
     const run = async () => {
       setUsers([]);
       setReceiver("");
       setFetchError("");
 
       if (!(mode === "user" && receiverRole)) return;
+
       try {
         setLoadingUsers(true);
         const res = await axios.get(endpointForRole(receiverRole), {
@@ -156,7 +650,7 @@ const CreateNotification = () => {
         await axios.post(
           `${globalBackendRoute}/api/send-notification-to-all-users`,
           basePayload,
-          { headers: authHeader }
+          { headers: authHeader },
         );
         setStatusMsg("✅ Broadcast created (audience: all).");
       } else if (mode === "role") {
@@ -167,7 +661,7 @@ const CreateNotification = () => {
         await axios.post(
           `${globalBackendRoute}/api/send-notification-to-all`,
           { ...basePayload, receiverRole },
-          { headers: authHeader }
+          { headers: authHeader },
         );
         setStatusMsg(`✅ Broadcast created for role: ${receiverRole}.`);
       } else if (mode === "user") {
@@ -178,7 +672,7 @@ const CreateNotification = () => {
         await axios.post(
           `${globalBackendRoute}/api/send-notification-to-one`,
           { ...basePayload, receiver, receiverRole },
-          { headers: authHeader }
+          { headers: authHeader },
         );
         setStatusMsg("✅ Notification created for selected user.");
       }
@@ -199,273 +693,290 @@ const CreateNotification = () => {
   };
 
   return (
-    <div className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
-          <h3 className="text-2xl font-bold text-start text-indigo-600">
-            Create Notification
-          </h3>
+    <div className="service-page-wrap min-h-screen">
+      <section className="service-hero-section" style={HERO_STYLE}>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/35 to-black/50" />
+        <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-black/30 via-black/10 to-black/30" />
+        <div className="service-hero-overlay-3" />
 
-          <div className="flex items-center gap-4">
+        <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-8 sm:py-10 lg:py-12">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {HERO_TAGS.map((item) => (
+                  <span key={item} className="service-tag-pill">
+                    {item}
+                  </span>
+                ))}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight leading-tight text-white">
+                Create{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">
+                  notification & audience
+                </span>
+              </h1>
+
+              <p className="mt-2 text-[11px] sm:text-xs md:text-sm text-white/90 max-w-2xl leading-relaxed">
+                Send notifications to all users, a role, or one specific user,
+                while controlling priority and message type.
+              </p>
+
+              <div className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/15 backdrop-blur-md border border-white/20 px-3 py-1.5 text-[11px] sm:text-xs text-white">
+                <span className="h-2 w-2 rounded-full bg-green-300 animate-pulse" />
+                Audience · Priority · Type · Send
+              </div>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <Link
+                to="/all-notifications"
+                className="text-xs text-white underline underline-offset-4 hover:text-indigo-200"
+              >
+                View All Notifications
+              </Link>
+              <Link
+                to="/super-admin-dashboard"
+                className="text-xs text-white underline underline-offset-4 hover:text-indigo-200"
+              >
+                Dashboard
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div className="service-main-wrap">
+        <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-5 sm:py-6 lg:py-7 space-y-5">
+          <div className="service-parent-card">
+            <h2 className="service-main-heading">Notification Controls</h2>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div>
+                <label className="form-label">Audience</label>
+                <div className="flex flex-wrap items-center gap-4 pt-2">
+                  <label className="inline-flex items-center text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="all"
+                      checked={mode === "all"}
+                      onChange={() => setMode("all")}
+                      className="mr-2"
+                    />
+                    <FaUsers className="mr-2 text-slate-500" />
+                    All
+                  </label>
+                  <label className="inline-flex items-center text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="role"
+                      checked={mode === "role"}
+                      onChange={() => setMode("role")}
+                      className="mr-2"
+                    />
+                    <FaUserTag className="mr-2 text-slate-500" />
+                    Role
+                  </label>
+                  <label className="inline-flex items-center text-sm text-slate-700">
+                    <input
+                      type="radio"
+                      name="mode"
+                      value="user"
+                      checked={mode === "user"}
+                      onChange={() => setMode("user")}
+                      className="mr-2"
+                    />
+                    <FaUser className="mr-2 text-slate-500" />
+                    User
+                  </label>
+                </div>
+              </div>
+
+              {(mode === "role" || mode === "user") && (
+                <div>
+                  <label className="form-label">Receiver Role</label>
+                  <select
+                    value={receiverRole}
+                    onChange={(e) => setReceiverRole(e.target.value)}
+                    className="form-input"
+                  >
+                    <option value="">-- Select Role --</option>
+                    {roleOptions.map((r) => (
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {mode === "user" && (
+                <div>
+                  <label className="form-label">Select User</label>
+                  <select
+                    value={receiver}
+                    onChange={(e) => setReceiver(e.target.value)}
+                    className="form-input"
+                    disabled={!receiverRole || loadingUsers}
+                  >
+                    <option value="">
+                      {loadingUsers
+                        ? "Loading users..."
+                        : !receiverRole
+                          ? "Choose a role first"
+                          : users.length === 0
+                            ? "No users found"
+                            : "-- Select User --"}
+                    </option>
+                    {users.map((u) => (
+                      <option key={u._id} value={u._id}>
+                        {u.name} ({u.email})
+                      </option>
+                    ))}
+                  </select>
+                  {fetchError && (
+                    <p className="text-xs text-red-600 mt-1">{fetchError}</p>
+                  )}
+                </div>
+              )}
+
+              <div>
+                <label className="form-label">Priority</label>
+                <div className="relative">
+                  <FaFlag className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+                  <select
+                    value={priority}
+                    onChange={(e) => setPriority(e.target.value)}
+                    className="form-input pl-9"
+                  >
+                    {priorityOptions.map((p) => (
+                      <option key={p} value={p}>
+                        {p}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="form-label">Type</label>
+                <div className="relative">
+                  <FaBell className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs" />
+                  <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="form-input pl-9"
+                  >
+                    {typeOptions.map((t) => (
+                      <option key={t} value={t}>
+                        {t}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex items-end gap-2">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="inline-flex items-center px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white hover:bg-slate-50"
+                  title="Reset form"
+                >
+                  <FaFilter className="mr-2" />
+                  Reset
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (mode === "user" && receiverRole) {
+                      const r = receiverRole;
+                      setReceiverRole("");
+                      setTimeout(() => setReceiverRole(r), 0);
+                    }
+                  }}
+                  className="inline-flex items-center px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white hover:bg-slate-50"
+                  title="Refresh users list"
+                >
+                  <FaSync
+                    className={`mr-2 ${loadingUsers ? "animate-spin" : ""}`}
+                  />
+                  Refresh
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit} className="service-parent-card">
+            <h2 className="service-main-heading">Compose Notification</h2>
+
+            <div>
+              <label className="form-label">Message</label>
+              <textarea
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                rows={6}
+                required
+                maxLength={2000}
+                className="form-input min-h-[160px]"
+                placeholder="Write the notification message..."
+              />
+              <div className="mt-1 text-[11px] text-slate-500">
+                {message.length}/2000 characters
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-slate-200 pt-4">
+              <div className="text-xs text-slate-600">
+                {mode === "all" && "Audience: All users"}
+                {mode === "role" &&
+                  (receiverRole
+                    ? `Audience: Role (${receiverRole})`
+                    : "Audience: Role (select one)")}
+                {mode === "user" &&
+                  (receiver
+                    ? `Audience: User (${receiver})`
+                    : "Audience: User (select role & user)")}
+              </div>
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className={`inline-flex items-center px-4 py-2 rounded-xl text-sm font-semibold text-white ${
+                  submitting
+                    ? "bg-indigo-400 cursor-not-allowed"
+                    : "bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 hover:brightness-110"
+                }`}
+              >
+                <FaPaperPlane className="mr-2" />
+                {submitting ? "Sending..." : "Send Notification"}
+              </button>
+            </div>
+
+            {statusMsg && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                <span className="font-semibold">Status:</span> {statusMsg}
+              </div>
+            )}
+          </form>
+
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
+            >
+              Go Back
+            </button>
             <Link
               to="/all-notifications"
-              className="text-xs text-indigo-600 hover:text-indigo-800 underline"
+              className="text-sm text-indigo-600 hover:text-indigo-800 underline"
             >
               View All Notifications
             </Link>
-            <Link
-              to="/super-admin-dashboard"
-              className="text-xs text-indigo-600 hover:text-indigo-800 underline"
-            >
-              Dashboard
-            </Link>
           </div>
-        </div>
-
-        {/* Controls */}
-        <div className="bg-white border rounded-lg p-4 mb-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {/* Audience Mode */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Audience
-              </label>
-              <div className="flex items-center gap-3">
-                <label className="inline-flex items-center text-sm">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="all"
-                    checked={mode === "all"}
-                    onChange={() => setMode("all")}
-                    className="mr-2"
-                  />
-                  <FaUsers className="mr-2 text-gray-500" />
-                  All
-                </label>
-                <label className="inline-flex items-center text-sm">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="role"
-                    checked={mode === "role"}
-                    onChange={() => setMode("role")}
-                    className="mr-2"
-                  />
-                  <FaUserTag className="mr-2 text-gray-500" />
-                  Role
-                </label>
-                <label className="inline-flex items-center text-sm">
-                  <input
-                    type="radio"
-                    name="mode"
-                    value="user"
-                    checked={mode === "user"}
-                    onChange={() => setMode("user")}
-                    className="mr-2"
-                  />
-                  <FaUser className="mr-2 text-gray-500" />
-                  User
-                </label>
-              </div>
-            </div>
-
-            {/* Role */}
-            {(mode === "role" || mode === "user") && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  Receiver Role
-                </label>
-                <select
-                  value={receiverRole}
-                  onChange={(e) => setReceiverRole(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                >
-                  <option value="">-- Select Role --</option>
-                  {roleOptions.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {/* User */}
-            {mode === "user" && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  Select User
-                </label>
-                <select
-                  value={receiver}
-                  onChange={(e) => setReceiver(e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm"
-                  disabled={!receiverRole || loadingUsers}
-                >
-                  <option value="">
-                    {loadingUsers
-                      ? "Loading users..."
-                      : !receiverRole
-                      ? "Choose a role first"
-                      : users.length === 0
-                      ? "No users found"
-                      : "-- Select User --"}
-                  </option>
-                  {users.map((u) => (
-                    <option key={u._id} value={u._id}>
-                      {u.name} ({u.email})
-                    </option>
-                  ))}
-                </select>
-                {fetchError && (
-                  <p className="text-xs text-red-600 mt-1">{fetchError}</p>
-                )}
-              </div>
-            )}
-
-            {/* Priority */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Priority
-              </label>
-              <div className="relative">
-                <FaFlag className="absolute left-3 top-2.5 text-gray-400" />
-                <select
-                  value={priority}
-                  onChange={(e) => setPriority(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
-                >
-                  {priorityOptions.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Type */}
-            <div>
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Type
-              </label>
-              <div className="relative">
-                <FaBell className="absolute left-3 top-2.5 text-gray-400" />
-                <select
-                  value={type}
-                  onChange={(e) => setType(e.target.value)}
-                  className="w-full pl-9 pr-3 py-2 border rounded-md text-sm"
-                >
-                  {typeOptions.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {/* Reset / Refresh */}
-            <div className="flex items-end gap-2">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="inline-flex items-center px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50"
-                title="Reset form"
-              >
-                <FaFilter className="mr-2" />
-                Reset
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (mode === "user" && receiverRole) {
-                    const r = receiverRole;
-                    setReceiverRole("");
-                    setTimeout(() => setReceiverRole(r), 0);
-                  }
-                }}
-                className="inline-flex items-center px-3 py-2 border rounded-md text-sm bg-white hover:bg-gray-50"
-                title="Refresh users list"
-              >
-                <FaSync
-                  className={`mr-2 ${loadingUsers ? "animate-spin" : ""}`}
-                />
-                Refresh
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Composer */}
-        <form onSubmit={handleSubmit} className="bg-white border rounded-lg">
-          <div className="p-4">
-            <label className="block text-xs font-semibold text-gray-600 mb-2">
-              Message
-            </label>
-            <textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              rows={5}
-              required
-              maxLength={2000}
-              className="w-full px-4 py-3 border rounded-md text-sm"
-              placeholder="Write the notification message..."
-            />
-            <div className="mt-1 text-[11px] text-gray-500">
-              {message.length}/2000 characters
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between px-4 py-3 border-t">
-            <div className="text-xs text-gray-600">
-              {mode === "all" && "Audience: All users"}
-              {mode === "role" &&
-                (receiverRole
-                  ? `Audience: Role (${receiverRole})`
-                  : "Audience: Role (select one)")}
-              {mode === "user" &&
-                (receiver
-                  ? `Audience: User (${receiver})`
-                  : "Audience: User (select role & user)")}
-            </div>
-            <button
-              type="submit"
-              disabled={submitting}
-              className={`inline-flex items-center px-4 py-2 rounded-md text-sm font-semibold text-white ${
-                submitting
-                  ? "bg-indigo-400 cursor-not-allowed"
-                  : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
-            >
-              <FaPaperPlane className="mr-2" />
-              {submitting ? "Sending..." : "Send Notification"}
-            </button>
-          </div>
-
-          {statusMsg && (
-            <div className="px-4 py-3 text-sm">
-              <span className="font-semibold">Status:</span>{" "}
-              <span>{statusMsg}</span>
-            </div>
-          )}
-        </form>
-
-        <div className="mt-6 flex items-center justify-between">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-sm text-indigo-600 hover:text-indigo-800 underline"
-          >
-            Go Back
-          </button>
-          <Link
-            to="/all-notifications"
-            className="text-sm text-indigo-600 hover:text-indigo-800 underline"
-          >
-            View All Notifications
-          </Link>
         </div>
       </div>
     </div>

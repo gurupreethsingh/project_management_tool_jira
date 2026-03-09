@@ -1,7 +1,180 @@
+// import React, { useEffect, useMemo, useState } from "react";
+// import { Link, useNavigate, useParams } from "react-router-dom";
+// import axios from "axios";
+// import globalBackendRoute from "../../config/Config";
+
+// const API = `${globalBackendRoute}/api`;
+
+// export default function UserNotificationDetail() {
+//   const { notificationId } = useParams();
+//   const navigate = useNavigate();
+
+//   const [item, setItem] = useState(null);
+//   const [err, setErr] = useState("");
+//   const [loading, setLoading] = useState(true);
+
+//   const token =
+//     localStorage.getItem("userToken") || localStorage.getItem("token") || "";
+//   let user = null;
+//   try {
+//     user = JSON.parse(localStorage.getItem("user"));
+//   } catch {
+//     user = null;
+//   }
+//   const userId = user?._id || user?.id;
+
+//   useEffect(() => {
+//     if (!token || !userId) {
+//       setLoading(false);
+//       setErr("Not authenticated.");
+//       return;
+//     }
+//     setLoading(true);
+//     setErr("");
+
+//     axios
+//       .get(`${API}/get-user-notifications/${userId}`, {
+//         headers: { Authorization: `Bearer ${token}` },
+//       })
+//       .then((res) => {
+//         const rows = Array.isArray(res.data) ? res.data : [];
+//         const found = rows.find((n) => n._id === notificationId);
+//         if (!found)
+//           setErr("Notification not found or not visible to this user.");
+//         else setItem(found);
+//       })
+//       .catch((e) => {
+//         console.error("detail get-user-notifications error:", e?.response || e);
+//         setErr(
+//           e?.response?.data?.message ||
+//             "Failed to load notification. Check server routes and auth."
+//         );
+//       })
+//       .finally(() => setLoading(false));
+//   }, [token, userId, notificationId]);
+
+//   // Mark as read on mount (best-effort)
+//   useEffect(() => {
+//     if (!token || !notificationId) return;
+//     axios
+//       .put(
+//         `${API}/mark-read/${notificationId}`,
+//         {},
+//         { headers: { Authorization: `Bearer ${token}` } }
+//       )
+//       .catch((e) => console.warn("detail mark-read failed:", e?.response || e));
+//   }, [token, notificationId]);
+
+//   const status = useMemo(() => {
+//     if (!item) return "";
+//     return (
+//       item?.receipt?.status ||
+//       item?.statusForUser ||
+//       (item?.isRead ? "read" : "unread")
+//     );
+//   }, [item]);
+
+//   if (!token || !userId) {
+//     return (
+//       <div className="max-w-3xl mx-auto p-4">
+//         <h1 className="text-xl font-semibold">Notification</h1>
+//         <p className="text-red-600 mt-2">Please log in to view this page.</p>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div className="max-w-3xl mx-auto p-4">
+//       <div className="flex items-center justify-between">
+//         <h1 className="text-2xl font-bold">Notification</h1>
+//         <Link
+//           to="/user-notifications"
+//           className="text-sm text-indigo-600 hover:underline"
+//         >
+//           ← Back to notifications
+//         </Link>
+//       </div>
+
+//       {loading && <div className="mt-4 text-gray-500">Loading…</div>}
+//       {err && (
+//         <div className="mt-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded">
+//           {err}
+//         </div>
+//       )}
+
+//       {!loading && !err && item && (
+//         <div className="mt-4 rounded-lg border p-4">
+//           <div className="flex items-center gap-2 text-sm text-gray-600">
+//             <span className="uppercase tracking-wide">
+//               {item.type || "notification"}
+//             </span>
+//             {item.priority && (
+//               <span className="text-xs rounded-full border px-2 py-0.5">
+//                 {item.priority}
+//               </span>
+//             )}
+//             <span className="text-xs bg-gray-100 rounded px-2 py-0.5">
+//               {status}
+//             </span>
+//           </div>
+
+//           <div className="mt-2 text-gray-900 whitespace-pre-wrap">
+//             {item.message || <em className="text-gray-400">No message</em>}
+//           </div>
+
+//           <div className="mt-3 text-xs text-gray-500">
+//             Created:{" "}
+//             {item.createdAt ? new Date(item.createdAt).toLocaleString() : "—"}
+//             {item.receiverRole ? ` • to role: ${item.receiverRole}` : null}
+//             {item.audience ? ` • audience: ${item.audience}` : null}
+//           </div>
+
+//           <div className="mt-4 flex gap-2">
+//             <button
+//               onClick={() => {
+//                 axios
+//                   .put(
+//                     `${API}/mark-read/${item._id}`,
+//                     {},
+//                     { headers: { Authorization: `Bearer ${token}` } }
+//                   )
+//                   .finally(() => navigate("/user-notifications"));
+//               }}
+//               className="px-4 py-2 rounded bg-indigo-600 text-white text-sm"
+//             >
+//               Mark as Read & Back
+//             </button>
+
+//             <button
+//               onClick={() => {
+//                 axios
+//                   .put(
+//                     `${API}/mark-seen/${item._id}`,
+//                     {},
+//                     { headers: { Authorization: `Bearer ${token}` } }
+//                   )
+//                   .finally(() => navigate("/user-notifications"));
+//               }}
+//               className="px-4 py-2 rounded border text-sm"
+//             >
+//               Mark as Seen & Back
+//             </button>
+//           </div>
+//         </div>
+//       )}
+//     </div>
+//   );
+// }
+
+//
+
+"use client";
+
 import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import axios from "axios";
 import globalBackendRoute from "../../config/Config";
+import notificationsBanner from "../../assets/images/profile_banner.jpg"; // change if needed
 
 const API = `${globalBackendRoute}/api`;
 
@@ -22,6 +195,11 @@ export default function UserNotificationDetail() {
     user = null;
   }
   const userId = user?._id || user?.id;
+
+  const HERO_TAGS = ["NOTIFICATION", "DETAIL", "STATUS", "READ", "SEEN"];
+  const HERO_STYLE = {
+    backgroundImage: `url(${notificationsBanner})`,
+  };
 
   useEffect(() => {
     if (!token || !userId) {
@@ -47,20 +225,19 @@ export default function UserNotificationDetail() {
         console.error("detail get-user-notifications error:", e?.response || e);
         setErr(
           e?.response?.data?.message ||
-            "Failed to load notification. Check server routes and auth."
+            "Failed to load notification. Check server routes and auth.",
         );
       })
       .finally(() => setLoading(false));
   }, [token, userId, notificationId]);
 
-  // Mark as read on mount (best-effort)
   useEffect(() => {
     if (!token || !notificationId) return;
     axios
       .put(
         `${API}/mark-read/${notificationId}`,
         {},
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       )
       .catch((e) => console.warn("detail mark-read failed:", e?.response || e));
   }, [token, notificationId]);
@@ -76,92 +253,183 @@ export default function UserNotificationDetail() {
 
   if (!token || !userId) {
     return (
-      <div className="max-w-3xl mx-auto p-4">
-        <h1 className="text-xl font-semibold">Notification</h1>
-        <p className="text-red-600 mt-2">Please log in to view this page.</p>
+      <div className="service-page-wrap min-h-screen">
+        <div className="service-main-container">
+          <div className="service-parent-card">
+            <h1 className="service-main-heading">Notification</h1>
+            <p className="text-red-600 mt-2">
+              Please log in to view this page.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Notification</h1>
-        <Link
-          to="/user-notifications"
-          className="text-sm text-indigo-600 hover:underline"
-        >
-          ← Back to notifications
-        </Link>
+    <div className="service-page-wrap min-h-screen">
+      <section className="service-hero-section" style={HERO_STYLE}>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/35 to-black/50" />
+        <div className="absolute inset-x-0 top-0 h-full bg-gradient-to-b from-black/30 via-black/10 to-black/30" />
+        <div className="service-hero-overlay-3" />
+
+        <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-8 sm:py-10 lg:py-12">
+          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+            <div>
+              <div className="mb-2 flex flex-wrap gap-2">
+                {HERO_TAGS.map((itemTag) => (
+                  <span key={itemTag} className="service-tag-pill">
+                    {itemTag}
+                  </span>
+                ))}
+              </div>
+
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold tracking-tight leading-tight text-white">
+                Notification{" "}
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200">
+                  detail & status
+                </span>
+              </h1>
+
+              <p className="mt-2 text-[11px] sm:text-xs md:text-sm text-white/90 max-w-2xl leading-relaxed">
+                View the full notification message, check its audience and
+                status, and update read or seen state.
+              </p>
+            </div>
+
+            <Link
+              to="/user-notifications"
+              className="text-xs text-white underline underline-offset-4 hover:text-indigo-200"
+            >
+              ← Back to notifications
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      <div className="service-main-wrap">
+        <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-5 sm:py-6 lg:py-7 space-y-5">
+          {loading && (
+            <div className="service-parent-card">
+              <div className="text-sm text-slate-500">Loading…</div>
+            </div>
+          )}
+
+          {err && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {err}
+            </div>
+          )}
+
+          {!loading && !err && item && (
+            <div className="service-grid-two">
+              <div className="service-parent-card">
+                <div className="flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                  <span className="service-badge-heading">
+                    {item.type || "notification"}
+                  </span>
+
+                  {item.priority && (
+                    <span className="inline-flex items-center rounded-full border px-2.5 py-1 text-[10px] sm:text-xs font-medium capitalize bg-indigo-50 text-indigo-700 border-indigo-200">
+                      {item.priority}
+                    </span>
+                  )}
+
+                  <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-1 text-[10px] sm:text-xs font-semibold text-slate-700">
+                    {status}
+                  </span>
+                </div>
+
+                <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                  <div className="service-paragraph whitespace-pre-wrap text-slate-800">
+                    {item.message || (
+                      <em className="text-slate-400">No message</em>
+                    )}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="service-small-card">
+                    <div className="min-w-0">
+                      <p className="service-badge-heading">Created</p>
+                      <p className="service-small-paragraph break-words">
+                        {item.createdAt
+                          ? new Date(item.createdAt).toLocaleString()
+                          : "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="service-small-card">
+                    <div className="min-w-0">
+                      <p className="service-badge-heading">Receiver Role</p>
+                      <p className="service-small-paragraph break-words">
+                        {item.receiverRole || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="service-small-card">
+                    <div className="min-w-0">
+                      <p className="service-badge-heading">Audience</p>
+                      <p className="service-small-paragraph break-words">
+                        {item.audience || "—"}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="service-small-card">
+                    <div className="min-w-0">
+                      <p className="service-badge-heading">Status</p>
+                      <p className="service-small-paragraph break-words">
+                        {status || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-5">
+                <div className="service-parent-card">
+                  <h2 className="service-main-heading">Actions</h2>
+
+                  <div className="flex flex-col gap-3">
+                    <button
+                      onClick={() => {
+                        axios
+                          .put(
+                            `${API}/mark-read/${item._id}`,
+                            {},
+                            { headers: { Authorization: `Bearer ${token}` } },
+                          )
+                          .finally(() => navigate("/user-notifications"));
+                      }}
+                      className="primary-gradient-button w-full"
+                    >
+                      Mark as Read & Back
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        axios
+                          .put(
+                            `${API}/mark-seen/${item._id}`,
+                            {},
+                            { headers: { Authorization: `Bearer ${token}` } },
+                          )
+                          .finally(() => navigate("/user-notifications"));
+                      }}
+                      className="inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50"
+                    >
+                      Mark as Seen & Back
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-
-      {loading && <div className="mt-4 text-gray-500">Loading…</div>}
-      {err && (
-        <div className="mt-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded">
-          {err}
-        </div>
-      )}
-
-      {!loading && !err && item && (
-        <div className="mt-4 rounded-lg border p-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <span className="uppercase tracking-wide">
-              {item.type || "notification"}
-            </span>
-            {item.priority && (
-              <span className="text-xs rounded-full border px-2 py-0.5">
-                {item.priority}
-              </span>
-            )}
-            <span className="text-xs bg-gray-100 rounded px-2 py-0.5">
-              {status}
-            </span>
-          </div>
-
-          <div className="mt-2 text-gray-900 whitespace-pre-wrap">
-            {item.message || <em className="text-gray-400">No message</em>}
-          </div>
-
-          <div className="mt-3 text-xs text-gray-500">
-            Created:{" "}
-            {item.createdAt ? new Date(item.createdAt).toLocaleString() : "—"}
-            {item.receiverRole ? ` • to role: ${item.receiverRole}` : null}
-            {item.audience ? ` • audience: ${item.audience}` : null}
-          </div>
-
-          <div className="mt-4 flex gap-2">
-            <button
-              onClick={() => {
-                axios
-                  .put(
-                    `${API}/mark-read/${item._id}`,
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  )
-                  .finally(() => navigate("/user-notifications"));
-              }}
-              className="px-4 py-2 rounded bg-indigo-600 text-white text-sm"
-            >
-              Mark as Read & Back
-            </button>
-
-            <button
-              onClick={() => {
-                axios
-                  .put(
-                    `${API}/mark-seen/${item._id}`,
-                    {},
-                    { headers: { Authorization: `Bearer ${token}` } }
-                  )
-                  .finally(() => navigate("/user-notifications"));
-              }}
-              className="px-4 py-2 rounded border text-sm"
-            >
-              Mark as Seen & Back
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
