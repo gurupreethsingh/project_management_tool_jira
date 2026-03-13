@@ -394,7 +394,7 @@ export default function CodeSummaryGenAssistantShell({
                 <FiRefreshCw /> Reload
               </button>
 
-              {(device || adapterName) && (
+              {/* {(device || adapterName) && (
                 <div className="text-[11px] text-gray-600">
                   {device && (
                     <>
@@ -408,7 +408,7 @@ export default function CodeSummaryGenAssistantShell({
                     </>
                   )}
                 </div>
-              )}
+              )} */}
             </div>
 
             <button

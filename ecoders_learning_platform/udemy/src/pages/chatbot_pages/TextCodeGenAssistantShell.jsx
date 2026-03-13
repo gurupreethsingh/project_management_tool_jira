@@ -55,7 +55,7 @@ function looksLikeHtmlOrJsx(s) {
   if (t.includes("<head") && t.includes("<body")) return true;
   if (
     /(<(div|section|header|footer|main|form|nav|table|button|input|h1|h2|aside|canvas|svg)\b)/i.test(
-      t
+      t,
     )
   )
     return true;
@@ -124,7 +124,7 @@ export default function TextCodeGenAssistantShell({
     if (el) el.scrollTop = el.scrollHeight;
     localStorage.setItem(
       lsKey(scope, "active_convo"),
-      JSON.stringify(messages)
+      JSON.stringify(messages),
     );
   }, [messages, scope]);
 
@@ -263,7 +263,7 @@ export default function TextCodeGenAssistantShell({
     } catch (e) {
       console.error("[TextCode] generate error:", e);
       setError(
-        e?.response?.data?.message || "Text-to-code generator is unavailable."
+        e?.response?.data?.message || "Text-to-code generator is unavailable.",
       );
     }
 
@@ -401,7 +401,7 @@ export default function TextCodeGenAssistantShell({
               >
                 <FiRefreshCw /> Reload
               </button>
-              {modelInfo && (
+              {/* {modelInfo && (
                 <div className="text-[11px] text-gray-600">
                   device: <code>{String(modelInfo.device)}</code>
                   {Array.isArray(modelInfo.adapters) && (
@@ -411,7 +411,7 @@ export default function TextCodeGenAssistantShell({
                     </>
                   )}
                 </div>
-              )}
+              )} */}
             </div>
             <button
               onClick={newChat}
