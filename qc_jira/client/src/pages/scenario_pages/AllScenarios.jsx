@@ -2558,7 +2558,7 @@ export default function AllScenarios() {
     <div className="bg-white py-10 sm:py-12">
       <div className="mx-auto container px-2 sm:px-3 lg:px-4">
         {/* Header / Controls */}
-        <div className="flex justify-between items-start gap-3 flex-wrap">
+        <div className="space-y-3 flex flex-wrap">
           <div>
             <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
               All Scenarios for Project: {projectName || projectId}
@@ -2583,88 +2583,94 @@ export default function AllScenarios() {
             )}
           </div>
 
-          <div className="flex flex-1 items-start gap-3 flex-wrap justify-end">
-            {/* Search */}
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
-                placeholder="Search scenarios, modules, project, user..."
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setCurrentPage(1);
-                }}
-                spellCheck={false}
-              />
-            </div>
+          <div className="w-full overflow-x-auto pb-1">
+            <div className="flex flex-wrap items-center gap-3 min-w-max">
+              {/* Search */}
+              <div className="relative shrink-0">
+                <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
+                  placeholder="Search scenarios, modules, project, user..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  spellCheck={false}
+                />
+              </div>
 
-            {/* Date filter */}
-            <div className="flex items-center gap-2">
-              <input
-                type="date"
-                list="scenario-dates"
-                className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
-                value={selectedDate}
-                onChange={(e) => {
-                  setSelectedDate(e.target.value);
-                  setCurrentPage(1);
-                }}
-                title="Filter by date"
-              />
-              <datalist id="scenario-dates">
-                {availableDates.map((d) => (
-                  <option key={d} value={d} />
-                ))}
-              </datalist>
+              {/* Date filter */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <input
+                  type="date"
+                  list="scenario-dates"
+                  className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  title="Filter by date"
+                />
+                <datalist id="scenario-dates">
+                  {availableDates.map((d) => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
 
-              <button
-                onClick={clearDateSelection}
-                className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100"
-                title="Clear date"
+                <button
+                  onClick={clearDateSelection}
+                  className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100 whitespace-nowrap"
+                  title="Clear date"
+                >
+                  Clear
+                </button>
+              </div>
+
+              {/* Rows per page */}
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="text-xs text-slate-600 whitespace-nowrap">
+                  Rows:
+                </label>
+                <select
+                  value={
+                    itemsPerPage >= 1000000000 ? "ALL" : String(itemsPerPage)
+                  }
+                  onChange={handlePageSizeChange}
+                  className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
+                  title="Rows per page"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="40">40</option>
+                  <option value="60">60</option>
+                  <option value="ALL">All</option>
+                </select>
+              </div>
+
+              <div className="shrink-0">
+                <ExportBar
+                  rows={exportRows}
+                  columns={exportCols}
+                  fileBaseName={`Scenarios_${projectName || projectId}`}
+                  title={`Scenarios Export - ${projectName || projectId}`}
+                />
+              </div>
+
+              <Link
+                to={`/single-project/${projectId}`}
+                className="inline-flex shrink-0 whitespace-nowrap px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
               >
-                Clear
-              </button>
+                Project Dashboard
+              </Link>
             </div>
-
-            {/* Rows per page */}
-            <div className="flex items-center gap-2">
-              <label className="text-xs text-slate-600">Rows:</label>
-              <select
-                value={
-                  itemsPerPage >= 1000000000 ? "ALL" : String(itemsPerPage)
-                }
-                onChange={handlePageSizeChange}
-                className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
-                title="Rows per page"
-              >
-                <option value="10">10</option>
-                <option value="20">20</option>
-                <option value="40">40</option>
-                <option value="60">60</option>
-                <option value="ALL">All</option>
-              </select>
-            </div>
-
-            <ExportBar
-              rows={exportRows}
-              columns={exportCols}
-              fileBaseName={`Scenarios_${projectName || projectId}`}
-              title={`Scenarios Export - ${projectName || projectId}`}
-            />
-
-            <Link
-              to={`/single-project/${projectId}`}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
-            >
-              Project Dashboard
-            </Link>
           </div>
         </div>
 
         {/* Module chips row */}
-        <div className="mt-4">
+        <div className="mt-2">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-slate-700">
               Filter by Module

@@ -3,6 +3,34 @@ const mongoose = require("mongoose");
 /* ------------------------ Normalization helpers ------------------------ */
 
 /**
+ * Convert input to PascalCase safely.
+ *
+ * Examples:
+ * - "home page" -> "HomePage"
+ * - "Home Page" -> "HomePage"
+ * - "home-page" -> "HomePage"
+ * - "home_page" -> "HomePage"
+ * - "HomePage" -> "HomePage"
+ * - "mainSectionPage" -> "MainSectionPage"
+ */
+function toPascalCase(raw = "") {
+  const cleaned = String(raw)
+    .trim()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join("");
+}
+
+/**
  * Normalize and validate module names.
  *
  * Rules:
@@ -10,11 +38,10 @@ const mongoose = require("mongoose");
  * - Must contain at least one letter
  * - Cannot contain numbers anywhere
  * - Cannot contain special characters anywhere
- * - Only letters and spaces allowed in raw input
+ * - Allows only letters, spaces, underscores, hyphens in raw input
  * - Leading/trailing spaces are trimmed
- * - Multiple internal spaces are collapsed to a single space
+ * - Multiple internal spaces are collapsed
  * - Stored value becomes PascalCase without spaces
- *   Example: "home page" -> "HomePage"
  *
  * Returns:
  *   { displayName, key }
@@ -29,29 +56,20 @@ function normalizeModuleName(raw) {
     return { error: "Module name cannot be empty or whitespace-only." };
   }
 
-  // Must contain at least one alphabetic character
   if (!/[A-Za-z]/.test(trimmed)) {
     return { error: "Module name must contain at least one letter (A–Z)." };
   }
 
-  // No numbers allowed anywhere
   if (/\d/.test(trimmed)) {
     return { error: "Module name cannot contain numbers." };
   }
 
-  // Allow only letters and spaces
-  if (/[^A-Za-z\s]/.test(trimmed)) {
+  // allow letters, spaces, _ and -
+  if (/[^A-Za-z\s_-]/.test(trimmed)) {
     return { error: "Module name cannot contain special characters." };
   }
 
-  // Collapse repeated spaces
-  const collapsed = trimmed.replace(/\s+/g, " ");
-
-  const words = collapsed.split(" ").filter(Boolean);
-
-  const displayName = words
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join("");
+  const displayName = toPascalCase(trimmed);
 
   if (!displayName) {
     return { error: "Module name cannot be empty." };
@@ -61,7 +79,6 @@ function normalizeModuleName(raw) {
     return { error: "Module name cannot be more than 100 characters." };
   }
 
-  // Lowercase normalized key for dedupe within a project
   const key = displayName.toLowerCase().slice(0, 200);
 
   return { displayName, key };
@@ -111,7 +128,6 @@ moduleSchema.index({ project: 1, key: 1 }, { unique: true });
 
 /* ---------------------- Validation + normalization ---------------------- */
 
-// Normalize on validate so create/save/update stay consistent
 moduleSchema.pre("validate", function (next) {
   try {
     if (!this.isModified("name")) return next();

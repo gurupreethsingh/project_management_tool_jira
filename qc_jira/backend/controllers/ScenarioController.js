@@ -1592,7 +1592,6 @@
 //   detachScenariosToUnassigned,
 //   listModulesWithCounts,
 // };
-
 const mongoose = require("mongoose");
 const Scenario = require("../models/ScenarioModel");
 const Change = require("../models/ChangeModel");
@@ -1634,7 +1633,6 @@ const safeGenerateScenarioNumber = async (projectId, projectName) => {
     .join("")}-${Date.now().toString().slice(-8)}`;
 };
 
-// Scenario duplicate normalization
 const normalizeKey = (text = "") =>
   text
     .toLowerCase()
@@ -1645,8 +1643,26 @@ const normalizeKey = (text = "") =>
     .substring(0, 200);
 
 /* -------------------------------------------------------------------- */
-/* Module name normalization - must match ModuleModel rules exactly     */
+/* Module name normalization - PascalCase safe                          */
 /* -------------------------------------------------------------------- */
+
+function toPascalCase(raw = "") {
+  const cleaned = String(raw)
+    .trim()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ");
+
+  return cleaned
+    .split(" ")
+    .filter(Boolean)
+    .map((word) => {
+      const lower = word.toLowerCase();
+      return lower.charAt(0).toUpperCase() + lower.slice(1);
+    })
+    .join("");
+}
+
 function normalizeModuleName(raw) {
   const input = String(raw ?? "");
   const trimmed = input.trim();
@@ -1663,16 +1679,11 @@ function normalizeModuleName(raw) {
     return { error: "Module name cannot contain numbers." };
   }
 
-  if (/[^A-Za-z\s]/.test(trimmed)) {
+  if (/[^A-Za-z\s_-]/.test(trimmed)) {
     return { error: "Module name cannot contain special characters." };
   }
 
-  const collapsed = trimmed.replace(/\s+/g, " ");
-  const words = collapsed.split(" ").filter(Boolean);
-
-  const displayName = words
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-    .join("");
+  const displayName = toPascalCase(trimmed);
 
   if (!displayName) {
     return { error: "Module name cannot be empty." };
@@ -1710,12 +1721,7 @@ function mapMongooseError(err) {
 }
 
 /* ------------------------- Module helper ------------------------- */
-/**
- * Finds an existing normalized module in the same project,
- * or creates it if missing.
- *
- * Validation rules are kept aligned with ModuleModel.
- */
+
 const findOrCreateModule = async (projectId, name, createdBy) => {
   const { displayName, key, error } = normalizeModuleName(name);
 
@@ -1736,7 +1742,6 @@ const findOrCreateModule = async (projectId, name, createdBy) => {
     });
     return created;
   } catch (err) {
-    // Race-safe duplicate handling
     if (err?.code === 11000) {
       const again = await Module.findOne({ project: projectId, key });
       if (again) return again;
@@ -1753,12 +1758,8 @@ const findOrCreateModule = async (projectId, name, createdBy) => {
   }
 };
 
-const getOrCreateUnassignedModule = async (projectId, createdBy) =>
-  findOrCreateModule(projectId, "Unassigned", createdBy);
-
 /* ---------------------------- core helpers --------------------------- */
 
-// Backward compatibility for old data that still has only `module`
 const withHydratedModules = (s) => {
   if (!s) return s;
 
@@ -1774,8 +1775,11 @@ const withHydratedModules = (s) => {
 const hydrateMany = (arr) =>
   Array.isArray(arr) ? arr.map(withHydratedModules) : [];
 
+const uniqueObjectIds = (values = []) =>
+  [...new Set(values.map(String))].map((id) => new mongoose.Types.ObjectId(id));
+
 /* ============================== CREATE =============================== */
-// POST /single-projects/:id/add-scenario
+
 const addScenario = async (req, res) => {
   try {
     const projectId = req.params.id;
@@ -1863,9 +1867,7 @@ const addScenario = async (req, res) => {
       resolvedIds.push(md._id);
     }
 
-    const uniqueResolved = [...new Set(resolvedIds.map(String))].map(
-      (id) => new mongoose.Types.ObjectId(id),
-    );
+    const uniqueResolved = uniqueObjectIds(resolvedIds);
 
     if (uniqueResolved.length === 0) {
       return res.status(400).json({
@@ -1886,8 +1888,8 @@ const addScenario = async (req, res) => {
       scenario_key,
       scenario_number,
       project: projectId,
-      module: primaryModuleId, // legacy single
-      modules: uniqueResolved, // multi-module support
+      module: primaryModuleId,
+      modules: uniqueResolved,
       createdBy,
     });
 
@@ -1922,7 +1924,7 @@ const addScenario = async (req, res) => {
 };
 
 /* ============================== UPDATE =============================== */
-// PUT /single-project/scenario/:scenarioId
+
 const updateScenario = async (req, res) => {
   const {
     scenario_text,
@@ -2052,12 +2054,10 @@ const updateScenario = async (req, res) => {
         ids.push(md._id);
       }
 
-      const uniqueResolved = [...new Set(ids.map(String))].map(
-        (id) => new mongoose.Types.ObjectId(id),
-      );
+      const uniqueResolved = uniqueObjectIds(ids);
 
       scenario.modules = uniqueResolved;
-      scenario.module = uniqueResolved[0] || undefined; // keep legacy primary in sync
+      scenario.module = uniqueResolved[0] || undefined;
     }
 
     scenario.updatedBy = {
@@ -2095,7 +2095,6 @@ const updateScenario = async (req, res) => {
 
 /* ========================= LIST / HISTORY ============================ */
 
-// GET /single-project/:id/view-all-scenarios
 const listScenariosByProject = async (req, res) => {
   try {
     const { id } = req.params;
@@ -2123,7 +2122,6 @@ const listScenariosByProject = async (req, res) => {
   }
 };
 
-// GET /single-project/:projectId/scenario-history/:scenarioId
 const getScenarioHistory = async (req, res) => {
   const { scenarioId } = req.params;
 
@@ -2158,7 +2156,6 @@ const getScenarioHistory = async (req, res) => {
   }
 };
 
-// GET /single-project/scenario/:scenarioId/scenario-number
 const getScenarioNumber = async (req, res) => {
   const { scenarioId } = req.params;
 
@@ -2181,7 +2178,6 @@ const getScenarioNumber = async (req, res) => {
   }
 };
 
-// GET /projects/:projectId/scenarios
 const getScenariosSimple = async (req, res) => {
   const { projectId } = req.params;
   const { moduleId } = req.query;
@@ -2241,7 +2237,6 @@ const getScenariosSimple = async (req, res) => {
 
 /* ============================ MODULE APIS ============================ */
 
-// GET /single-projects/:projectId/modules
 const listModulesByProject = async (req, res) => {
   const { projectId } = req.params;
 
@@ -2254,7 +2249,11 @@ const listModulesByProject = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const mods = await Module.find({ project: projectId }).sort({ name: 1 });
+    const mods = await Module.find({
+      project: projectId,
+      name: { $ne: "Unassigned" },
+    }).sort({ name: 1 });
+
     return res.json(mods);
   } catch (err) {
     console.error("Error listing modules:", err);
@@ -2262,7 +2261,6 @@ const listModulesByProject = async (req, res) => {
   }
 };
 
-// POST /single-projects/:projectId/modules
 const createOrGetModule = async (req, res) => {
   const { projectId } = req.params;
   const { name } = req.body;
@@ -2302,9 +2300,135 @@ const createOrGetModule = async (req, res) => {
   }
 };
 
+const deleteModule = async (req, res) => {
+  const { projectId, moduleId } = req.params;
+  const { transferToModuleId = null, userId } = req.body || {};
+
+  try {
+    if (!mongoose.Types.ObjectId.isValid(projectId)) {
+      return res.status(400).json({ error: "Invalid project ID" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+      return res.status(400).json({ error: "Invalid module ID" });
+    }
+
+    if (!(await Project.exists({ _id: projectId }))) {
+      return res.status(404).json({ error: "Project not found" });
+    }
+
+    const actorId = req.user?.id || userId;
+    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
+      return res.status(401).json({ error: "Authentication required" });
+    }
+
+    if (!(await User.exists({ _id: actorId }))) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const moduleDoc = await Module.findOne({
+      _id: moduleId,
+      project: projectId,
+    });
+
+    if (!moduleDoc) {
+      return res.status(404).json({ error: "Module not found" });
+    }
+
+    if (moduleDoc.name === "Unassigned") {
+      return res
+        .status(400)
+        .json({ error: "Unassigned module cannot be deleted." });
+    }
+
+    let targetModule = null;
+
+    if (transferToModuleId) {
+      if (!mongoose.Types.ObjectId.isValid(transferToModuleId)) {
+        return res.status(400).json({ error: "Invalid transfer module ID" });
+      }
+
+      if (String(transferToModuleId) === String(moduleId)) {
+        return res.status(400).json({
+          error: "Transfer module cannot be the same as module being deleted.",
+        });
+      }
+
+      targetModule = await Module.findOne({
+        _id: transferToModuleId,
+        project: projectId,
+      });
+
+      if (!targetModule) {
+        return res.status(404).json({ error: "Transfer module not found" });
+      }
+    }
+
+    const affectedScenarios = await Scenario.find({
+      project: projectId,
+      $or: [{ module: moduleDoc._id }, { modules: { $in: [moduleDoc._id] } }],
+    });
+
+    for (const scenario of affectedScenarios) {
+      const currentIds = [];
+
+      if (scenario.module) currentIds.push(String(scenario.module));
+      if (Array.isArray(scenario.modules)) {
+        for (const mid of scenario.modules) currentIds.push(String(mid));
+      }
+
+      let nextIds = [...new Set(currentIds)].filter(
+        (id) => id !== String(moduleDoc._id),
+      );
+
+      if (targetModule) {
+        nextIds.push(String(targetModule._id));
+      }
+
+      nextIds = [...new Set(nextIds)];
+
+      const finalIds = nextIds.map((id) => new mongoose.Types.ObjectId(id));
+
+      scenario.modules = finalIds;
+      scenario.module = finalIds[0] || undefined;
+      scenario.updatedBy = {
+        user: actorId,
+        updateTime: new Date(),
+      };
+
+      await scenario.save();
+    }
+
+    await Module.deleteOne({ _id: moduleDoc._id });
+
+    return res.json({
+      message: "Module deleted successfully.",
+      deletedModule: {
+        _id: moduleDoc._id,
+        name: moduleDoc.name,
+      },
+      affectedScenarioCount: affectedScenarios.length,
+      reassignedTo: targetModule
+        ? { _id: targetModule._id, name: targetModule.name }
+        : null,
+    });
+  } catch (err) {
+    if (err?.status) {
+      return res.status(err.status).json({ error: err.message });
+    }
+
+    const mapped = mapMongooseError(err);
+    if (mapped) {
+      return res.status(mapped.status).json({ error: mapped.message });
+    }
+
+    console.error("Error deleting module:", err);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
 /* ========================== BULK OPERATIONS ========================== */
 
-// POST /single-projects/:projectId/scenarios/transfer
 const transferScenarios = async (req, res) => {
   const { projectId } = req.params;
   const { scenarioIds = [], toModuleId, toModuleName } = req.body;
@@ -2390,7 +2514,6 @@ const transferScenarios = async (req, res) => {
   }
 };
 
-// POST /single-projects/:projectId/scenarios/detach
 const detachScenariosToUnassigned = async (req, res) => {
   const { projectId } = req.params;
   const { scenarioIds = [] } = req.body;
@@ -2433,7 +2556,6 @@ const detachScenariosToUnassigned = async (req, res) => {
   }
 };
 
-// GET /single-projects/:projectId/modules-with-counts
 const listModulesWithCounts = async (req, res) => {
   const { projectId } = req.params;
 
@@ -2446,7 +2568,10 @@ const listModulesWithCounts = async (req, res) => {
       return res.status(404).json({ message: "Project not found" });
     }
 
-    const mods = await Module.find({ project: projectId }, { name: 1 })
+    const mods = await Module.find(
+      { project: projectId, name: { $ne: "Unassigned" } },
+      { name: 1 },
+    )
       .sort({ name: 1 })
       .lean();
 
@@ -2523,7 +2648,6 @@ const searchScenarios = async (req, res) => {
 
 /* ============================== DELETE ============================== */
 
-// DELETE /single-project/scenario/:scenarioId
 const deleteScenario = async (req, res) => {
   const { scenarioId } = req.params;
 
@@ -2562,6 +2686,7 @@ module.exports = {
   getScenariosSimple,
   listModulesByProject,
   createOrGetModule,
+  deleteModule,
   searchScenarios,
   transferScenarios,
   detachScenariosToUnassigned,
