@@ -324,7 +324,7 @@ const Footer = () => {
 
             <div className="flex items-center gap-2 text-[12px] font-semibold text-gray-600">
               <FaShieldAlt className="text-orange-600" />
-              <span>Secure • Fast • Reliable</span>
+              <span>Secure.Fast.Reliable</span>
             </div>
 
             <p className="text-[12px] font-semibold text-gray-600 text-center md:text-right">
