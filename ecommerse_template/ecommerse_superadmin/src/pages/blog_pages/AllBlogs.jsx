@@ -14,6 +14,7 @@ import {
 import { motion } from "framer-motion";
 import axios from "axios";
 import globalBackendRoute from "../../config/Config";
+import dogImage from "../../assets/dog.jpg";
 
 export default function AllBlogs() {
   const [view, setView] = useState("grid");
@@ -110,7 +111,7 @@ export default function AllBlogs() {
   const itemsPerPage = 6;
   const totalPages = Math.max(
     1,
-    Math.ceil(filteredBlogs.length / itemsPerPage)
+    Math.ceil(filteredBlogs.length / itemsPerPage),
   );
   const paginatedBlogs = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
@@ -180,8 +181,8 @@ export default function AllBlogs() {
               view === "list"
                 ? "grid-cols-1"
                 : view === "grid"
-                ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-                : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
+                  ? "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
+                  : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-4"
             }`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
