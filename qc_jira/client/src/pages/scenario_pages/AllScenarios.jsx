@@ -636,7 +636,7 @@ export default function AllScenarios() {
             </p>
 
             {(searchQuery || selectedModuleId || selectedDate) && (
-              <p className="text-xs text-gray-600">
+              <p className="text-xs text-red-600">
                 Showing {filteredScenarioCount} result(s)
                 {searchQuery ? <> for “{searchQuery}”</> : null}
                 {selectedModuleId ? " in selected module" : null}
@@ -741,7 +741,8 @@ export default function AllScenarios() {
         <div className="mt-2">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-slate-700">
-              Filter by Module
+              Filter by{" "}
+              <span className="text-indigo-600 underline">Module/Page</span>
             </h3>
             <button
               onClick={clearModuleSelection}
@@ -780,7 +781,7 @@ export default function AllScenarios() {
           <div ref={tableContainerRef} className="overflow-x-auto">
             {/* Header row */}
             <div
-              className="relative grid items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200 min-w-max"
+              className="relative grid items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200 min-w-max bg-light"
               style={{ gridTemplateColumns }}
             >
               {[

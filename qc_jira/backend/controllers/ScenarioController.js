@@ -1,753 +1,3 @@
-// // // controllers/ScenarioController.js
-// // const mongoose = require("mongoose");
-// // const Scenario = require("../models/ScenarioModel");
-// // const Change = require("../models/ChangeModel");
-// // const Project = require("../models/ProjectModel");
-// // const User = require("../models/UserModel");
-// // const Module = require("../models/ModuleModel");
-
-// // /* -------------------------- utils & helpers -------------------------- */
-// // const generateScenarioNumber = (projectName) => {
-// //   const initials = projectName
-// //     .split(" ")
-// //     .map((w) => w[0]?.toUpperCase() ?? "")
-// //     .join("");
-// //   const randomNum = Math.floor(1000 + Math.random() * 9000);
-// //   return `${initials}-${randomNum}`;
-// // };
-
-// // const safeGenerateScenarioNumber = async (projectId, projectName) => {
-// //   let candidate = generateScenarioNumber(projectName);
-// //   let exists = await Scenario.exists({
-// //     project: projectId,
-// //     scenario_number: candidate,
-// //   });
-// //   if (!exists) return candidate;
-// //   candidate = generateScenarioNumber(projectName);
-// //   exists = await Scenario.exists({
-// //     project: projectId,
-// //     scenario_number: candidate,
-// //   });
-// //   if (!exists) return candidate;
-// //   return `${projectName
-// //     .split(" ")
-// //     .map((w) => w[0]?.toUpperCase() ?? "")
-// //     .join("")}-${Date.now().toString().slice(-8)}`;
-// // };
-
-// // const normalizeKey = (text = "") =>
-// //   text
-// //     .toLowerCase()
-// //     .trim()
-// //     .replace(/[^a-z0-9]+/g, " ")
-// //     .replace(/\s+/g, " ")
-// //     .replace(/\s+/g, "")
-// //     .substring(0, 200);
-
-// // const normalizeModuleKey = normalizeKey;
-
-// // const findOrCreateModule = async (projectId, name, createdBy) => {
-// //   const key = normalizeModuleKey(name);
-// //   const nameTrim = String(name || "").trim();
-// //   try {
-// //     const existing = await Module.findOne({ project: projectId, key });
-// //     if (existing) return existing;
-// //     const created = await Module.create({
-// //       name: nameTrim,
-// //       key,
-// //       project: projectId,
-// //       createdBy,
-// //     });
-// //     return created;
-// //   } catch (err) {
-// //     if (err?.code === 11000) {
-// //       const again = await Module.findOne({ project: projectId, key });
-// //       if (again) return again;
-// //     }
-// //     throw err;
-// //   }
-// // };
-
-// // const getOrCreateUnassignedModule = async (projectId, createdBy) =>
-// //   findOrCreateModule(projectId, "Unassigned", createdBy);
-
-// // /* ---------------------------- core helpers --------------------------- */
-// // // Back-compat: given a Scenario doc (lean or not), ensure it has modules[] at read time.
-// // const withHydratedModules = (s) => {
-// //   if (!s) return s;
-// //   const out = { ...s };
-// //   // If modules is missing/empty but legacy single `module` exists, hydrate
-// //   if ((!Array.isArray(out.modules) || out.modules.length === 0) && out.module) {
-// //     out.modules = [out.module];
-// //   }
-// //   return out;
-// // };
-// // // Map array safely for lean results
-// // const hydrateMany = (arr) =>
-// //   Array.isArray(arr) ? arr.map(withHydratedModules) : [];
-
-// // /* ============================== CREATE =============================== */
-// // // POST /single-projects/:id/add-scenario
-// // // Accepts: moduleId / module_name (legacy single) OR moduleIds[] / module_names[] (multi)
-// // const addScenario = async (req, res) => {
-// //   try {
-// //     const projectId = req.params.id;
-// //     const {
-// //       scenario_text,
-// //       moduleId, // legacy single id
-// //       module_name, // legacy single name
-// //       moduleIds = [], // multi ids
-// //       module_names = [], // multi names
-// //     } = req.body;
-
-// //     if (!scenario_text)
-// //       return res.status(400).json({ error: "Scenario text is required" });
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ error: "Invalid project ID" });
-
-// //     const project = await Project.findById(projectId);
-// //     if (!project) return res.status(404).json({ error: "Project not found" });
-
-// //     const createdBy = req.user?.id || req.body.createdBy;
-// //     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
-// //       return res.status(401).json({ error: "Authentication required" });
-
-// //     if (!(await User.exists({ _id: createdBy })))
-// //       return res.status(404).json({ error: "Creator user not found" });
-
-// //     const scenario_key = normalizeKey(scenario_text);
-// //     if (await Scenario.exists({ project: projectId, scenario_key }))
-// //       return res
-// //         .status(409)
-// //         .json({ error: "A scenario with similar text already exists." });
-
-// //     // Resolve module IDs
-// //     const resolvedIds = [];
-
-// //     if (moduleId) {
-// //       if (!mongoose.Types.ObjectId.isValid(moduleId))
-// //         return res.status(400).json({ error: "Invalid moduleId" });
-// //       const md = await Module.findOne({ _id: moduleId, project: projectId });
-// //       if (!md)
-// //         return res
-// //           .status(404)
-// //           .json({ error: "Module not found for this project" });
-// //       resolvedIds.push(md._id);
-// //     }
-
-// //     if (module_name) {
-// //       const md = await findOrCreateModule(projectId, module_name, createdBy);
-// //       resolvedIds.push(md._id);
-// //     }
-
-// //     for (const mid of moduleIds || []) {
-// //       if (!mongoose.Types.ObjectId.isValid(mid))
-// //         return res
-// //           .status(400)
-// //           .json({ error: "Invalid module id in moduleIds" });
-// //       const md = await Module.findOne({ _id: mid, project: projectId });
-// //       if (!md)
-// //         return res
-// //           .status(404)
-// //           .json({ error: `Module not found for this project: ${mid}` });
-// //       resolvedIds.push(md._id);
-// //     }
-
-// //     for (const name of module_names || []) {
-// //       if (!String(name || "").trim()) continue;
-// //       const md = await findOrCreateModule(projectId, name, createdBy);
-// //       resolvedIds.push(md._id);
-// //     }
-
-// //     const uniqueResolved = [...new Set(resolvedIds.map(String))].map(
-// //       (id) => new mongoose.Types.ObjectId(id)
-// //     );
-// //     if (uniqueResolved.length === 0)
-// //       return res.status(400).json({
-// //         error:
-// //           "Provide at least one module (moduleId/module_name/moduleIds/module_names).",
-// //       });
-
-// //     const scenario_number = await safeGenerateScenarioNumber(
-// //       projectId,
-// //       project.project_name
-// //     );
-
-// //     // 🔑 Back-compat: keep legacy `module` in sync with first module
-// //     const primaryModuleId = uniqueResolved[0];
-
-// //     const scenario = new Scenario({
-// //       scenario_text,
-// //       scenario_key,
-// //       scenario_number,
-// //       project: projectId,
-// //       module: primaryModuleId, // legacy single
-// //       modules: uniqueResolved, // new multi
-// //       createdBy,
-// //     });
-
-// //     await scenario.save();
-// //     await Project.findByIdAndUpdate(projectId, {
-// //       $push: { scenarios: scenario._id },
-// //     });
-
-// //     const populated = await Scenario.findById(scenario._id)
-// //       .populate("module", "name")
-// //       .populate("modules", "name")
-// //       .lean();
-
-// //     return res.status(201).json({
-// //       message: "Scenario added successfully",
-// //       scenario: withHydratedModules(populated),
-// //     });
-// //   } catch (error) {
-// //     console.error("Error adding scenario:", error);
-// //     return res.status(500).json({ error: "Server error" });
-// //   }
-// // };
-
-// // /* ============================== UPDATE =============================== */
-// // // PUT /single-project/scenario/:scenarioId
-// // // If moduleId/moduleIds/module_name/module_names provided => replace full set.
-// // // Also keep legacy `module = modules[0]`.
-// // const updateScenario = async (req, res) => {
-// //   const {
-// //     scenario_text,
-// //     userId,
-// //     moduleId,
-// //     module_name,
-// //     moduleIds = [],
-// //     module_names = [],
-// //   } = req.body;
-// //   const { scenarioId } = req.params;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(scenarioId))
-// //       return res.status(400).json({ message: "Invalid scenario ID" });
-
-// //     const scenario = await Scenario.findById(scenarioId).populate("project");
-// //     if (!scenario)
-// //       return res.status(404).json({ message: "Scenario not found" });
-
-// //     const actorId = req.user?.id || userId;
-// //     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId))
-// //       return res.status(400).json({ message: "Invalid user ID" });
-// //     if (!(await User.exists({ _id: actorId })))
-// //       return res.status(404).json({ message: "User not found" });
-
-// //     // Text change + duplicate guard
-// //     if (
-// //       typeof scenario_text === "string" &&
-// //       scenario_text !== scenario.scenario_text
-// //     ) {
-// //       const newKey = normalizeKey(scenario_text);
-// //       const dupe = await Scenario.findOne({
-// //         project: scenario.project._id,
-// //         scenario_key: newKey,
-// //         _id: { $ne: scenario._id },
-// //       });
-// //       if (dupe)
-// //         return res.status(409).json({
-// //           message: "Another scenario with similar text already exists.",
-// //         });
-
-// //       await new Change({
-// //         scenario: scenario._id,
-// //         previous_text: scenario.scenario_text,
-// //         user: actorId,
-// //         time: Date.now(),
-// //       }).save();
-
-// //       scenario.scenario_text = scenario_text;
-// //       scenario.scenario_key = newKey;
-// //     }
-
-// //     // Modules replacement if any provided
-// //     const wantsModuleUpdate =
-// //       moduleId ||
-// //       module_name ||
-// //       (Array.isArray(moduleIds) && moduleIds.length) ||
-// //       (Array.isArray(module_names) && module_names.length);
-
-// //     if (wantsModuleUpdate) {
-// //       const ids = [];
-
-// //       if (moduleId) {
-// //         if (!mongoose.Types.ObjectId.isValid(moduleId))
-// //           return res.status(400).json({ message: "Invalid moduleId" });
-// //         const md = await Module.findOne({
-// //           _id: moduleId,
-// //           project: scenario.project._id,
-// //         });
-// //         if (!md)
-// //           return res
-// //             .status(404)
-// //             .json({ message: "Module not found for this project" });
-// //         ids.push(md._id);
-// //       }
-
-// //       for (const mid of moduleIds || []) {
-// //         if (!mongoose.Types.ObjectId.isValid(mid))
-// //           return res
-// //             .status(400)
-// //             .json({ message: "Invalid module id in moduleIds" });
-// //         const md = await Module.findOne({
-// //           _id: mid,
-// //           project: scenario.project._id,
-// //         });
-// //         if (!md)
-// //           return res
-// //             .status(404)
-// //             .json({ message: `Module not found for this project: ${mid}` });
-// //         ids.push(md._id);
-// //       }
-
-// //       if (module_name) {
-// //         const md = await findOrCreateModule(
-// //           scenario.project._id,
-// //           module_name,
-// //           actorId
-// //         );
-// //         ids.push(md._id);
-// //       }
-
-// //       for (const name of module_names || []) {
-// //         const md = await findOrCreateModule(
-// //           scenario.project._id,
-// //           name,
-// //           actorId
-// //         );
-// //         ids.push(md._id);
-// //       }
-
-// //       const uniqueResolved = [...new Set(ids.map(String))].map(
-// //         (id) => new mongoose.Types.ObjectId(id)
-// //       );
-// //       scenario.modules = uniqueResolved;
-// //       scenario.module = uniqueResolved[0] || undefined; // 🔑 keep primary in sync
-// //     }
-
-// //     scenario.updatedBy = { user: actorId, updateTime: Date.now() };
-// //     await scenario.save();
-
-// //     const populated = await Scenario.findById(scenario._id)
-// //       .populate("module", "name")
-// //       .populate("modules", "name")
-// //       .lean();
-
-// //     return res.json({
-// //       message: "Scenario updated successfully",
-// //       scenario: withHydratedModules(populated),
-// //     });
-// //   } catch (error) {
-// //     console.error("Error updating scenario:", error);
-// //     return res
-// //       .status(500)
-// //       .json({ message: "Error updating scenario", error: error.message });
-// //   }
-// // };
-
-// // /* ========================= LIST / HISTORY ============================ */
-
-// // // GET /single-project/:id/view-all-scenarios
-// // const listScenariosByProject = async (req, res) => {
-// //   try {
-// //     const { id } = req.params;
-// //     if (!mongoose.Types.ObjectId.isValid(id))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-
-// //     if (!(await Project.exists({ _id: id })))
-// //       return res.status(404).json({ message: "Project not found" });
-
-// //     const scenarios = await Scenario.find({ project: id })
-// //       .populate("createdBy", "name")
-// //       .populate("project", "project_name")
-// //       .populate("testCases", "title description")
-// //       .populate("module", "name") // legacy
-// //       .populate("modules", "name") // new
-// //       .lean();
-
-// //     return res.json(hydrateMany(scenarios));
-// //   } catch (error) {
-// //     console.error("Error fetching scenarios:", error.message);
-// //     return res.status(500).json({ message: "Server error: " + error.message });
-// //   }
-// // };
-
-// // // GET /single-project/:projectId/scenario-history/:scenarioId
-// // const getScenarioHistory = async (req, res) => {
-// //   const { scenarioId } = req.params;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(scenarioId))
-// //       return res.status(400).json({ message: "Invalid scenario ID" });
-
-// //     const scenario = await Scenario.findById(scenarioId)
-// //       .populate("createdBy project")
-// //       .populate("module", "name")
-// //       .populate("modules", "name")
-// //       .lean();
-// //     if (!scenario)
-// //       return res.status(404).json({ message: "Scenario not found" });
-
-// //     const changes = await Change.find({ scenario: scenarioId })
-// //       .populate("user")
-// //       .sort({ time: -1 });
-
-// //     return res.json({ scenario: withHydratedModules(scenario), changes });
-// //   } catch (error) {
-// //     console.error("Error fetching scenario details:", error);
-// //     return res
-// //       .status(500)
-// //       .json({ message: "Error fetching scenario details", error });
-// //   }
-// // };
-
-// // // GET /single-project/scenario/:scenarioId/scenario-number
-// // const getScenarioNumber = async (req, res) => {
-// //   const { scenarioId } = req.params;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(scenarioId))
-// //       return res.status(400).json({ message: "Invalid scenario ID" });
-
-// //     const scenario = await Scenario.findById(scenarioId);
-// //     if (!scenario)
-// //       return res.status(404).json({ message: "Scenario not found" });
-
-// //     return res.json({ scenarioNumber: scenario.scenario_number });
-// //   } catch (error) {
-// //     console.error("Error fetching scenario number:", error);
-// //     return res
-// //       .status(500)
-// //       .json({ message: "Error fetching scenario number", error });
-// //   }
-// // };
-
-// // // GET /projects/:projectId/scenarios  (simple)
-// // const getScenariosSimple = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   const { moduleId } = req.query;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-
-// //     if (!(await Project.exists({ _id: projectId })))
-// //       return res.status(404).json({ message: "Project not found" });
-
-// //     const filter = { project: projectId };
-// //     if (moduleId) {
-// //       if (!mongoose.Types.ObjectId.isValid(moduleId))
-// //         return res.status(400).json({ message: "Invalid moduleId" });
-// //       // match either legacy single or new multi
-// //       filter.$or = [
-// //         { module: moduleId },
-// //         { modules: { $in: [new mongoose.Types.ObjectId(moduleId)] } },
-// //       ];
-// //     }
-
-// //     const scenarios = await Scenario.find(filter, {
-// //       scenario_text: 1,
-// //       scenario_number: 1,
-// //       module: 1,
-// //       modules: 1,
-// //     })
-// //       .sort({ scenario_number: 1 })
-// //       .populate("module", "name")
-// //       .populate("modules", "name")
-// //       .lean();
-
-// //     const hydrated = hydrateMany(scenarios).map((s) => ({
-// //       _id: s._id,
-// //       scenario_number: s.scenario_number,
-// //       scenario_text: s.scenario_text,
-// //       // Keep legacy single for old UIs + full array for new UIs
-// //       module: s.module
-// //         ? { _id: s.module._id, name: s.module.name }
-// //         : s.modules?.[0] || null,
-// //       modules: (s.modules || []).map((m) => ({ _id: m._id, name: m.name })),
-// //     }));
-
-// //     return res.json(hydrated);
-// //   } catch (error) {
-// //     console.error("Error fetching scenarios:", error);
-// //     return res.status(500).json({ message: "Error fetching scenarios" });
-// //   }
-// // };
-
-// // /* ============================ MODULE APIS ============================ */
-
-// // // GET /single-projects/:projectId/modules
-// // const listModulesByProject = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-// //     const mods = await Module.find({ project: projectId }).sort({ name: 1 });
-// //     return res.json(mods);
-// //   } catch (err) {
-// //     console.error("Error listing modules:", err);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // // POST /single-projects/:projectId/modules
-// // const createOrGetModule = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   const { name } = req.body;
-// //   try {
-// //     if (!name || !name.trim())
-// //       return res.status(400).json({ message: "Module name is required" });
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-
-// //     const createdBy = req.user?.id || req.body.createdBy;
-// //     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
-// //       return res.status(401).json({ message: "Authentication required" });
-
-// //     const mod = await findOrCreateModule(projectId, name, createdBy);
-// //     return res.status(201).json(mod);
-// //   } catch (err) {
-// //     console.error("Error creating module:", err);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // /* ========================== BULK OPERATIONS ========================== */
-
-// // // POST /single-projects/:projectId/scenarios/transfer
-// // // body: { scenarioIds: [..], toModuleId?, toModuleName? }
-// // // Adds destination to modules[] and DOES NOT clear legacy `module`.
-// // // Primary module remains unchanged here.
-// // const transferScenarios = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   const { scenarioIds = [], toModuleId, toModuleName } = req.body;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-// //     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
-// //       return res.status(400).json({ message: "scenarioIds is required" });
-
-// //     let targetModule;
-// //     if (toModuleId) {
-// //       if (!mongoose.Types.ObjectId.isValid(toModuleId))
-// //         return res.status(400).json({ message: "Invalid toModuleId" });
-// //       targetModule = await Module.findOne({
-// //         _id: toModuleId,
-// //         project: projectId,
-// //       });
-// //       if (!targetModule)
-// //         return res
-// //           .status(404)
-// //           .json({ message: "Destination module not found" });
-// //     } else if (toModuleName) {
-// //       const actorId = req.user?.id || null;
-// //       targetModule = await findOrCreateModule(
-// //         projectId,
-// //         toModuleName,
-// //         actorId || undefined
-// //       );
-// //     } else {
-// //       return res
-// //         .status(400)
-// //         .json({ message: "Provide toModuleId or toModuleName" });
-// //     }
-
-// //     const validIds = scenarioIds.filter((id) =>
-// //       mongoose.Types.ObjectId.isValid(id)
-// //     );
-// //     const { modifiedCount } = await Scenario.updateMany(
-// //       { _id: { $in: validIds }, project: projectId },
-// //       {
-// //         $addToSet: { modules: targetModule._id }, // add (do not replace)
-// //         $set: {
-// //           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
-// //         },
-// //       }
-// //     );
-
-// //     return res.json({
-// //       message: "Scenarios transferred (added to module)",
-// //       modifiedCount,
-// //       to: { _id: targetModule._id, name: targetModule.name },
-// //     });
-// //   } catch (error) {
-// //     console.error("Error transferring scenarios:", error);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // // POST /single-projects/:projectId/scenarios/detach
-// // // body: { scenarioIds: [..] } -> clear modules[] and legacy module (fully unassigned)
-// // const detachScenariosToUnassigned = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   const { scenarioIds = [] } = req.body;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-// //     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
-// //       return res.status(400).json({ message: "scenarioIds is required" });
-
-// //     const { modifiedCount } = await Scenario.updateMany(
-// //       {
-// //         _id: {
-// //           $in: scenarioIds.filter((id) => mongoose.Types.ObjectId.isValid(id)),
-// //         },
-// //         project: projectId,
-// //       },
-// //       {
-// //         $set: {
-// //           modules: [],
-// //           module: undefined, // 🔑 also clear legacy primary when explicitly detaching
-// //           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
-// //         },
-// //       }
-// //     );
-
-// //     return res.json({
-// //       message: "Scenarios detached (unassigned)",
-// //       modifiedCount,
-// //     });
-// //   } catch (error) {
-// //     console.error("Error detaching scenarios:", error);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // // GET /single-projects/:projectId/modules-with-counts
-// // const listModulesWithCounts = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-
-// //     const mods = await Module.find({ project: projectId }, { name: 1 })
-// //       .sort({ name: 1 })
-// //       .lean();
-
-// //     // Count scenarios by either legacy single OR multi
-// //     const countsAgg = await Scenario.aggregate([
-// //       { $match: { project: new mongoose.Types.ObjectId(projectId) } },
-// //       {
-// //         $facet: {
-// //           legacy: [
-// //             { $match: { module: { $ne: null } } },
-// //             { $group: { _id: "$module", count: { $sum: 1 } } },
-// //           ],
-// //           multi: [
-// //             {
-// //               $unwind: { path: "$modules", preserveNullAndEmptyArrays: false },
-// //             },
-// //             { $group: { _id: "$modules", count: { $sum: 1 } } },
-// //           ],
-// //         },
-// //       },
-// //       {
-// //         $project: {
-// //           combined: { $setUnion: ["$legacy", "$multi"] },
-// //         },
-// //       },
-// //       { $unwind: "$combined" },
-// //       { $replaceRoot: { newRoot: "$combined" } },
-// //       {
-// //         $group: {
-// //           _id: "$_id",
-// //           count: { $sum: "$count" },
-// //         },
-// //       },
-// //     ]);
-
-// //     const countMap = new Map(
-// //       countsAgg.map((c) => [String(c._id || ""), c.count])
-// //     );
-// //     const payload = mods.map((m) => ({
-// //       _id: m._id,
-// //       name: m.name,
-// //       count: countMap.get(String(m._id)) || 0,
-// //     }));
-
-// //     return res.json(payload);
-// //   } catch (err) {
-// //     console.error("Error listing modules with counts:", err);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // const searchScenarios = async (req, res) => {
-// //   const { projectId } = req.params;
-// //   const q = String(req.query.q || "").trim();
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(projectId))
-// //       return res.status(400).json({ message: "Invalid project ID" });
-
-// //     if (!q) return res.json([]);
-
-// //     // simple text search on scenario_text (case-insensitive)
-// //     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
-
-// //     const rows = await Scenario.find(
-// //       { project: projectId, scenario_text: rx },
-// //       { scenario_text: 1, modules: 1 } // keep it light
-// //     )
-// //       .limit(15)
-// //       .populate("modules", "name")
-// //       .lean();
-
-// //     res.json(rows.map(withHydratedModules));
-// //   } catch (err) {
-// //     console.error("searchScenarios error:", err);
-// //     res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // // DELETE /single-project/scenario/:scenarioId
-// // const deleteScenario = async (req, res) => {
-// //   const { scenarioId } = req.params;
-
-// //   try {
-// //     if (!mongoose.Types.ObjectId.isValid(scenarioId))
-// //       return res.status(400).json({ message: "Invalid scenario ID" });
-
-// //     const doc = await Scenario.findById(scenarioId);
-// //     if (!doc) return res.status(404).json({ message: "Scenario not found" });
-
-// //     // remove from project's array (best-effort)
-// //     await Project.updateOne(
-// //       { _id: doc.project },
-// //       { $pull: { scenarios: doc._id } }
-// //     );
-
-// //     await Change.deleteMany({ scenario: doc._id });
-// //     await Scenario.deleteOne({ _id: doc._id });
-
-// //     return res.json({ message: "Scenario deleted", _id: scenarioId });
-// //   } catch (err) {
-// //     console.error("deleteScenario error:", err);
-// //     return res.status(500).json({ message: "Server error" });
-// //   }
-// // };
-
-// // module.exports = {
-// //   addScenario,
-// //   updateScenario,
-// //   listScenariosByProject,
-// //   getScenarioHistory,
-// //   deleteScenario,
-// //   getScenarioNumber,
-// //   getScenariosSimple,
-// //   listModulesByProject,
-// //   createOrGetModule,
-// //   searchScenarios, // unchanged above (uses populate module/modules)
-// //   transferScenarios,
-// //   detachScenariosToUnassigned,
-// //   listModulesWithCounts,
-// // };
-
-// // controllers/ScenarioController.js
 // const mongoose = require("mongoose");
 // const Scenario = require("../models/ScenarioModel");
 // const Change = require("../models/ChangeModel");
@@ -756,17 +6,20 @@
 // const Module = require("../models/ModuleModel");
 
 // /* -------------------------- utils & helpers -------------------------- */
+
 // const generateScenarioNumber = (projectName) => {
 //   const initials = projectName
 //     .split(" ")
 //     .map((w) => w[0]?.toUpperCase() ?? "")
 //     .join("");
+
 //   const randomNum = Math.floor(1000 + Math.random() * 9000);
 //   return `${initials}-${randomNum}`;
 // };
 
 // const safeGenerateScenarioNumber = async (projectId, projectName) => {
 //   let candidate = generateScenarioNumber(projectName);
+
 //   let exists = await Scenario.exists({
 //     project: projectId,
 //     scenario_number: candidate,
@@ -786,7 +39,6 @@
 //     .join("")}-${Date.now().toString().slice(-8)}`;
 // };
 
-// // ✅ scenario-key normalization (unchanged)
 // const normalizeKey = (text = "") =>
 //   text
 //     .toLowerCase()
@@ -797,13 +49,26 @@
 //     .substring(0, 200);
 
 // /* -------------------------------------------------------------------- */
-// /* ✅ NEW: module name normalization must match ModuleModel rules        */
-// /* - only letters + spaces allowed                                      */
-// /* - no numbers, no special chars                                       */
-// /* - trim + collapse spaces                                             */
-// /* - store as CamelCase: "home page" -> "HomePage"                      */
-// /* - key = lowercase(camelcase)                                         */
+// /* Module name normalization - PascalCase safe                          */
 // /* -------------------------------------------------------------------- */
+
+// function toPascalCase(raw = "") {
+//   const cleaned = String(raw)
+//     .trim()
+//     .replace(/([a-z])([A-Z])/g, "$1 $2")
+//     .replace(/[_-]+/g, " ")
+//     .replace(/\s+/g, " ");
+
+//   return cleaned
+//     .split(" ")
+//     .filter(Boolean)
+//     .map((word) => {
+//       const lower = word.toLowerCase();
+//       return lower.charAt(0).toUpperCase() + lower.slice(1);
+//     })
+//     .join("");
+// }
+
 // function normalizeModuleName(raw) {
 //   const input = String(raw ?? "");
 //   const trimmed = input.trim();
@@ -820,17 +85,15 @@
 //     return { error: "Module name cannot contain numbers." };
 //   }
 
-//   // allow only letters and spaces
-//   if (/[^A-Za-z\s]/.test(trimmed)) {
+//   if (/[^A-Za-z\s_-]/.test(trimmed)) {
 //     return { error: "Module name cannot contain special characters." };
 //   }
 
-//   const collapsed = trimmed.replace(/\s+/g, " ");
-//   const words = collapsed.split(" ").filter(Boolean);
+//   const displayName = toPascalCase(trimmed);
 
-//   const displayName = words
-//     .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
-//     .join("");
+//   if (!displayName) {
+//     return { error: "Module name cannot be empty." };
+//   }
 
 //   if (displayName.length > 100) {
 //     return { error: "Module name cannot be more than 100 characters." };
@@ -840,23 +103,22 @@
 //   return { displayName, key };
 // }
 
-// /* ✅ Standard error mapper so you don't accidentally send 500 */
+// /* -------------------------- error helpers -------------------------- */
+
 // function mapMongooseError(err) {
-//   // Duplicate key (unique index)
 //   if (err?.code === 11000) {
 //     return { status: 409, message: "Module already exists in this project." };
 //   }
 
-//   // Validation error
 //   if (err?.name === "ValidationError") {
 //     const first =
 //       err?.errors && Object.values(err.errors)[0]
 //         ? Object.values(err.errors)[0].message
 //         : "Validation failed.";
+
 //     return { status: 400, message: first };
 //   }
 
-//   // Cast errors
 //   if (err?.name === "CastError") {
 //     return { status: 400, message: "Invalid input." };
 //   }
@@ -865,26 +127,19 @@
 // }
 
 // /* ------------------------- Module helper ------------------------- */
-// /**
-//  * ✅ findOrCreateModule that:
-//  * - validates input same as ModuleModel rules
-//  * - searches by project+key
-//  * - creates using ONLY {name, project, createdBy} (model sets key/name)
-//  * - converts dup/validation into proper HTTP statuses
-//  */
+
 // const findOrCreateModule = async (projectId, name, createdBy) => {
 //   const { displayName, key, error } = normalizeModuleName(name);
+
 //   if (error) {
 //     const e = new Error(error);
 //     e.status = 400;
 //     throw e;
 //   }
 
-//   // First try find by key (fast path)
 //   const existing = await Module.findOne({ project: projectId, key });
 //   if (existing) return existing;
 
-//   // Create (let ModuleModel normalize as final source of truth)
 //   try {
 //     const created = await Module.create({
 //       name: displayName,
@@ -893,7 +148,6 @@
 //     });
 //     return created;
 //   } catch (err) {
-//     // If duplicate, fetch existing and return it (keeps previous behavior)
 //     if (err?.code === 11000) {
 //       const again = await Module.findOne({ project: projectId, key });
 //       if (again) return again;
@@ -905,28 +159,33 @@
 //       e.status = mapped.status;
 //       throw e;
 //     }
+
 //     throw err;
 //   }
 // };
 
-// const getOrCreateUnassignedModule = async (projectId, createdBy) =>
-//   findOrCreateModule(projectId, "Unassigned", createdBy);
-
 // /* ---------------------------- core helpers --------------------------- */
-// // Back-compat: given a Scenario doc (lean or not), ensure it has modules[] at read time.
+
 // const withHydratedModules = (s) => {
 //   if (!s) return s;
+
 //   const out = { ...s };
+
 //   if ((!Array.isArray(out.modules) || out.modules.length === 0) && out.module) {
 //     out.modules = [out.module];
 //   }
+
 //   return out;
 // };
+
 // const hydrateMany = (arr) =>
 //   Array.isArray(arr) ? arr.map(withHydratedModules) : [];
 
+// const uniqueObjectIds = (values = []) =>
+//   [...new Set(values.map(String))].map((id) => new mongoose.Types.ObjectId(id));
+
 // /* ============================== CREATE =============================== */
-// // POST /single-projects/:id/add-scenario
+
 // const addScenario = async (req, res) => {
 //   try {
 //     const projectId = req.params.id;
@@ -938,38 +197,50 @@
 //       module_names = [],
 //     } = req.body;
 
-//     if (!scenario_text)
+//     if (!scenario_text) {
 //       return res.status(400).json({ error: "Scenario text is required" });
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ error: "Invalid project ID" });
+//     }
 
 //     const project = await Project.findById(projectId);
-//     if (!project) return res.status(404).json({ error: "Project not found" });
+//     if (!project) {
+//       return res.status(404).json({ error: "Project not found" });
+//     }
 
 //     const createdBy = req.user?.id || req.body.createdBy;
-//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
+//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
 //       return res.status(401).json({ error: "Authentication required" });
+//     }
 
-//     if (!(await User.exists({ _id: createdBy })))
+//     if (!(await User.exists({ _id: createdBy }))) {
 //       return res.status(404).json({ error: "Creator user not found" });
+//     }
 
 //     const scenario_key = normalizeKey(scenario_text);
-//     if (await Scenario.exists({ project: projectId, scenario_key }))
+
+//     if (await Scenario.exists({ project: projectId, scenario_key })) {
 //       return res
 //         .status(409)
 //         .json({ error: "A scenario with similar text already exists." });
+//     }
 
 //     const resolvedIds = [];
 
 //     if (moduleId) {
-//       if (!mongoose.Types.ObjectId.isValid(moduleId))
+//       if (!mongoose.Types.ObjectId.isValid(moduleId)) {
 //         return res.status(400).json({ error: "Invalid moduleId" });
+//       }
 
 //       const md = await Module.findOne({ _id: moduleId, project: projectId });
-//       if (!md)
+//       if (!md) {
 //         return res
 //           .status(404)
 //           .json({ error: "Module not found for this project" });
+//       }
+
 //       resolvedIds.push(md._id);
 //     }
 
@@ -979,34 +250,37 @@
 //     }
 
 //     for (const mid of moduleIds || []) {
-//       if (!mongoose.Types.ObjectId.isValid(mid))
+//       if (!mongoose.Types.ObjectId.isValid(mid)) {
 //         return res
 //           .status(400)
 //           .json({ error: "Invalid module id in moduleIds" });
+//       }
 
 //       const md = await Module.findOne({ _id: mid, project: projectId });
-//       if (!md)
+//       if (!md) {
 //         return res
 //           .status(404)
 //           .json({ error: `Module not found for this project: ${mid}` });
+//       }
+
 //       resolvedIds.push(md._id);
 //     }
 
 //     for (const name of module_names || []) {
 //       if (!String(name || "").trim()) continue;
+
 //       const md = await findOrCreateModule(projectId, name, createdBy);
 //       resolvedIds.push(md._id);
 //     }
 
-//     const uniqueResolved = [...new Set(resolvedIds.map(String))].map(
-//       (id) => new mongoose.Types.ObjectId(id),
-//     );
+//     const uniqueResolved = uniqueObjectIds(resolvedIds);
 
-//     if (uniqueResolved.length === 0)
+//     if (uniqueResolved.length === 0) {
 //       return res.status(400).json({
 //         error:
 //           "Provide at least one module (moduleId/module_name/moduleIds/module_names).",
 //       });
+//     }
 
 //     const scenario_number = await safeGenerateScenarioNumber(
 //       projectId,
@@ -1026,6 +300,7 @@
 //     });
 
 //     await scenario.save();
+
 //     await Project.findByIdAndUpdate(projectId, {
 //       $push: { scenarios: scenario._id },
 //     });
@@ -1040,14 +315,14 @@
 //       scenario: withHydratedModules(populated),
 //     });
 //   } catch (error) {
-//     // ✅ return correct status for module validation/dup too
 //     if (error?.status) {
 //       return res.status(error.status).json({ error: error.message });
 //     }
 
 //     const mapped = mapMongooseError(error);
-//     if (mapped)
+//     if (mapped) {
 //       return res.status(mapped.status).json({ error: mapped.message });
+//     }
 
 //     console.error("Error adding scenario:", error);
 //     return res.status(500).json({ error: "Server error" });
@@ -1055,6 +330,7 @@
 // };
 
 // /* ============================== UPDATE =============================== */
+
 // const updateScenario = async (req, res) => {
 //   const {
 //     scenario_text,
@@ -1064,36 +340,45 @@
 //     moduleIds = [],
 //     module_names = [],
 //   } = req.body;
+
 //   const { scenarioId } = req.params;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId))
+//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
 //       return res.status(400).json({ message: "Invalid scenario ID" });
+//     }
 
 //     const scenario = await Scenario.findById(scenarioId).populate("project");
-//     if (!scenario)
+//     if (!scenario) {
 //       return res.status(404).json({ message: "Scenario not found" });
+//     }
 
 //     const actorId = req.user?.id || userId;
-//     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId))
+//     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
 //       return res.status(400).json({ message: "Invalid user ID" });
-//     if (!(await User.exists({ _id: actorId })))
+//     }
+
+//     if (!(await User.exists({ _id: actorId }))) {
 //       return res.status(404).json({ message: "User not found" });
+//     }
 
 //     if (
 //       typeof scenario_text === "string" &&
 //       scenario_text !== scenario.scenario_text
 //     ) {
 //       const newKey = normalizeKey(scenario_text);
+
 //       const dupe = await Scenario.findOne({
 //         project: scenario.project._id,
 //         scenario_key: newKey,
 //         _id: { $ne: scenario._id },
 //       });
-//       if (dupe)
+
+//       if (dupe) {
 //         return res.status(409).json({
 //           message: "Another scenario with similar text already exists.",
 //         });
+//       }
 
 //       await new Change({
 //         scenario: scenario._id,
@@ -1116,34 +401,42 @@
 //       const ids = [];
 
 //       if (moduleId) {
-//         if (!mongoose.Types.ObjectId.isValid(moduleId))
+//         if (!mongoose.Types.ObjectId.isValid(moduleId)) {
 //           return res.status(400).json({ message: "Invalid moduleId" });
+//         }
 
 //         const md = await Module.findOne({
 //           _id: moduleId,
 //           project: scenario.project._id,
 //         });
-//         if (!md)
+
+//         if (!md) {
 //           return res
 //             .status(404)
 //             .json({ message: "Module not found for this project" });
+//         }
+
 //         ids.push(md._id);
 //       }
 
 //       for (const mid of moduleIds || []) {
-//         if (!mongoose.Types.ObjectId.isValid(mid))
+//         if (!mongoose.Types.ObjectId.isValid(mid)) {
 //           return res
 //             .status(400)
 //             .json({ message: "Invalid module id in moduleIds" });
+//         }
 
 //         const md = await Module.findOne({
 //           _id: mid,
 //           project: scenario.project._id,
 //         });
-//         if (!md)
+
+//         if (!md) {
 //           return res
 //             .status(404)
 //             .json({ message: `Module not found for this project: ${mid}` });
+//         }
+
 //         ids.push(md._id);
 //       }
 
@@ -1157,6 +450,8 @@
 //       }
 
 //       for (const name of module_names || []) {
+//         if (!String(name || "").trim()) continue;
+
 //         const md = await findOrCreateModule(
 //           scenario.project._id,
 //           name,
@@ -1165,14 +460,17 @@
 //         ids.push(md._id);
 //       }
 
-//       const uniqueResolved = [...new Set(ids.map(String))].map(
-//         (id) => new mongoose.Types.ObjectId(id),
-//       );
+//       const uniqueResolved = uniqueObjectIds(ids);
+
 //       scenario.modules = uniqueResolved;
 //       scenario.module = uniqueResolved[0] || undefined;
 //     }
 
-//     scenario.updatedBy = { user: actorId, updateTime: Date.now() };
+//     scenario.updatedBy = {
+//       user: actorId,
+//       updateTime: Date.now(),
+//     };
+
 //     await scenario.save();
 
 //     const populated = await Scenario.findById(scenario._id)
@@ -1190,8 +488,9 @@
 //     }
 
 //     const mapped = mapMongooseError(error);
-//     if (mapped)
+//     if (mapped) {
 //       return res.status(mapped.status).json({ message: mapped.message });
+//     }
 
 //     console.error("Error updating scenario:", error);
 //     return res
@@ -1205,11 +504,14 @@
 // const listScenariosByProject = async (req, res) => {
 //   try {
 //     const { id } = req.params;
-//     if (!mongoose.Types.ObjectId.isValid(id))
-//       return res.status(400).json({ message: "Invalid project ID" });
 
-//     if (!(await Project.exists({ _id: id })))
+//     if (!mongoose.Types.ObjectId.isValid(id)) {
+//       return res.status(400).json({ message: "Invalid project ID" });
+//     }
+
+//     if (!(await Project.exists({ _id: id }))) {
 //       return res.status(404).json({ message: "Project not found" });
+//     }
 
 //     const scenarios = await Scenario.find({ project: id })
 //       .populate("createdBy", "name")
@@ -1230,22 +532,28 @@
 //   const { scenarioId } = req.params;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId))
+//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
 //       return res.status(400).json({ message: "Invalid scenario ID" });
+//     }
 
 //     const scenario = await Scenario.findById(scenarioId)
 //       .populate("createdBy project")
 //       .populate("module", "name")
 //       .populate("modules", "name")
 //       .lean();
-//     if (!scenario)
+
+//     if (!scenario) {
 //       return res.status(404).json({ message: "Scenario not found" });
+//     }
 
 //     const changes = await Change.find({ scenario: scenarioId })
 //       .populate("user")
 //       .sort({ time: -1 });
 
-//     return res.json({ scenario: withHydratedModules(scenario), changes });
+//     return res.json({
+//       scenario: withHydratedModules(scenario),
+//       changes,
+//     });
 //   } catch (error) {
 //     console.error("Error fetching scenario details:", error);
 //     return res
@@ -1258,12 +566,14 @@
 //   const { scenarioId } = req.params;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId))
+//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
 //       return res.status(400).json({ message: "Invalid scenario ID" });
+//     }
 
 //     const scenario = await Scenario.findById(scenarioId);
-//     if (!scenario)
+//     if (!scenario) {
 //       return res.status(404).json({ message: "Scenario not found" });
+//     }
 
 //     return res.json({ scenarioNumber: scenario.scenario_number });
 //   } catch (error) {
@@ -1279,16 +589,20 @@
 //   const { moduleId } = req.query;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ message: "Invalid project ID" });
+//     }
 
-//     if (!(await Project.exists({ _id: projectId })))
+//     if (!(await Project.exists({ _id: projectId }))) {
 //       return res.status(404).json({ message: "Project not found" });
+//     }
 
 //     const filter = { project: projectId };
+
 //     if (moduleId) {
-//       if (!mongoose.Types.ObjectId.isValid(moduleId))
+//       if (!mongoose.Types.ObjectId.isValid(moduleId)) {
 //         return res.status(400).json({ message: "Invalid moduleId" });
+//       }
 
 //       filter.$or = [
 //         { module: moduleId },
@@ -1314,7 +628,10 @@
 //       module: s.module
 //         ? { _id: s.module._id, name: s.module.name }
 //         : s.modules?.[0] || null,
-//       modules: (s.modules || []).map((m) => ({ _id: m._id, name: m.name })),
+//       modules: (s.modules || []).map((m) => ({
+//         _id: m._id,
+//         name: m.name,
+//       })),
 //     }));
 
 //     return res.json(hydrated);
@@ -1328,11 +645,21 @@
 
 // const listModulesByProject = async (req, res) => {
 //   const { projectId } = req.params;
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
-//       return res.status(400).json({ message: "Invalid project ID" });
 
-//     const mods = await Module.find({ project: projectId }).sort({ name: 1 });
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
+//       return res.status(400).json({ message: "Invalid project ID" });
+//     }
+
+//     if (!(await Project.exists({ _id: projectId }))) {
+//       return res.status(404).json({ message: "Project not found" });
+//     }
+
+//     const mods = await Module.find({
+//       project: projectId,
+//       name: { $ne: "Unassigned" },
+//     }).sort({ name: 1 });
+
 //     return res.json(mods);
 //   } catch (err) {
 //     console.error("Error listing modules:", err);
@@ -1345,14 +672,23 @@
 //   const { name } = req.body;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ message: "Invalid project ID" });
+//     }
+
+//     if (!(await Project.exists({ _id: projectId }))) {
+//       return res.status(404).json({ message: "Project not found" });
+//     }
 
 //     const createdBy = req.user?.id || req.body.createdBy;
-//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy))
+//     if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
 //       return res.status(401).json({ message: "Authentication required" });
+//     }
 
-//     // ✅ uses same strict rules + returns existing on duplicates
+//     if (!(await User.exists({ _id: createdBy }))) {
+//       return res.status(404).json({ message: "Creator user not found" });
+//     }
+
 //     const mod = await findOrCreateModule(projectId, name, createdBy);
 //     return res.status(201).json(mod);
 //   } catch (err) {
@@ -1361,11 +697,139 @@
 //     }
 
 //     const mapped = mapMongooseError(err);
-//     if (mapped)
+//     if (mapped) {
 //       return res.status(mapped.status).json({ message: mapped.message });
+//     }
 
 //     console.error("Error creating module:", err);
 //     return res.status(500).json({ message: "Server error" });
+//   }
+// };
+
+// const deleteModule = async (req, res) => {
+//   const { projectId, moduleId } = req.params;
+//   const { transferToModuleId = null, userId } = req.body || {};
+
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
+//       return res.status(400).json({ error: "Invalid project ID" });
+//     }
+
+//     if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+//       return res.status(400).json({ error: "Invalid module ID" });
+//     }
+
+//     if (!(await Project.exists({ _id: projectId }))) {
+//       return res.status(404).json({ error: "Project not found" });
+//     }
+
+//     const actorId = req.user?.id || userId;
+//     if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
+//       return res.status(401).json({ error: "Authentication required" });
+//     }
+
+//     if (!(await User.exists({ _id: actorId }))) {
+//       return res.status(404).json({ error: "User not found" });
+//     }
+
+//     const moduleDoc = await Module.findOne({
+//       _id: moduleId,
+//       project: projectId,
+//     });
+
+//     if (!moduleDoc) {
+//       return res.status(404).json({ error: "Module not found" });
+//     }
+
+//     if (moduleDoc.name === "Unassigned") {
+//       return res
+//         .status(400)
+//         .json({ error: "Unassigned module cannot be deleted." });
+//     }
+
+//     let targetModule = null;
+
+//     if (transferToModuleId) {
+//       if (!mongoose.Types.ObjectId.isValid(transferToModuleId)) {
+//         return res.status(400).json({ error: "Invalid transfer module ID" });
+//       }
+
+//       if (String(transferToModuleId) === String(moduleId)) {
+//         return res.status(400).json({
+//           error: "Transfer module cannot be the same as module being deleted.",
+//         });
+//       }
+
+//       targetModule = await Module.findOne({
+//         _id: transferToModuleId,
+//         project: projectId,
+//       });
+
+//       if (!targetModule) {
+//         return res.status(404).json({ error: "Transfer module not found" });
+//       }
+//     }
+
+//     const affectedScenarios = await Scenario.find({
+//       project: projectId,
+//       $or: [{ module: moduleDoc._id }, { modules: { $in: [moduleDoc._id] } }],
+//     });
+
+//     for (const scenario of affectedScenarios) {
+//       const currentIds = [];
+
+//       if (scenario.module) currentIds.push(String(scenario.module));
+//       if (Array.isArray(scenario.modules)) {
+//         for (const mid of scenario.modules) currentIds.push(String(mid));
+//       }
+
+//       let nextIds = [...new Set(currentIds)].filter(
+//         (id) => id !== String(moduleDoc._id),
+//       );
+
+//       if (targetModule) {
+//         nextIds.push(String(targetModule._id));
+//       }
+
+//       nextIds = [...new Set(nextIds)];
+
+//       const finalIds = nextIds.map((id) => new mongoose.Types.ObjectId(id));
+
+//       scenario.modules = finalIds;
+//       scenario.module = finalIds[0] || undefined;
+//       scenario.updatedBy = {
+//         user: actorId,
+//         updateTime: new Date(),
+//       };
+
+//       await scenario.save();
+//     }
+
+//     await Module.deleteOne({ _id: moduleDoc._id });
+
+//     return res.json({
+//       message: "Module deleted successfully.",
+//       deletedModule: {
+//         _id: moduleDoc._id,
+//         name: moduleDoc.name,
+//       },
+//       affectedScenarioCount: affectedScenarios.length,
+//       reassignedTo: targetModule
+//         ? { _id: targetModule._id, name: targetModule.name }
+//         : null,
+//     });
+//   } catch (err) {
+//     if (err?.status) {
+//       return res.status(err.status).json({ error: err.message });
+//     }
+
+//     const mapped = mapMongooseError(err);
+//     if (mapped) {
+//       return res.status(mapped.status).json({ error: mapped.message });
+//     }
+
+//     console.error("Error deleting module:", err);
+//     return res.status(500).json({ error: "Server error" });
 //   }
 // };
 
@@ -1376,31 +840,43 @@
 //   const { scenarioIds = [], toModuleId, toModuleName } = req.body;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ message: "Invalid project ID" });
-//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
+//     }
+
+//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
 //       return res.status(400).json({ message: "scenarioIds is required" });
+//     }
 
 //     let targetModule;
+
 //     if (toModuleId) {
-//       if (!mongoose.Types.ObjectId.isValid(toModuleId))
+//       if (!mongoose.Types.ObjectId.isValid(toModuleId)) {
 //         return res.status(400).json({ message: "Invalid toModuleId" });
+//       }
 
 //       targetModule = await Module.findOne({
 //         _id: toModuleId,
 //         project: projectId,
 //       });
-//       if (!targetModule)
+
+//       if (!targetModule) {
 //         return res
 //           .status(404)
 //           .json({ message: "Destination module not found" });
+//       }
 //     } else if (toModuleName) {
-//       const actorId = req.user?.id || null;
-//       targetModule = await findOrCreateModule(
-//         projectId,
-//         toModuleName,
-//         actorId || undefined,
-//       );
+//       const actorId = req.user?.id || req.body.createdBy;
+
+//       if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
+//         return res.status(401).json({ message: "Authentication required" });
+//       }
+
+//       if (!(await User.exists({ _id: actorId }))) {
+//         return res.status(404).json({ message: "User not found" });
+//       }
+
+//       targetModule = await findOrCreateModule(projectId, toModuleName, actorId);
 //     } else {
 //       return res
 //         .status(400)
@@ -1416,7 +892,10 @@
 //       {
 //         $addToSet: { modules: targetModule._id },
 //         $set: {
-//           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
+//           updatedBy: {
+//             user: req.user?.id || null,
+//             updateTime: new Date(),
+//           },
 //         },
 //       },
 //     );
@@ -1432,8 +911,9 @@
 //     }
 
 //     const mapped = mapMongooseError(error);
-//     if (mapped)
+//     if (mapped) {
 //       return res.status(mapped.status).json({ message: mapped.message });
+//     }
 
 //     console.error("Error transferring scenarios:", error);
 //     return res.status(500).json({ message: "Server error" });
@@ -1445,10 +925,13 @@
 //   const { scenarioIds = [] } = req.body;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ message: "Invalid project ID" });
-//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0)
+//     }
+
+//     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
 //       return res.status(400).json({ message: "scenarioIds is required" });
+//     }
 
 //     const { modifiedCount } = await Scenario.updateMany(
 //       {
@@ -1461,7 +944,10 @@
 //         $set: {
 //           modules: [],
 //           module: undefined,
-//           updatedBy: { user: req.user?.id || null, updateTime: new Date() },
+//           updatedBy: {
+//             user: req.user?.id || null,
+//             updateTime: new Date(),
+//           },
 //         },
 //       },
 //     );
@@ -1478,11 +964,20 @@
 
 // const listModulesWithCounts = async (req, res) => {
 //   const { projectId } = req.params;
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
-//       return res.status(400).json({ message: "Invalid project ID" });
 
-//     const mods = await Module.find({ project: projectId }, { name: 1 })
+//   try {
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
+//       return res.status(400).json({ message: "Invalid project ID" });
+//     }
+
+//     if (!(await Project.exists({ _id: projectId }))) {
+//       return res.status(404).json({ message: "Project not found" });
+//     }
+
+//     const mods = await Module.find(
+//       { project: projectId, name: { $ne: "Unassigned" } },
+//       { name: 1 },
+//     )
 //       .sort({ name: 1 })
 //       .lean();
 
@@ -1525,15 +1020,20 @@
 //   }
 // };
 
+// /* ============================== SEARCH ============================== */
+
 // const searchScenarios = async (req, res) => {
 //   const { projectId } = req.params;
 //   const q = String(req.query.q || "").trim();
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(projectId))
+//     if (!mongoose.Types.ObjectId.isValid(projectId)) {
 //       return res.status(400).json({ message: "Invalid project ID" });
+//     }
 
-//     if (!q) return res.json([]);
+//     if (!q) {
+//       return res.json([]);
+//     }
 
 //     const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
 
@@ -1545,22 +1045,27 @@
 //       .populate("modules", "name")
 //       .lean();
 
-//     res.json(rows.map(withHydratedModules));
+//     return res.json(rows.map(withHydratedModules));
 //   } catch (err) {
 //     console.error("searchScenarios error:", err);
-//     res.status(500).json({ message: "Server error" });
+//     return res.status(500).json({ message: "Server error" });
 //   }
 // };
+
+// /* ============================== DELETE ============================== */
 
 // const deleteScenario = async (req, res) => {
 //   const { scenarioId } = req.params;
 
 //   try {
-//     if (!mongoose.Types.ObjectId.isValid(scenarioId))
+//     if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
 //       return res.status(400).json({ message: "Invalid scenario ID" });
+//     }
 
 //     const doc = await Scenario.findById(scenarioId);
-//     if (!doc) return res.status(404).json({ message: "Scenario not found" });
+//     if (!doc) {
+//       return res.status(404).json({ message: "Scenario not found" });
+//     }
 
 //     await Project.updateOne(
 //       { _id: doc.project },
@@ -1587,11 +1092,16 @@
 //   getScenariosSimple,
 //   listModulesByProject,
 //   createOrGetModule,
+//   deleteModule,
 //   searchScenarios,
 //   transferScenarios,
 //   detachScenariosToUnassigned,
 //   listModulesWithCounts,
 // };
+
+// till here old code perfectly working fine.
+
+// new code with updated scenario number with module name
 const mongoose = require("mongoose");
 const Scenario = require("../models/ScenarioModel");
 const Change = require("../models/ChangeModel");
@@ -1599,20 +1109,104 @@ const Project = require("../models/ProjectModel");
 const User = require("../models/UserModel");
 const Module = require("../models/ModuleModel");
 
-/* -------------------------- utils & helpers -------------------------- */
+/* -------------------------- constants -------------------------- */
 
-const generateScenarioNumber = (projectName) => {
-  const initials = projectName
-    .split(" ")
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("");
+const MAX_SCENARIO_TEXT_LENGTH = 5000;
+const MAX_SCENARIO_KEY_LENGTH = 300;
+const MAX_MODULE_NAME_LENGTH = 100;
+const MAX_SEARCH_RESULTS = 15;
 
-  const randomNum = Math.floor(1000 + Math.random() * 9000);
-  return `${initials}-${randomNum}`;
+/* -------------------------- generic helpers -------------------------- */
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+
+const toObjectId = (value) => new mongoose.Types.ObjectId(value);
+
+const safeTrim = (value = "") => String(value ?? "").trim();
+
+const ensureArray = (value) => (Array.isArray(value) ? value : []);
+
+const dedupeStrings = (values = []) => [...new Set(values.map(String))];
+
+const uniqueObjectIds = (values = []) =>
+  dedupeStrings(values).map((id) => toObjectId(id));
+
+const escapeRegex = (value = "") =>
+  String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/* -------------------------- text normalization helpers -------------------------- */
+
+const normalizeUnicodeText = (value = "") => {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+    .replace(/[\u2013\u2014\u2015]/g, "-");
 };
 
-const safeGenerateScenarioNumber = async (projectId, projectName) => {
-  let candidate = generateScenarioNumber(projectName);
+const splitIntoWords = (value = "") => {
+  return normalizeUnicodeText(value)
+    .trim()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .filter(Boolean);
+};
+
+const getInitialsFromWords = (value = "") => {
+  return splitIntoWords(value)
+    .map((word) => word[0]?.toUpperCase() ?? "")
+    .join("");
+};
+
+const normalizeScenarioText = (text = "") => {
+  return normalizeUnicodeText(text).replace(/\s+/g, " ").trim();
+};
+
+const normalizeKey = (text = "") => {
+  return normalizeUnicodeText(text)
+    .toLowerCase()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_/\\-]+/g, " ")
+    .replace(/["'`.,!?()[\]{}:;<>@#$%^&*+=|~]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\s/g, "")
+    .substring(0, MAX_SCENARIO_KEY_LENGTH);
+};
+
+const buildSearchableScenarioText = (text = "") => {
+  return normalizeUnicodeText(text)
+    .toLowerCase()
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/[_/\\-]+/g, " ")
+    .replace(/["'`.,!?()[\]{}:;<>@#$%^&*+=|~]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+/* -------------------------- scenario number helpers -------------------------- */
+
+const generateScenarioNumber = (projectName, moduleName) => {
+  const projectInitials = getInitialsFromWords(projectName);
+  const moduleInitials = getInitialsFromWords(moduleName);
+  const randomNum = Math.floor(1000 + Math.random() * 9000);
+
+  if (moduleInitials) {
+    return `${projectInitials}-${moduleInitials}-${randomNum}`;
+  }
+
+  return `${projectInitials}-${randomNum}`;
+};
+
+const safeGenerateScenarioNumber = async (
+  projectId,
+  projectName,
+  moduleName,
+) => {
+  let candidate = generateScenarioNumber(projectName, moduleName);
 
   let exists = await Scenario.exists({
     project: projectId,
@@ -1620,34 +1214,52 @@ const safeGenerateScenarioNumber = async (projectId, projectName) => {
   });
   if (!exists) return candidate;
 
-  candidate = generateScenarioNumber(projectName);
+  candidate = generateScenarioNumber(projectName, moduleName);
   exists = await Scenario.exists({
     project: projectId,
     scenario_number: candidate,
   });
   if (!exists) return candidate;
 
-  return `${projectName
-    .split(" ")
-    .map((w) => w[0]?.toUpperCase() ?? "")
-    .join("")}-${Date.now().toString().slice(-8)}`;
+  const projectInitials = getInitialsFromWords(projectName);
+  const moduleInitials = getInitialsFromWords(moduleName);
+  const suffix = Date.now().toString().slice(-8);
+
+  if (moduleInitials) {
+    return `${projectInitials}-${moduleInitials}-${suffix}`;
+  }
+
+  return `${projectInitials}-${suffix}`;
 };
 
-const normalizeKey = (text = "") =>
-  text
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .replace(/\s+/g, "")
-    .substring(0, 200);
+/* -------------------------- validation helpers -------------------------- */
 
-/* -------------------------------------------------------------------- */
-/* Module name normalization - PascalCase safe                          */
-/* -------------------------------------------------------------------- */
+const validateScenarioText = (raw) => {
+  const cleaned = normalizeScenarioText(raw);
+
+  if (!cleaned) {
+    return { ok: false, message: "Scenario text is required." };
+  }
+
+  if (!/[A-Za-z]/.test(cleaned)) {
+    return {
+      ok: false,
+      message: "Scenario text must contain at least one letter (A–Z).",
+    };
+  }
+
+  if (cleaned.length > MAX_SCENARIO_TEXT_LENGTH) {
+    return {
+      ok: false,
+      message: `Scenario text cannot exceed ${MAX_SCENARIO_TEXT_LENGTH} characters.`,
+    };
+  }
+
+  return { ok: true, cleaned };
+};
 
 function toPascalCase(raw = "") {
-  const cleaned = String(raw)
+  const cleaned = normalizeUnicodeText(raw)
     .trim()
     .replace(/([a-z])([A-Z])/g, "$1 $2")
     .replace(/[_-]+/g, " ")
@@ -1664,7 +1276,7 @@ function toPascalCase(raw = "") {
 }
 
 function normalizeModuleName(raw) {
-  const input = String(raw ?? "");
+  const input = normalizeUnicodeText(raw);
   const trimmed = input.trim();
 
   if (!trimmed) {
@@ -1689,8 +1301,10 @@ function normalizeModuleName(raw) {
     return { error: "Module name cannot be empty." };
   }
 
-  if (displayName.length > 100) {
-    return { error: "Module name cannot be more than 100 characters." };
+  if (displayName.length > MAX_MODULE_NAME_LENGTH) {
+    return {
+      error: `Module name cannot be more than ${MAX_MODULE_NAME_LENGTH} characters.`,
+    };
   }
 
   const key = displayName.toLowerCase().slice(0, 200);
@@ -1701,7 +1315,34 @@ function normalizeModuleName(raw) {
 
 function mapMongooseError(err) {
   if (err?.code === 11000) {
-    return { status: 409, message: "Module already exists in this project." };
+    const keyPattern = err?.keyPattern || {};
+    const keys = Object.keys(keyPattern);
+
+    if (keys.includes("project") && keys.includes("scenario_key")) {
+      return {
+        status: 409,
+        message: "A scenario with similar text already exists in this project.",
+      };
+    }
+
+    if (keys.includes("project") && keys.includes("scenario_number")) {
+      return {
+        status: 409,
+        message: "Generated scenario number already exists. Please retry.",
+      };
+    }
+
+    if (keys.includes("project") && keys.includes("key")) {
+      return {
+        status: 409,
+        message: "Module already exists in this project.",
+      };
+    }
+
+    return {
+      status: 409,
+      message: "Duplicate record already exists.",
+    };
   }
 
   if (err?.name === "ValidationError") {
@@ -1720,6 +1361,89 @@ function mapMongooseError(err) {
   return null;
 }
 
+const sendHandledError = (res, error, fallbackMessage = "Server error") => {
+  if (error?.status) {
+    return res.status(error.status).json({
+      error: error.message,
+      message: error.message,
+    });
+  }
+
+  const mapped = mapMongooseError(error);
+  if (mapped) {
+    return res.status(mapped.status).json({
+      error: mapped.message,
+      message: mapped.message,
+    });
+  }
+
+  console.error(fallbackMessage + ":", error);
+  return res.status(500).json({
+    error: fallbackMessage,
+    message: fallbackMessage,
+  });
+};
+
+/* ------------------------- auth/resource helpers ------------------------- */
+
+const ensureValidProject = async (projectId) => {
+  if (!isValidObjectId(projectId)) {
+    const e = new Error("Invalid project ID");
+    e.status = 400;
+    throw e;
+  }
+
+  const project = await Project.findById(projectId);
+  if (!project) {
+    const e = new Error("Project not found");
+    e.status = 404;
+    throw e;
+  }
+
+  return project;
+};
+
+const ensureValidUser = async (
+  userId,
+  authRequiredMessage = "Authentication required",
+) => {
+  if (!userId || !isValidObjectId(userId)) {
+    const e = new Error(authRequiredMessage);
+    e.status = 401;
+    throw e;
+  }
+
+  const exists = await User.exists({ _id: userId });
+  if (!exists) {
+    const e = new Error("User not found");
+    e.status = 404;
+    throw e;
+  }
+
+  return userId;
+};
+
+const ensureModuleBelongsToProject = async (
+  moduleId,
+  projectId,
+  customMessage,
+) => {
+  if (!isValidObjectId(moduleId)) {
+    const e = new Error("Invalid module ID");
+    e.status = 400;
+    throw e;
+  }
+
+  const moduleDoc = await Module.findOne({ _id: moduleId, project: projectId });
+  if (!moduleDoc) {
+    const e = new Error(customMessage || "Module not found for this project");
+    e.status = 404;
+    throw e;
+  }
+
+  return moduleDoc;
+};
+
 /* ------------------------- Module helper ------------------------- */
 
 const findOrCreateModule = async (projectId, name, createdBy) => {
@@ -1737,6 +1461,7 @@ const findOrCreateModule = async (projectId, name, createdBy) => {
   try {
     const created = await Module.create({
       name: displayName,
+      key,
       project: projectId,
       createdBy,
     });
@@ -1746,24 +1471,16 @@ const findOrCreateModule = async (projectId, name, createdBy) => {
       const again = await Module.findOne({ project: projectId, key });
       if (again) return again;
     }
-
-    const mapped = mapMongooseError(err);
-    if (mapped) {
-      const e = new Error(mapped.message);
-      e.status = mapped.status;
-      throw e;
-    }
-
     throw err;
   }
 };
 
-/* ---------------------------- core helpers --------------------------- */
+/* ---------------------------- scenario helpers --------------------------- */
 
-const withHydratedModules = (s) => {
-  if (!s) return s;
+const withHydratedModules = (scenario) => {
+  if (!scenario) return scenario;
 
-  const out = { ...s };
+  const out = { ...scenario };
 
   if ((!Array.isArray(out.modules) || out.modules.length === 0) && out.module) {
     out.modules = [out.module];
@@ -1775,12 +1492,63 @@ const withHydratedModules = (s) => {
 const hydrateMany = (arr) =>
   Array.isArray(arr) ? arr.map(withHydratedModules) : [];
 
-const uniqueObjectIds = (values = []) =>
-  [...new Set(values.map(String))].map((id) => new mongoose.Types.ObjectId(id));
+const resolveScenarioModules = async ({
+  projectId,
+  createdBy,
+  moduleId,
+  module_name,
+  moduleIds = [],
+  module_names = [],
+}) => {
+  const resolvedIds = [];
+  const resolvedDocs = [];
+
+  if (moduleId) {
+    const md = await ensureModuleBelongsToProject(
+      moduleId,
+      projectId,
+      "Module not found for this project",
+    );
+    resolvedIds.push(md._id);
+    resolvedDocs.push(md);
+  }
+
+  if (module_name) {
+    const md = await findOrCreateModule(projectId, module_name, createdBy);
+    resolvedIds.push(md._id);
+    resolvedDocs.push(md);
+  }
+
+  for (const mid of ensureArray(moduleIds)) {
+    const md = await ensureModuleBelongsToProject(
+      mid,
+      projectId,
+      `Module not found for this project: ${mid}`,
+    );
+    resolvedIds.push(md._id);
+    resolvedDocs.push(md);
+  }
+
+  for (const name of ensureArray(module_names)) {
+    if (!safeTrim(name)) continue;
+    const md = await findOrCreateModule(projectId, name, createdBy);
+    resolvedIds.push(md._id);
+    resolvedDocs.push(md);
+  }
+
+  const uniqueResolved = uniqueObjectIds(resolvedIds);
+
+  return {
+    uniqueResolved,
+    resolvedDocs,
+  };
+};
 
 /* ============================== CREATE =============================== */
 
 const addScenario = async (req, res) => {
+  const session = await mongoose.startSession();
+
   try {
     const projectId = req.params.id;
     const {
@@ -1791,83 +1559,41 @@ const addScenario = async (req, res) => {
       module_names = [],
     } = req.body;
 
-    if (!scenario_text) {
-      return res.status(400).json({ error: "Scenario text is required" });
+    const validation = validateScenarioText(scenario_text);
+    if (!validation.ok) {
+      return res.status(400).json({ error: validation.message });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ error: "Invalid project ID" });
-    }
+    const cleanedScenarioText = validation.cleaned;
+    const scenario_key = normalizeKey(cleanedScenarioText);
 
-    const project = await Project.findById(projectId);
-    if (!project) {
-      return res.status(404).json({ error: "Project not found" });
-    }
+    const project = await ensureValidProject(projectId);
+    const createdBy = await ensureValidUser(
+      req.user?.id || req.body.createdBy,
+      "Authentication required",
+    );
 
-    const createdBy = req.user?.id || req.body.createdBy;
-    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
+    const existingScenario = await Scenario.exists({
+      project: projectId,
+      scenario_key,
+    });
 
-    if (!(await User.exists({ _id: createdBy }))) {
-      return res.status(404).json({ error: "Creator user not found" });
-    }
-
-    const scenario_key = normalizeKey(scenario_text);
-
-    if (await Scenario.exists({ project: projectId, scenario_key })) {
+    if (existingScenario) {
       return res
         .status(409)
-        .json({ error: "A scenario with similar text already exists." });
+        .json({
+          error: "A scenario with similar text already exists in this project.",
+        });
     }
 
-    const resolvedIds = [];
-
-    if (moduleId) {
-      if (!mongoose.Types.ObjectId.isValid(moduleId)) {
-        return res.status(400).json({ error: "Invalid moduleId" });
-      }
-
-      const md = await Module.findOne({ _id: moduleId, project: projectId });
-      if (!md) {
-        return res
-          .status(404)
-          .json({ error: "Module not found for this project" });
-      }
-
-      resolvedIds.push(md._id);
-    }
-
-    if (module_name) {
-      const md = await findOrCreateModule(projectId, module_name, createdBy);
-      resolvedIds.push(md._id);
-    }
-
-    for (const mid of moduleIds || []) {
-      if (!mongoose.Types.ObjectId.isValid(mid)) {
-        return res
-          .status(400)
-          .json({ error: "Invalid module id in moduleIds" });
-      }
-
-      const md = await Module.findOne({ _id: mid, project: projectId });
-      if (!md) {
-        return res
-          .status(404)
-          .json({ error: `Module not found for this project: ${mid}` });
-      }
-
-      resolvedIds.push(md._id);
-    }
-
-    for (const name of module_names || []) {
-      if (!String(name || "").trim()) continue;
-
-      const md = await findOrCreateModule(projectId, name, createdBy);
-      resolvedIds.push(md._id);
-    }
-
-    const uniqueResolved = uniqueObjectIds(resolvedIds);
+    const { uniqueResolved, resolvedDocs } = await resolveScenarioModules({
+      projectId,
+      createdBy,
+      moduleId,
+      module_name,
+      moduleIds,
+      module_names,
+    });
 
     if (uniqueResolved.length === 0) {
       return res.status(400).json({
@@ -1876,30 +1602,45 @@ const addScenario = async (req, res) => {
       });
     }
 
+    const primaryModuleId = uniqueResolved[0];
+    const primaryModule =
+      resolvedDocs.find((m) => String(m._id) === String(primaryModuleId)) ||
+      null;
+
     const scenario_number = await safeGenerateScenarioNumber(
       projectId,
       project.project_name,
+      primaryModule?.name || "",
     );
 
-    const primaryModuleId = uniqueResolved[0];
+    let savedScenarioId = null;
 
-    const scenario = new Scenario({
-      scenario_text,
-      scenario_key,
-      scenario_number,
-      project: projectId,
-      module: primaryModuleId,
-      modules: uniqueResolved,
-      createdBy,
+    await session.withTransaction(async () => {
+      const created = await Scenario.create(
+        [
+          {
+            scenario_text: cleanedScenarioText,
+            scenario_key,
+            scenario_number,
+            project: projectId,
+            module: primaryModuleId,
+            modules: uniqueResolved,
+            createdBy,
+          },
+        ],
+        { session },
+      );
+
+      savedScenarioId = created[0]._id;
+
+      await Project.findByIdAndUpdate(
+        projectId,
+        { $addToSet: { scenarios: savedScenarioId } },
+        { session },
+      );
     });
 
-    await scenario.save();
-
-    await Project.findByIdAndUpdate(projectId, {
-      $push: { scenarios: scenario._id },
-    });
-
-    const populated = await Scenario.findById(scenario._id)
+    const populated = await Scenario.findById(savedScenarioId)
       .populate("module", "name")
       .populate("modules", "name")
       .lean();
@@ -1909,36 +1650,28 @@ const addScenario = async (req, res) => {
       scenario: withHydratedModules(populated),
     });
   } catch (error) {
-    if (error?.status) {
-      return res.status(error.status).json({ error: error.message });
-    }
-
-    const mapped = mapMongooseError(error);
-    if (mapped) {
-      return res.status(mapped.status).json({ error: mapped.message });
-    }
-
-    console.error("Error adding scenario:", error);
-    return res.status(500).json({ error: "Server error" });
+    return sendHandledError(res, error, "Error adding scenario");
+  } finally {
+    await session.endSession();
   }
 };
 
 /* ============================== UPDATE =============================== */
 
 const updateScenario = async (req, res) => {
-  const {
-    scenario_text,
-    userId,
-    moduleId,
-    module_name,
-    moduleIds = [],
-    module_names = [],
-  } = req.body;
-
-  const { scenarioId } = req.params;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    const {
+      scenario_text,
+      userId,
+      moduleId,
+      module_name,
+      moduleIds = [],
+      module_names = [],
+    } = req.body;
+
+    const { scenarioId } = req.params;
+
+    if (!isValidObjectId(scenarioId)) {
       return res.status(400).json({ message: "Invalid scenario ID" });
     }
 
@@ -1947,114 +1680,64 @@ const updateScenario = async (req, res) => {
       return res.status(404).json({ message: "Scenario not found" });
     }
 
-    const actorId = req.user?.id || userId;
-    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
-      return res.status(400).json({ message: "Invalid user ID" });
-    }
+    const actorId = await ensureValidUser(
+      req.user?.id || userId,
+      "Invalid user ID",
+    );
 
-    if (!(await User.exists({ _id: actorId }))) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    if (
-      typeof scenario_text === "string" &&
-      scenario_text !== scenario.scenario_text
-    ) {
-      const newKey = normalizeKey(scenario_text);
-
-      const dupe = await Scenario.findOne({
-        project: scenario.project._id,
-        scenario_key: newKey,
-        _id: { $ne: scenario._id },
-      });
-
-      if (dupe) {
-        return res.status(409).json({
-          message: "Another scenario with similar text already exists.",
-        });
+    if (typeof scenario_text === "string") {
+      const validation = validateScenarioText(scenario_text);
+      if (!validation.ok) {
+        return res.status(400).json({ message: validation.message });
       }
 
-      await new Change({
-        scenario: scenario._id,
-        previous_text: scenario.scenario_text,
-        user: actorId,
-        time: Date.now(),
-      }).save();
+      const cleanedScenarioText = validation.cleaned;
+      const newKey = normalizeKey(cleanedScenarioText);
 
-      scenario.scenario_text = scenario_text;
-      scenario.scenario_key = newKey;
+      if (
+        cleanedScenarioText !== scenario.scenario_text ||
+        newKey !== scenario.scenario_key
+      ) {
+        const dupe = await Scenario.findOne({
+          project: scenario.project._id,
+          scenario_key: newKey,
+          _id: { $ne: scenario._id },
+        });
+
+        if (dupe) {
+          return res.status(409).json({
+            message:
+              "Another scenario with similar text already exists in this project.",
+          });
+        }
+
+        await Change.create({
+          scenario: scenario._id,
+          previous_text: scenario.scenario_text,
+          user: actorId,
+          time: Date.now(),
+        });
+
+        scenario.scenario_text = cleanedScenarioText;
+        scenario.scenario_key = newKey;
+      }
     }
 
     const wantsModuleUpdate =
       moduleId ||
       module_name ||
-      (Array.isArray(moduleIds) && moduleIds.length) ||
-      (Array.isArray(module_names) && module_names.length);
+      (Array.isArray(moduleIds) && moduleIds.length > 0) ||
+      (Array.isArray(module_names) && module_names.length > 0);
 
     if (wantsModuleUpdate) {
-      const ids = [];
-
-      if (moduleId) {
-        if (!mongoose.Types.ObjectId.isValid(moduleId)) {
-          return res.status(400).json({ message: "Invalid moduleId" });
-        }
-
-        const md = await Module.findOne({
-          _id: moduleId,
-          project: scenario.project._id,
-        });
-
-        if (!md) {
-          return res
-            .status(404)
-            .json({ message: "Module not found for this project" });
-        }
-
-        ids.push(md._id);
-      }
-
-      for (const mid of moduleIds || []) {
-        if (!mongoose.Types.ObjectId.isValid(mid)) {
-          return res
-            .status(400)
-            .json({ message: "Invalid module id in moduleIds" });
-        }
-
-        const md = await Module.findOne({
-          _id: mid,
-          project: scenario.project._id,
-        });
-
-        if (!md) {
-          return res
-            .status(404)
-            .json({ message: `Module not found for this project: ${mid}` });
-        }
-
-        ids.push(md._id);
-      }
-
-      if (module_name) {
-        const md = await findOrCreateModule(
-          scenario.project._id,
-          module_name,
-          actorId,
-        );
-        ids.push(md._id);
-      }
-
-      for (const name of module_names || []) {
-        if (!String(name || "").trim()) continue;
-
-        const md = await findOrCreateModule(
-          scenario.project._id,
-          name,
-          actorId,
-        );
-        ids.push(md._id);
-      }
-
-      const uniqueResolved = uniqueObjectIds(ids);
+      const { uniqueResolved } = await resolveScenarioModules({
+        projectId: scenario.project._id,
+        createdBy: actorId,
+        moduleId,
+        module_name,
+        moduleIds,
+        module_names,
+      });
 
       scenario.modules = uniqueResolved;
       scenario.module = uniqueResolved[0] || undefined;
@@ -2077,19 +1760,7 @@ const updateScenario = async (req, res) => {
       scenario: withHydratedModules(populated),
     });
   } catch (error) {
-    if (error?.status) {
-      return res.status(error.status).json({ message: error.message });
-    }
-
-    const mapped = mapMongooseError(error);
-    if (mapped) {
-      return res.status(mapped.status).json({ message: mapped.message });
-    }
-
-    console.error("Error updating scenario:", error);
-    return res
-      .status(500)
-      .json({ message: "Error updating scenario", error: error.message });
+    return sendHandledError(res, error, "Error updating scenario");
   }
 };
 
@@ -2099,13 +1770,7 @@ const listScenariosByProject = async (req, res) => {
   try {
     const { id } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
-
-    if (!(await Project.exists({ _id: id }))) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    await ensureValidProject(id);
 
     const scenarios = await Scenario.find({ project: id })
       .populate("createdBy", "name")
@@ -2117,21 +1782,21 @@ const listScenariosByProject = async (req, res) => {
 
     return res.json(hydrateMany(scenarios));
   } catch (error) {
-    console.error("Error fetching scenarios:", error.message);
-    return res.status(500).json({ message: "Server error: " + error.message });
+    return sendHandledError(res, error, "Error fetching scenarios");
   }
 };
 
 const getScenarioHistory = async (req, res) => {
-  const { scenarioId } = req.params;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    const { scenarioId } = req.params;
+
+    if (!isValidObjectId(scenarioId)) {
       return res.status(400).json({ message: "Invalid scenario ID" });
     }
 
     const scenario = await Scenario.findById(scenarioId)
-      .populate("createdBy project")
+      .populate("createdBy", "name")
+      .populate("project", "project_name")
       .populate("module", "name")
       .populate("modules", "name")
       .lean();
@@ -2141,7 +1806,7 @@ const getScenarioHistory = async (req, res) => {
     }
 
     const changes = await Change.find({ scenario: scenarioId })
-      .populate("user")
+      .populate("user", "name email")
       .sort({ time: -1 });
 
     return res.json({
@@ -2149,58 +1814,49 @@ const getScenarioHistory = async (req, res) => {
       changes,
     });
   } catch (error) {
-    console.error("Error fetching scenario details:", error);
-    return res
-      .status(500)
-      .json({ message: "Error fetching scenario details", error });
+    return sendHandledError(res, error, "Error fetching scenario details");
   }
 };
 
 const getScenarioNumber = async (req, res) => {
-  const { scenarioId } = req.params;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    const { scenarioId } = req.params;
+
+    if (!isValidObjectId(scenarioId)) {
       return res.status(400).json({ message: "Invalid scenario ID" });
     }
 
-    const scenario = await Scenario.findById(scenarioId);
+    const scenario = await Scenario.findById(scenarioId, {
+      scenario_number: 1,
+    }).lean();
+
     if (!scenario) {
       return res.status(404).json({ message: "Scenario not found" });
     }
 
     return res.json({ scenarioNumber: scenario.scenario_number });
   } catch (error) {
-    console.error("Error fetching scenario number:", error);
-    return res
-      .status(500)
-      .json({ message: "Error fetching scenario number", error });
+    return sendHandledError(res, error, "Error fetching scenario number");
   }
 };
 
 const getScenariosSimple = async (req, res) => {
-  const { projectId } = req.params;
-  const { moduleId } = req.query;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
+    const { moduleId } = req.query;
 
-    if (!(await Project.exists({ _id: projectId }))) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    await ensureValidProject(projectId);
 
     const filter = { project: projectId };
 
     if (moduleId) {
-      if (!mongoose.Types.ObjectId.isValid(moduleId)) {
+      if (!isValidObjectId(moduleId)) {
         return res.status(400).json({ message: "Invalid moduleId" });
       }
 
       filter.$or = [
         { module: moduleId },
-        { modules: { $in: [new mongoose.Types.ObjectId(moduleId)] } },
+        { modules: { $in: [toObjectId(moduleId)] } },
       ];
     }
 
@@ -2230,110 +1886,67 @@ const getScenariosSimple = async (req, res) => {
 
     return res.json(hydrated);
   } catch (error) {
-    console.error("Error fetching scenarios:", error);
-    return res.status(500).json({ message: "Error fetching scenarios" });
+    return sendHandledError(res, error, "Error fetching scenarios");
   }
 };
 
 /* ============================ MODULE APIS ============================ */
 
 const listModulesByProject = async (req, res) => {
-  const { projectId } = req.params;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
 
-    if (!(await Project.exists({ _id: projectId }))) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    await ensureValidProject(projectId);
 
     const mods = await Module.find({
       project: projectId,
       name: { $ne: "Unassigned" },
-    }).sort({ name: 1 });
+    })
+      .sort({ name: 1 })
+      .lean();
 
     return res.json(mods);
-  } catch (err) {
-    console.error("Error listing modules:", err);
-    return res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    return sendHandledError(res, error, "Error listing modules");
   }
 };
 
 const createOrGetModule = async (req, res) => {
-  const { projectId } = req.params;
-  const { name } = req.body;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
+    const { name } = req.body;
 
-    if (!(await Project.exists({ _id: projectId }))) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    await ensureValidProject(projectId);
 
-    const createdBy = req.user?.id || req.body.createdBy;
-    if (!createdBy || !mongoose.Types.ObjectId.isValid(createdBy)) {
-      return res.status(401).json({ message: "Authentication required" });
-    }
-
-    if (!(await User.exists({ _id: createdBy }))) {
-      return res.status(404).json({ message: "Creator user not found" });
-    }
+    const createdBy = await ensureValidUser(
+      req.user?.id || req.body.createdBy,
+      "Authentication required",
+    );
 
     const mod = await findOrCreateModule(projectId, name, createdBy);
     return res.status(201).json(mod);
-  } catch (err) {
-    if (err?.status) {
-      return res.status(err.status).json({ message: err.message });
-    }
-
-    const mapped = mapMongooseError(err);
-    if (mapped) {
-      return res.status(mapped.status).json({ message: mapped.message });
-    }
-
-    console.error("Error creating module:", err);
-    return res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    return sendHandledError(res, error, "Error creating module");
   }
 };
 
 const deleteModule = async (req, res) => {
-  const { projectId, moduleId } = req.params;
-  const { transferToModuleId = null, userId } = req.body || {};
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ error: "Invalid project ID" });
-    }
+    const { projectId, moduleId } = req.params;
+    const { transferToModuleId = null, userId } = req.body || {};
 
-    if (!mongoose.Types.ObjectId.isValid(moduleId)) {
-      return res.status(400).json({ error: "Invalid module ID" });
-    }
+    await ensureValidProject(projectId);
 
-    if (!(await Project.exists({ _id: projectId }))) {
-      return res.status(404).json({ error: "Project not found" });
-    }
+    const actorId = await ensureValidUser(
+      req.user?.id || userId,
+      "Authentication required",
+    );
 
-    const actorId = req.user?.id || userId;
-    if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-
-    if (!(await User.exists({ _id: actorId }))) {
-      return res.status(404).json({ error: "User not found" });
-    }
-
-    const moduleDoc = await Module.findOne({
-      _id: moduleId,
-      project: projectId,
-    });
-
-    if (!moduleDoc) {
-      return res.status(404).json({ error: "Module not found" });
-    }
+    const moduleDoc = await ensureModuleBelongsToProject(
+      moduleId,
+      projectId,
+      "Module not found",
+    );
 
     if (moduleDoc.name === "Unassigned") {
       return res
@@ -2344,24 +1957,17 @@ const deleteModule = async (req, res) => {
     let targetModule = null;
 
     if (transferToModuleId) {
-      if (!mongoose.Types.ObjectId.isValid(transferToModuleId)) {
-        return res.status(400).json({ error: "Invalid transfer module ID" });
-      }
-
       if (String(transferToModuleId) === String(moduleId)) {
         return res.status(400).json({
           error: "Transfer module cannot be the same as module being deleted.",
         });
       }
 
-      targetModule = await Module.findOne({
-        _id: transferToModuleId,
-        project: projectId,
-      });
-
-      if (!targetModule) {
-        return res.status(404).json({ error: "Transfer module not found" });
-      }
+      targetModule = await ensureModuleBelongsToProject(
+        transferToModuleId,
+        projectId,
+        "Transfer module not found",
+      );
     }
 
     const affectedScenarios = await Scenario.find({
@@ -2387,7 +1993,7 @@ const deleteModule = async (req, res) => {
 
       nextIds = [...new Set(nextIds)];
 
-      const finalIds = nextIds.map((id) => new mongoose.Types.ObjectId(id));
+      const finalIds = nextIds.map((id) => toObjectId(id));
 
       scenario.modules = finalIds;
       scenario.module = finalIds[0] || undefined;
@@ -2412,31 +2018,19 @@ const deleteModule = async (req, res) => {
         ? { _id: targetModule._id, name: targetModule.name }
         : null,
     });
-  } catch (err) {
-    if (err?.status) {
-      return res.status(err.status).json({ error: err.message });
-    }
-
-    const mapped = mapMongooseError(err);
-    if (mapped) {
-      return res.status(mapped.status).json({ error: mapped.message });
-    }
-
-    console.error("Error deleting module:", err);
-    return res.status(500).json({ error: "Server error" });
+  } catch (error) {
+    return sendHandledError(res, error, "Error deleting module");
   }
 };
 
 /* ========================== BULK OPERATIONS ========================== */
 
 const transferScenarios = async (req, res) => {
-  const { projectId } = req.params;
-  const { scenarioIds = [], toModuleId, toModuleName } = req.body;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
+    const { scenarioIds = [], toModuleId, toModuleName } = req.body;
+
+    await ensureValidProject(projectId);
 
     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
       return res.status(400).json({ message: "scenarioIds is required" });
@@ -2445,30 +2039,16 @@ const transferScenarios = async (req, res) => {
     let targetModule;
 
     if (toModuleId) {
-      if (!mongoose.Types.ObjectId.isValid(toModuleId)) {
-        return res.status(400).json({ message: "Invalid toModuleId" });
-      }
-
-      targetModule = await Module.findOne({
-        _id: toModuleId,
-        project: projectId,
-      });
-
-      if (!targetModule) {
-        return res
-          .status(404)
-          .json({ message: "Destination module not found" });
-      }
+      targetModule = await ensureModuleBelongsToProject(
+        toModuleId,
+        projectId,
+        "Destination module not found",
+      );
     } else if (toModuleName) {
-      const actorId = req.user?.id || req.body.createdBy;
-
-      if (!actorId || !mongoose.Types.ObjectId.isValid(actorId)) {
-        return res.status(401).json({ message: "Authentication required" });
-      }
-
-      if (!(await User.exists({ _id: actorId }))) {
-        return res.status(404).json({ message: "User not found" });
-      }
+      const actorId = await ensureValidUser(
+        req.user?.id || req.body.createdBy,
+        "Authentication required",
+      );
 
       targetModule = await findOrCreateModule(projectId, toModuleName, actorId);
     } else {
@@ -2477,9 +2057,7 @@ const transferScenarios = async (req, res) => {
         .json({ message: "Provide toModuleId or toModuleName" });
     }
 
-    const validIds = scenarioIds.filter((id) =>
-      mongoose.Types.ObjectId.isValid(id),
-    );
+    const validIds = scenarioIds.filter((id) => isValidObjectId(id));
 
     const { modifiedCount } = await Scenario.updateMany(
       { _id: { $in: validIds }, project: projectId },
@@ -2500,28 +2078,16 @@ const transferScenarios = async (req, res) => {
       to: { _id: targetModule._id, name: targetModule.name },
     });
   } catch (error) {
-    if (error?.status) {
-      return res.status(error.status).json({ message: error.message });
-    }
-
-    const mapped = mapMongooseError(error);
-    if (mapped) {
-      return res.status(mapped.status).json({ message: mapped.message });
-    }
-
-    console.error("Error transferring scenarios:", error);
-    return res.status(500).json({ message: "Server error" });
+    return sendHandledError(res, error, "Error transferring scenarios");
   }
 };
 
 const detachScenariosToUnassigned = async (req, res) => {
-  const { projectId } = req.params;
-  const { scenarioIds = [] } = req.body;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
+    const { scenarioIds = [] } = req.body;
+
+    await ensureValidProject(projectId);
 
     if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
       return res.status(400).json({ message: "scenarioIds is required" });
@@ -2530,7 +2096,7 @@ const detachScenariosToUnassigned = async (req, res) => {
     const { modifiedCount } = await Scenario.updateMany(
       {
         _id: {
-          $in: scenarioIds.filter((id) => mongoose.Types.ObjectId.isValid(id)),
+          $in: scenarioIds.filter((id) => isValidObjectId(id)),
         },
         project: projectId,
       },
@@ -2551,22 +2117,15 @@ const detachScenariosToUnassigned = async (req, res) => {
       modifiedCount,
     });
   } catch (error) {
-    console.error("Error detaching scenarios:", error);
-    return res.status(500).json({ message: "Server error" });
+    return sendHandledError(res, error, "Error detaching scenarios");
   }
 };
 
 const listModulesWithCounts = async (req, res) => {
-  const { projectId } = req.params;
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
 
-    if (!(await Project.exists({ _id: projectId }))) {
-      return res.status(404).json({ message: "Project not found" });
-    }
+    await ensureValidProject(projectId);
 
     const mods = await Module.find(
       { project: projectId, name: { $ne: "Unassigned" } },
@@ -2576,7 +2135,7 @@ const listModulesWithCounts = async (req, res) => {
       .lean();
 
     const countsAgg = await Scenario.aggregate([
-      { $match: { project: new mongoose.Types.ObjectId(projectId) } },
+      { $match: { project: toObjectId(projectId) } },
       {
         $facet: {
           legacy: [
@@ -2591,7 +2150,7 @@ const listModulesWithCounts = async (req, res) => {
           ],
         },
       },
-      { $project: { combined: { $setUnion: ["$legacy", "$multi"] } } },
+      { $project: { combined: { $concatArrays: ["$legacy", "$multi"] } } },
       { $unwind: "$combined" },
       { $replaceRoot: { newRoot: "$combined" } },
       { $group: { _id: "$_id", count: { $sum: "$count" } } },
@@ -2608,51 +2167,88 @@ const listModulesWithCounts = async (req, res) => {
     }));
 
     return res.json(payload);
-  } catch (err) {
-    console.error("Error listing modules with counts:", err);
-    return res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    return sendHandledError(res, error, "Error listing modules with counts");
   }
 };
 
 /* ============================== SEARCH ============================== */
 
 const searchScenarios = async (req, res) => {
-  const { projectId } = req.params;
-  const q = String(req.query.q || "").trim();
-
   try {
-    if (!mongoose.Types.ObjectId.isValid(projectId)) {
-      return res.status(400).json({ message: "Invalid project ID" });
-    }
+    const { projectId } = req.params;
+    const q = safeTrim(req.query.q || "");
+
+    await ensureValidProject(projectId);
 
     if (!q) {
       return res.json([]);
     }
 
-    const rx = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i");
+    const normalizedQuery = buildSearchableScenarioText(q);
+    const escaped = escapeRegex(normalizedQuery);
+    const tokens = normalizedQuery.split(" ").filter(Boolean);
+
+    const orConditions = [];
+
+    if (escaped) {
+      orConditions.push({ scenario_text: new RegExp(escaped, "i") });
+    }
+
+    for (const token of tokens) {
+      if (token.length >= 2) {
+        orConditions.push({
+          scenario_text: new RegExp(escapeRegex(token), "i"),
+        });
+      }
+    }
 
     const rows = await Scenario.find(
-      { project: projectId, scenario_text: rx },
-      { scenario_text: 1, modules: 1 },
+      {
+        project: projectId,
+        $or: orConditions.length ? orConditions : [{ scenario_text: /a^/ }],
+      },
+      { scenario_text: 1, modules: 1, module: 1 },
     )
-      .limit(15)
+      .limit(MAX_SEARCH_RESULTS)
+      .populate("module", "name")
       .populate("modules", "name")
       .lean();
 
-    return res.json(rows.map(withHydratedModules));
-  } catch (err) {
-    console.error("searchScenarios error:", err);
-    return res.status(500).json({ message: "Server error" });
+    const scored = rows
+      .map((row) => {
+        const normalizedRow = normalizeKey(row.scenario_text);
+        const normalizedInput = normalizeKey(q);
+
+        let score = 0;
+        if (normalizedRow === normalizedInput) score += 100;
+        if (normalizedRow.includes(normalizedInput)) score += 40;
+
+        for (const token of tokens) {
+          if (buildSearchableScenarioText(row.scenario_text).includes(token)) {
+            score += 5;
+          }
+        }
+
+        return { ...row, _score: score };
+      })
+      .sort((a, b) => b._score - a._score);
+
+    return res.json(scored.map(withHydratedModules));
+  } catch (error) {
+    return sendHandledError(res, error, "Error searching scenarios");
   }
 };
 
 /* ============================== DELETE ============================== */
 
 const deleteScenario = async (req, res) => {
-  const { scenarioId } = req.params;
+  const session = await mongoose.startSession();
 
   try {
-    if (!mongoose.Types.ObjectId.isValid(scenarioId)) {
+    const { scenarioId } = req.params;
+
+    if (!isValidObjectId(scenarioId)) {
       return res.status(400).json({ message: "Invalid scenario ID" });
     }
 
@@ -2661,18 +2257,22 @@ const deleteScenario = async (req, res) => {
       return res.status(404).json({ message: "Scenario not found" });
     }
 
-    await Project.updateOne(
-      { _id: doc.project },
-      { $pull: { scenarios: doc._id } },
-    );
+    await session.withTransaction(async () => {
+      await Project.updateOne(
+        { _id: doc.project },
+        { $pull: { scenarios: doc._id } },
+        { session },
+      );
 
-    await Change.deleteMany({ scenario: doc._id });
-    await Scenario.deleteOne({ _id: doc._id });
+      await Change.deleteMany({ scenario: doc._id }, { session });
+      await Scenario.deleteOne({ _id: doc._id }, { session });
+    });
 
     return res.json({ message: "Scenario deleted", _id: scenarioId });
-  } catch (err) {
-    console.error("deleteScenario error:", err);
-    return res.status(500).json({ message: "Server error" });
+  } catch (error) {
+    return sendHandledError(res, error, "Error deleting scenario");
+  } finally {
+    await session.endSession();
   }
 };
 
