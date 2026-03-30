@@ -1,280 +1,803 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import React, {
+  useCallback,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  memo,
+} from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
-import {
-  FaThList,
-  FaThLarge,
-  FaTh,
-  FaSearch,
-  FaArrowLeft,
-  FaArrowRight,
-} from "react-icons/fa";
+import { FaSearch, FaEye, FaArrowLeft, FaArrowRight } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
+import ExportBar from "../../components/common_components/ExportBar";
+
+const UNASSIGNED_ID = "__unassigned__";
+const UNASSIGNED_NAME = "Unassigned";
+
+const MIN_COL_WIDTHS = [56, 120, 260, 180, 150, 110, 130, 130, 48];
+const COL_WEIGHTS = [0.05, 0.1, 0.29, 0.15, 0.12, 0.09, 0.1, 0.1, 0.04];
+
+function buildResponsiveColWidths(containerWidth) {
+  const safeWidth = Math.max(containerWidth || 0, 360);
+  return COL_WEIGHTS.map((weight, index) =>
+    Math.max(MIN_COL_WIDTHS[index], Math.floor(safeWidth * weight)),
+  );
+}
+
+/* ---------- Search utils ---------- */
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "of",
+  "in",
+  "on",
+  "at",
+  "to",
+  "for",
+  "with",
+  "by",
+  "from",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "been",
+  "being",
+  "i",
+  "you",
+  "he",
+  "she",
+  "it",
+  "we",
+  "they",
+  "me",
+  "him",
+  "her",
+  "us",
+  "them",
+  "this",
+  "that",
+  "these",
+  "those",
+  "there",
+  "here",
+  "please",
+  "pls",
+  "plz",
+  "show",
+  "find",
+  "search",
+  "look",
+  "list",
+  "traceability",
+  "matrix",
+  "scenario",
+  "scenarios",
+  "module",
+  "modules",
+  "test",
+  "case",
+  "cases",
+  "defect",
+  "named",
+  "called",
+]);
+
+const norm = (s = "") =>
+  String(s)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
+const tokenize = (raw) => {
+  const trimmed = String(raw || "").trim();
+  if (!trimmed) return [];
+  return trimmed
+    .split(/\s+/)
+    .map(norm)
+    .filter(Boolean)
+    .filter((t) => !STOP_WORDS.has(t));
+};
+
+const toLocalYMD = (d) => {
+  const dt = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(dt.getTime())) return "";
+  const y = dt.getFullYear();
+  const m = String(dt.getMonth() + 1).padStart(2, "0");
+  const day = String(dt.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+};
+
+const safeStr = (v) => (v == null ? "" : String(v));
+const cmpStr = (a, b) =>
+  safeStr(a).localeCompare(safeStr(b), undefined, { sensitivity: "base" });
+
+const Resizer = ({ onMouseDown }) => (
+  <span
+    onMouseDown={onMouseDown}
+    className="absolute right-0 top-0 h-full w-2 cursor-col-resize select-none"
+    title="Drag to resize"
+  />
+);
+
+const RowHeightHandle = ({ onMouseDown }) => (
+  <div
+    onMouseDown={onMouseDown}
+    className="absolute bottom-0 left-0 h-2 w-full cursor-row-resize"
+    title="Drag to resize row"
+  />
+);
 
 export default function TraceabilityMatrix() {
   const { projectId } = useParams();
+  const navigate = useNavigate();
 
-  // raw data
   const [matrix, setMatrix] = useState([]);
   const [scenarios, setScenarios] = useState([]);
+  const [projectName, setProjectName] = useState("");
 
-  // ui state
-  const [view, setView] = useState("list"); // list | grid | card
   const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedModuleId, setSelectedModuleId] = useState(null);
+  const [selectedDate, setSelectedDate] = useState("");
+
   const [currentPage, setCurrentPage] = useState(1);
-  const [cardsPerPage, setCardsPerPage] = useState(6);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
 
-  // counters (top summary)
   const [totalScenarios, setTotalScenarios] = useState(0);
   const [totalTestCases, setTotalTestCases] = useState(0);
   const [passCount, setPassCount] = useState(0);
   const [failCount, setFailCount] = useState(0);
   const [defectReportCount, setDefectReportCount] = useState(0);
   const [missingTestCasesCount, setMissingTestCasesCount] = useState(0);
+  const [filteredCount, setFilteredCount] = useState(0);
 
-  // module filter (same behavior as AllScenarios)
-  const [selectedModuleId, setSelectedModuleId] = useState(null);
+  const [sortKey, setSortKey] = useState("createdAt");
+  const [sortDir, setSortDir] = useState("desc");
 
-  // fetch matrix + scenarios (so modules match AllScenarios 1:1)
+  const tableContainerRef = useRef(null);
+  const userResizedColumnsRef = useRef(false);
+
+  const [colW, setColW] = useState(() =>
+    buildResponsiveColWidths(
+      typeof window !== "undefined" ? window.innerWidth : 1400,
+    ),
+  );
+  const dragRef = useRef(null);
+
+  const [rowHeights, setRowHeights] = useState({});
+  const rowDragRef = useRef(null);
+
   useEffect(() => {
-    (async () => {
+    const updateWidths = () => {
+      if (userResizedColumnsRef.current) return;
+
+      const containerWidth =
+        tableContainerRef.current?.clientWidth || window.innerWidth;
+
+      setColW(buildResponsiveColWidths(containerWidth));
+    };
+
+    updateWidths();
+    window.addEventListener("resize", updateWidths);
+    return () => window.removeEventListener("resize", updateWidths);
+  }, []);
+
+  const gridTemplateColumns = useMemo(
+    () => colW.map((w) => `${Math.max(32, Number(w) || 0)}px`).join(" "),
+    [colW],
+  );
+
+  const startColResize = useCallback(
+    (colIndex, e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      userResizedColumnsRef.current = true;
+
+      const startX = e.clientX;
+      const startW = colW[colIndex] || 60;
+
+      dragRef.current = { colIndex, startX, startW };
+
+      const onMove = (ev) => {
+        if (!dragRef.current) return;
+        const dx = ev.clientX - dragRef.current.startX;
+        const next = Math.max(32, dragRef.current.startW + dx);
+        setColW((prev) => {
+          const cp = [...prev];
+          cp[colIndex] = next;
+          return cp;
+        });
+      };
+
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        dragRef.current = null;
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [colW],
+  );
+
+  const startRowResize = useCallback(
+    (rowId, e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const startY = e.clientY;
+      const startH = rowHeights[rowId] || 42;
+
+      rowDragRef.current = { rowId, startY, startH };
+
+      const onMove = (ev) => {
+        if (!rowDragRef.current) return;
+        const dy = ev.clientY - rowDragRef.current.startY;
+        const next = Math.max(42, rowDragRef.current.startH + dy);
+        setRowHeights((prev) => ({
+          ...prev,
+          [rowId]: next,
+        }));
+      };
+
+      const onUp = () => {
+        window.removeEventListener("mousemove", onMove);
+        window.removeEventListener("mouseup", onUp);
+        rowDragRef.current = null;
+      };
+
+      window.addEventListener("mousemove", onMove);
+      window.addEventListener("mouseup", onUp);
+    },
+    [rowHeights],
+  );
+
+  useEffect(() => {
+    let alive = true;
+    const controller = new AbortController();
+
+    const fetchAll = async () => {
       try {
         const token = localStorage.getItem("token");
         const auth = token
-          ? { headers: { Authorization: `Bearer ${token}` } }
-          : undefined;
+          ? {
+              headers: { Authorization: `Bearer ${token}` },
+              signal: controller.signal,
+            }
+          : { signal: controller.signal };
 
-        const [matrixRes, scenariosRes] = await Promise.all([
+        const [matrixRes, scenariosRes, projectRes] = await Promise.all([
           axios.get(
             `${globalBackendRoute}/api/projects/${projectId}/traceability-matrix`,
-            auth
+            auth,
           ),
           axios.get(
             `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`,
-            auth
+            auth,
+          ),
+          axios.get(
+            `${globalBackendRoute}/api/single-project/${projectId}`,
+            auth,
           ),
         ]);
 
+        if (!alive) return;
+
         const m = Array.isArray(matrixRes.data) ? matrixRes.data : [];
         const s = Array.isArray(scenariosRes.data) ? scenariosRes.data : [];
+        const p = projectRes?.data || {};
 
         setMatrix(m);
         setScenarios(s);
 
-        // counters from matrix
+        const pn =
+          p.projectName ||
+          p.project_name ||
+          p.name ||
+          p.title ||
+          s?.[0]?.project?.project_name ||
+          s?.[0]?.project?.projectName ||
+          "";
+        setProjectName(pn);
+
         setTotalScenarios(m.length);
         setTotalTestCases(m.filter((i) => i.testCaseNumber).length);
         setPassCount(m.filter((i) => i.testCaseStatus === "Pass").length);
         setFailCount(m.filter((i) => i.testCaseStatus === "Fail").length);
         setDefectReportCount(
-          m.filter((i) => i.defectReportStatus === "Present").length
+          m.filter((i) => i.defectReportStatus === "Present").length,
         );
         setMissingTestCasesCount(
           m.filter((i) => !i.testCaseNumber || i.testCaseNumber === "Missing")
-            .length
+            .length,
         );
-
         setCurrentPage(1);
       } catch (err) {
-        console.error("Error fetching data:", err?.message || err);
+        if (!axios.isCancel?.(err)) {
+          console.error("Error fetching data:", err?.message || err);
+        }
       }
-    })();
+    };
+
+    fetchAll();
+
+    return () => {
+      alive = false;
+      controller.abort();
+    };
   }, [projectId]);
 
-  // responsive page size
-  useEffect(() => {
-    const apply = () => {
-      const w = window.innerWidth;
-      if (view === "card") setCardsPerPage(w >= 1024 ? 6 : 4);
-      else if (view === "grid") setCardsPerPage(w >= 1024 ? 8 : 6);
-      else setCardsPerPage(w >= 1366 ? 5 : 4); // list
-    };
-    apply();
-    const onResize = () => apply();
-    window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
-  }, [view]);
-
-  // debounce search
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery), 180);
-    return () => clearTimeout(t);
-  }, [searchQuery]);
-
-  const norm = (v) => (v ?? "").toString().toLowerCase();
-
-  // --- build a lookup from scenarioNumber -> module { _id, name } using the exact AllScenarios shape
-  const scenarioNumToModule = useMemo(() => {
+  const scenarioNumToScenarioMeta = useMemo(() => {
     const map = new Map();
     for (const s of scenarios) {
-      // AllScenarios data shape: s.module?._id / s.module?.name
       const key = s?.scenario_number?.toString();
       if (!key) continue;
+
+      const modules =
+        Array.isArray(s?.modules) && s.modules.length
+          ? s.modules.filter(Boolean).map((m) =>
+              typeof m === "object"
+                ? {
+                    _id: m?._id || UNASSIGNED_ID,
+                    name: m?.name || UNASSIGNED_NAME,
+                  }
+                : { _id: m, name: "" },
+            )
+          : s?.module?._id || s?.module?.name
+            ? [
+                {
+                  _id: s?.module?._id || UNASSIGNED_ID,
+                  name: s?.module?.name || UNASSIGNED_NAME,
+                },
+              ]
+            : [];
+
       map.set(key, {
-        _id: s?.module?._id || "__unassigned__",
-        name: s?.module?.name || "Unassigned",
+        _id: s?._id || "",
+        createdAt: s?.createdAt || "",
+        modules,
       });
     }
     return map;
   }, [scenarios]);
 
-  // module chips (+ counts) using the same logic as AllScenarios
-  const modules = useMemo(() => {
-    const counts = new Map(); // id -> { _id, name, count }
-    // count by module id from scenario lookup
+  const getRowModules = useCallback(
+    (row) => {
+      const sn = row?.scenarioNumber?.toString();
+      const meta = scenarioNumToScenarioMeta.get(sn);
+      const mods = meta?.modules || [];
+      if (mods.length) return mods;
+      return [{ _id: UNASSIGNED_ID, name: UNASSIGNED_NAME }];
+    },
+    [scenarioNumToScenarioMeta],
+  );
+
+  const availableDates = useMemo(() => {
+    const set = new Set();
     for (const row of matrix) {
       const sn = row?.scenarioNumber?.toString();
-      const m = scenarioNumToModule.get(sn) || {
-        _id: "__unassigned__",
-        name: "Unassigned",
-      };
-      if (!counts.has(m._id))
-        counts.set(m._id, { _id: m._id, name: m.name, count: 0 });
-      counts.get(m._id).count += 1;
+      const ymd = toLocalYMD(scenarioNumToScenarioMeta.get(sn)?.createdAt);
+      if (ymd) set.add(ymd);
     }
-    return Array.from(counts.values()).sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
-    );
-  }, [matrix, scenarioNumToModule]);
+    return Array.from(set).sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
+  }, [matrix, scenarioNumToScenarioMeta]);
 
-  // filter (search + module)
-  const filtered = useMemo(() => {
-    const q = norm(debouncedQuery);
-    return matrix.filter((row) => {
-      // module filter identical to AllScenarios (by id)
-      if (selectedModuleId) {
-        const sn = row?.scenarioNumber?.toString();
-        const m = scenarioNumToModule.get(sn) || { _id: "__unassigned__" };
-        if (m._id !== selectedModuleId) return false;
+  const hasSelectedDate = Boolean(String(selectedDate || "").trim());
+  const isSelectedDateValid = useMemo(() => {
+    if (!hasSelectedDate) return true;
+    return availableDates.includes(selectedDate);
+  }, [availableDates, hasSelectedDate, selectedDate]);
+
+  const modules = useMemo(() => {
+    const counts = new Map();
+
+    for (const row of matrix) {
+      const mods = getRowModules(row);
+      const seen = new Set();
+
+      for (const m of mods) {
+        const id = String(m?._id || UNASSIGNED_ID);
+        if (seen.has(id)) continue;
+        seen.add(id);
+
+        if (!counts.has(id)) {
+          counts.set(id, {
+            _id: id,
+            name: m?.name || UNASSIGNED_NAME,
+            count: 0,
+          });
+        }
+        counts.get(id).count += 1;
       }
-      // search fields
-      const fields = [
-        row.scenarioNumber,
-        row.scenarioText,
-        row.testCaseNumber,
-        row.defectNumber,
-        row.testCaseStatus,
-        row.defectReportStatus,
-        (scenarioNumToModule.get(row?.scenarioNumber?.toString()) || {}).name ||
-          "Unassigned",
-      ].map(norm);
-      return q ? fields.some((f) => f.includes(q)) : true;
+    }
+
+    return Array.from(counts.values()).sort((a, b) =>
+      a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
+    );
+  }, [matrix, getRowModules]);
+
+  const dq = useDeferredValue(searchQuery);
+  const dd = useDeferredValue(selectedDate);
+  const dm = useDeferredValue(selectedModuleId);
+
+  const filtered = useMemo(() => {
+    if (dd && !availableDates.includes(dd)) return [];
+
+    const tokens = tokenize(dq);
+
+    return matrix.filter((row) => {
+      const sn = row?.scenarioNumber?.toString();
+      const meta = scenarioNumToScenarioMeta.get(sn);
+      const rowDate = toLocalYMD(meta?.createdAt);
+
+      if (dd && rowDate !== dd) return false;
+
+      if (dm) {
+        const mods = getRowModules(row).map((m) => String(m._id));
+        if (!mods.includes(String(dm))) return false;
+      }
+
+      if (!tokens.length) return true;
+
+      const hay = norm(
+        [
+          row?.scenarioNumber || "",
+          row?.scenarioText || "",
+          row?.testCaseNumber || "",
+          row?.defectNumber || "",
+          row?.testCaseStatus || "",
+          row?.defectReportStatus || "",
+          rowDate,
+          getRowModules(row)
+            .map((m) => m.name)
+            .join(" "),
+        ].join(" "),
+      );
+
+      return tokens.some((t) => hay.includes(t));
     });
-  }, [matrix, debouncedQuery, selectedModuleId, scenarioNumToModule]);
+  }, [
+    matrix,
+    dq,
+    dd,
+    dm,
+    availableDates,
+    scenarioNumToScenarioMeta,
+    getRowModules,
+  ]);
 
-  // pagination
+  const sortedFiltered = useMemo(() => {
+    const arr = [...filtered];
+    const dir = sortDir === "asc" ? 1 : -1;
+
+    const getVal = (row) => {
+      const sn = row?.scenarioNumber?.toString();
+      const meta = scenarioNumToScenarioMeta.get(sn);
+
+      if (sortKey === "scenarioNumber") return row?.scenarioNumber || "";
+      if (sortKey === "scenarioText") return row?.scenarioText || "";
+      if (sortKey === "modules")
+        return getRowModules(row)
+          .map((m) => m.name || m._id)
+          .join(", ");
+      if (sortKey === "testCaseNumber") return row?.testCaseNumber || "";
+      if (sortKey === "testCaseStatus") return row?.testCaseStatus || "";
+      if (sortKey === "defectNumber") return row?.defectNumber || "";
+      if (sortKey === "defectReportStatus")
+        return row?.defectReportStatus || "";
+      if (sortKey === "createdAt")
+        return new Date(meta?.createdAt || 0).getTime();
+
+      return "";
+    };
+
+    arr.sort((a, b) => {
+      const va = getVal(a);
+      const vb = getVal(b);
+
+      if (sortKey === "createdAt") return (va - vb) * dir;
+      return cmpStr(va, vb) * dir;
+    });
+
+    return arr;
+  }, [filtered, sortKey, sortDir, scenarioNumToScenarioMeta, getRowModules]);
+
   useEffect(() => {
-    const pages = Math.max(1, Math.ceil(filtered.length / cardsPerPage));
+    setFilteredCount(sortedFiltered.length);
+    const pages = Math.max(1, Math.ceil(sortedFiltered.length / itemsPerPage));
     setTotalPages(pages);
-    setCurrentPage((p) => Math.min(p, pages) || 1);
-  }, [filtered, cardsPerPage]);
+    setCurrentPage((p) => Math.min(p, pages));
+  }, [sortedFiltered, itemsPerPage]);
 
-  const indexOfLast = currentPage * cardsPerPage;
-  const indexOfFirst = indexOfLast - cardsPerPage;
-  const current = filtered.slice(indexOfFirst, indexOfLast);
+  const handlePageSizeChange = useCallback((e) => {
+    const v = e.target.value;
+    const next = v === "ALL" ? 1000000000 : Number(v);
+    setItemsPerPage(next);
+    setCurrentPage(1);
+  }, []);
 
-  // view helpers
-  const getNumberOfColumns = (viewType) => {
-    const w = window.innerWidth;
-    if (viewType === "grid") return w >= 1366 ? "grid-cols-4" : "grid-cols-3";
-    if (viewType === "card") return w >= 1366 ? "grid-cols-2" : "grid-cols-1";
-    return "grid-cols-1";
-  };
+  const indexOfLast = currentPage * itemsPerPage;
+  const indexOfFirst = indexOfLast - itemsPerPage;
 
-  const onModuleClick = (id) => {
+  const pageSlice = useMemo(
+    () => sortedFiltered.slice(indexOfFirst, indexOfLast),
+    [sortedFiltered, indexOfFirst, indexOfLast],
+  );
+
+  const [renderCount, setRenderCount] = useState(60);
+  useEffect(() => {
+    setRenderCount(60);
+  }, [currentPage, itemsPerPage, dq, dd, dm, sortKey, sortDir]);
+
+  useEffect(() => {
+    if (renderCount >= pageSlice.length) return;
+    const id = window.requestAnimationFrame(() => {
+      setRenderCount((c) => Math.min(pageSlice.length, c + 80));
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [renderCount, pageSlice.length]);
+
+  const current = useMemo(
+    () => pageSlice.slice(0, renderCount),
+    [pageSlice, renderCount],
+  );
+
+  const onModuleClick = useCallback((id) => {
     setSelectedModuleId((prev) => (prev === id ? null : id));
     setCurrentPage(1);
-  };
-  const clearModuleSelection = () => {
+  }, []);
+
+  const clearModuleSelection = useCallback(() => {
     setSelectedModuleId(null);
     setCurrentPage(1);
+  }, []);
+
+  const clearDateSelection = useCallback(() => {
+    setSelectedDate("");
+    setCurrentPage(1);
+  }, []);
+
+  const onHeaderSort = useCallback(
+    (key) => {
+      if (sortKey === key) {
+        setSortDir((prev) => (prev === "asc" ? "desc" : "asc"));
+      } else {
+        setSortKey(key);
+        setSortDir(key === "createdAt" ? "desc" : "asc");
+      }
+    },
+    [sortKey],
+  );
+
+  const handlePageChange = useCallback(
+    (newPage) => setCurrentPage(newPage),
+    [],
+  );
+
+  const handleRowClick = useCallback(
+    (row) => {
+      const sn = row?.scenarioNumber?.toString();
+      const scenarioId = scenarioNumToScenarioMeta.get(sn)?._id;
+      if (scenarioId) {
+        navigate(`/single-project/${projectId}/scenario-history/${scenarioId}`);
+      }
+    },
+    [navigate, projectId, scenarioNumToScenarioMeta],
+  );
+
+  const ModuleChips = memo(function ModuleChips({ row, max = 3 }) {
+    const mods = getRowModules(row);
+    if (!mods.length) {
+      return (
+        <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium text-slate-700">
+          {UNASSIGNED_NAME}
+        </span>
+      );
+    }
+
+    const show = mods.slice(0, max);
+    const extra = mods.length - show.length;
+
+    return (
+      <span className="flex flex-wrap gap-1">
+        {show.map((m) => (
+          <span
+            key={m._id}
+            className="inline-flex max-w-full items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700 whitespace-normal break-words"
+          >
+            {m.name || m._id}
+          </span>
+        ))}
+        {extra > 0 && (
+          <span className="inline-flex items-center rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[10px] font-medium text-slate-600">
+            +{extra}
+          </span>
+        )}
+      </span>
+    );
+  });
+
+  const exportRows = useMemo(() => {
+    return sortedFiltered.map((r, idx) => ({
+      ...r,
+      __rowIndex: idx + 1,
+      __createdAt: toLocalYMD(
+        scenarioNumToScenarioMeta.get(r?.scenarioNumber?.toString())?.createdAt,
+      ),
+    }));
+  }, [sortedFiltered, scenarioNumToScenarioMeta]);
+
+  const exportCols = useMemo(() => {
+    return [
+      { header: "#", value: (r) => r.__rowIndex },
+      { header: "Scenario", value: (r) => r?.scenarioNumber || "" },
+      { header: "Text", value: (r) => r?.scenarioText || "" },
+      {
+        header: "Modules",
+        value: (r) =>
+          getRowModules(r)
+            .map((m) => m.name || m._id)
+            .join(", "),
+      },
+      { header: "Test Case #", value: (r) => r?.testCaseNumber || "" },
+      { header: "Status", value: (r) => r?.testCaseStatus || "" },
+      { header: "Defect #", value: (r) => r?.defectNumber || "" },
+      { header: "Defect Report", value: (r) => r?.defectReportStatus || "" },
+      { header: "Created On", value: (r) => r.__createdAt || "" },
+    ];
+  }, [getRowModules]);
+
+  const getStatusClass = (status) => {
+    if (status === "Pass") return "text-emerald-600";
+    if (status === "Fail") return "text-rose-600";
+    return "text-slate-600";
   };
 
-  const getRowModule = (row) => {
-    const sn = row?.scenarioNumber?.toString();
-    return (
-      scenarioNumToModule.get(sn) || {
-        _id: "__unassigned__",
-        name: "Unassigned",
-      }
-    );
+  const getDefectReportClass = (status) => {
+    if (status === "Present") return "text-emerald-600";
+    if (!status || status === "Missing") return "text-rose-600";
+    return "text-slate-600";
   };
 
   return (
     <div className="bg-white py-10 sm:py-12">
-      <div className="mx-auto container px-4 sm:px-6 lg:px-8">
-        {/* Header / Controls (matches AllScenarios) */}
-        <div className="flex justify-between items-center gap-3 flex-wrap">
+      <div className="mx-auto container px-2 sm:px-3 lg:px-4">
+        <div className="space-y-3 flex flex-wrap">
           <div>
             <h2 className="font-semibold tracking-tight text-indigo-600 text-lg">
-              Traceability Matrix for Project: {projectId}
+              Traceability Matrix for Project: {projectName || projectId}
             </h2>
             <p className="text-xs text-gray-600 mt-1">
-              Total Scenarios: {totalScenarios} | Expected TestCases:{" "}
-              {totalTestCases} |{" "}
-              <span className="text-rose-600">
+              Total Scenarios: {totalScenarios}
+            </p>
+
+            <p className="text-[11px] text-slate-600 mt-1">
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 mr-1 font-medium text-slate-700">
+                Expected Test Cases: {totalTestCases}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 mr-1 font-medium text-rose-700">
                 Missing Test Cases: {missingTestCasesCount}
-              </span>{" "}
-              | <span className="text-emerald-600">Pass: {passCount}</span> |{" "}
-              <span className="text-rose-600">Fail: {failCount}</span> |{" "}
-              <span className="text-rose-600">
-                Missing Defect Reports: {defectReportCount}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 mr-1 font-medium text-emerald-700">
+                Pass: {passCount}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 mr-1 font-medium text-rose-700">
+                Fail: {failCount}
+              </span>
+              <span className="inline-flex items-center rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-medium text-amber-700">
+                Defect Reports Present: {defectReportCount}
               </span>
             </p>
-            {searchQuery && (
+
+            {(searchQuery || selectedModuleId || selectedDate) && (
               <p className="text-xs text-gray-600">
-                Showing {filtered.length} result(s) for “{searchQuery}”
+                Showing {filteredCount} result(s)
+                {searchQuery ? <> for “{searchQuery}”</> : null}
+                {selectedModuleId ? " in selected module" : null}
+                {selectedDate ? ` on ${selectedDate}` : null}
+              </p>
+            )}
+
+            {hasSelectedDate && !isSelectedDateValid && (
+              <p className="text-xs text-rose-600 mt-1">
+                No traceability rows found for {selectedDate}.
               </p>
             )}
           </div>
 
-          <div className="flex items-center gap-3 flex-wrap">
-            <FaThList
-              className={`text-lg cursor-pointer ${
-                view === "list" ? "text-blue-500" : "text-gray-500"
-              }`}
-              onClick={() => setView("list")}
-              title="List view"
-            />
-            <FaThLarge
-              className={`text-lg cursor-pointer ${
-                view === "card" ? "text-blue-500" : "text-gray-500"
-              }`}
-              onClick={() => setView("card")}
-              title="Card view"
-            />
-            <FaTh
-              className={`text-lg cursor-pointer ${
-                view === "grid" ? "text-blue-500" : "text-gray-500"
-              }`}
-              onClick={() => setView("grid")}
-              title="Grid view"
-            />
+          <div className="w-full overflow-x-auto pb-1">
+            <div className="flex flex-wrap items-center gap-3 min-w-max">
+              <div className="relative shrink-0">
+                <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
+                <input
+                  type="text"
+                  className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
+                  placeholder="Search scenario, module, testcase, defect..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  spellCheck={false}
+                />
+              </div>
 
-            <div className="relative">
-              <FaSearch className="absolute left-3 top-2.5 text-gray-400" />
-              <input
-                type="text"
-                className="pl-9 pr-3 py-1.5 text-sm border rounded-md focus:outline-none"
-                placeholder="Search..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <input
+                  type="date"
+                  list="traceability-dates"
+                  className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
+                  value={selectedDate}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  title="Filter by date"
+                />
+                <datalist id="traceability-dates">
+                  {availableDates.map((d) => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
+
+                <button
+                  onClick={clearDateSelection}
+                  className="text-[11px] px-2 py-1 border rounded-md bg-slate-50 hover:bg-slate-100 whitespace-nowrap"
+                  title="Clear date"
+                >
+                  Clear
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0">
+                <label className="text-xs text-slate-600 whitespace-nowrap">
+                  Rows:
+                </label>
+                <select
+                  value={
+                    itemsPerPage >= 1000000000 ? "ALL" : String(itemsPerPage)
+                  }
+                  onChange={handlePageSizeChange}
+                  className="px-2 py-1.5 text-sm border rounded-md focus:outline-none"
+                  title="Rows per page"
+                >
+                  <option value="10">10</option>
+                  <option value="20">20</option>
+                  <option value="40">40</option>
+                  <option value="60">60</option>
+                  <option value="ALL">All</option>
+                </select>
+              </div>
+
+              <div className="shrink-0">
+                <ExportBar
+                  rows={exportRows}
+                  columns={exportCols}
+                  fileBaseName={`TraceabilityMatrix_${projectName || projectId}`}
+                  title={`Traceability Matrix Export - ${projectName || projectId}`}
+                />
+              </div>
+
+              <Link
+                to={`/single-project/${projectId}`}
+                className="inline-flex shrink-0 whitespace-nowrap px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
+              >
+                Project Dashboard
+              </Link>
             </div>
-
-            <Link
-              to={`/single-project/${projectId}`}
-              className="px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-800 text-sm"
-            >
-              Project Dashboard
-            </Link>
           </div>
         </div>
 
-        {/* Module chips row — identical behavior to AllScenarios */}
-        <div className="mt-4">
+        <div className="mt-2">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-xs font-semibold text-slate-700">
               Filter by Module
@@ -287,19 +810,18 @@ export default function TraceabilityMatrix() {
             </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="flex gap-2 flex-wrap">
             {modules.map((m) => {
               const active = selectedModuleId === m._id;
               return (
                 <button
                   key={m._id}
                   onClick={() => onModuleClick(m._id)}
-                  className={[
-                    "whitespace-nowrap px-3 py-1 rounded-full border text-[12px]",
+                  className={`max-w-full px-3 py-1 rounded-full border text-[12px] leading-snug text-left whitespace-normal break-words ${
                     active
                       ? "bg-indigo-600 text-white border-indigo-600"
-                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100",
-                  ].join(" ")}
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100"
+                  }`}
                   title={`${m.name} (${m.count})`}
                 >
                   {m.name} <span className="opacity-70 ml-1">({m.count})</span>
@@ -312,232 +834,156 @@ export default function TraceabilityMatrix() {
           </div>
         </div>
 
-        {/* LIST VIEW — compact, single global header (same layout spirit as AllScenarios) */}
-        {view === "list" && (
-          <div className="mt-5">
-            <div className="grid grid-cols-[56px,120px,1fr,160px,140px,120px,120px,120px] items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200">
-              <div>#</div>
-              <div>Scenario</div>
-              <div>Text</div>
-              <div>Module</div>
-              <div>TestCase #</div>
-              <div>Status</div>
-              <div>Defect #</div>
-              <div>Defect Report</div>
+        <div className="mt-5">
+          <div ref={tableContainerRef} className="overflow-x-auto">
+            <div
+              className="relative grid items-center text-[12px] font-semibold text-slate-600 px-3 py-2 border-b border-slate-200 min-w-max"
+              style={{ gridTemplateColumns }}
+            >
+              {[
+                { label: "#", key: null },
+                { label: "Scenario", key: "scenarioNumber" },
+                { label: "Text", key: "scenarioText" },
+                { label: "Modules", key: "modules" },
+                { label: "TestCase #", key: "testCaseNumber" },
+                { label: "Status", key: "testCaseStatus" },
+                { label: "Defect #", key: "defectNumber" },
+                { label: "Defect Report", key: "defectReportStatus" },
+                { label: "View", key: null },
+              ].map((col, i) => (
+                <div
+                  key={col.label}
+                  className={`relative ${i >= 8 ? "text-center" : ""} pr-2`}
+                >
+                  <span
+                    className={
+                      col.key
+                        ? "cursor-pointer select-none hover:text-slate-900"
+                        : ""
+                    }
+                    onClick={() => col.key && onHeaderSort(col.key)}
+                    title={
+                      col.key
+                        ? `Sort by ${col.label} (${sortKey === col.key ? sortDir : "asc"})`
+                        : undefined
+                    }
+                  >
+                    {col.label}
+                  </span>
+
+                  {i < colW.length - 1 ? (
+                    <Resizer onMouseDown={(e) => startColResize(i, e)} />
+                  ) : null}
+                </div>
+              ))}
             </div>
 
-            <div className="divide-y divide-slate-200">
-              {current.map((it, idx) => {
-                const m = getRowModule(it);
+            <div className="divide-y divide-slate-200 min-w-max">
+              {current.map((row, idx) => {
+                const sn = row?.scenarioNumber?.toString();
+                const scenarioId = scenarioNumToScenarioMeta.get(sn)?._id;
                 return (
                   <div
-                    key={`${it.scenarioNumber}-${idx}`}
-                    className="grid grid-cols-[56px,120px,1fr,160px,140px,120px,120px,120px] items-center text-[12px] px-3 py-2"
+                    key={`${row?.scenarioNumber || "row"}-${idx}`}
+                    onClick={() => handleRowClick(row)}
+                    className={`relative grid items-start text-[12px] px-3 py-2 overflow-visible hover:bg-slate-50 ${
+                      scenarioId ? "cursor-pointer" : ""
+                    }`}
+                    style={{
+                      gridTemplateColumns,
+                      minHeight:
+                        rowHeights[`${row?.scenarioNumber}-${idx}`] || 42,
+                      height:
+                        rowHeights[`${row?.scenarioNumber}-${idx}`] || "auto",
+                    }}
+                    title={
+                      scenarioId ? "Click row to view scenario" : undefined
+                    }
                   >
                     <div className="text-slate-700">
                       {indexOfFirst + idx + 1}
                     </div>
 
-                    <div className="text-slate-900 font-medium truncate">
-                      {it.scenarioNumber}
+                    <div className="text-slate-900 font-medium whitespace-normal break-words leading-snug">
+                      {row?.scenarioNumber || "-"}
                     </div>
 
-                    <div className="text-slate-700 line-clamp-2">
-                      {it.scenarioText}
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {row?.scenarioText || "-"}
                     </div>
 
-                    <div className="truncate">
-                      <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                        {m.name}
-                      </span>
+                    <div className="whitespace-normal break-words">
+                      <ModuleChips row={row} />
                     </div>
 
                     <div
-                      className={`truncate ${
-                        it.testCaseNumber === "Missing"
+                      className={`whitespace-normal break-words leading-snug ${
+                        row?.testCaseNumber === "Missing"
                           ? "text-rose-600 font-semibold"
-                          : "text-slate-800"
+                          : "text-slate-700"
                       }`}
                     >
-                      {it.testCaseNumber || "N/A"}
+                      {row?.testCaseNumber || "-"}
                     </div>
 
                     <div
-                      className={`font-semibold ${
-                        it.testCaseStatus === "Fail"
-                          ? "text-rose-600"
-                          : "text-emerald-600"
-                      }`}
+                      className={`font-semibold ${getStatusClass(row?.testCaseStatus)}`}
                     >
-                      {it.testCaseStatus || "N/A"}
+                      {row?.testCaseStatus || "-"}
                     </div>
 
-                    <div className="text-slate-800 truncate">
-                      {it.defectNumber || "N/A"}
+                    <div className="text-slate-700 whitespace-normal break-words leading-snug">
+                      {row?.defectNumber || "-"}
                     </div>
 
                     <div
-                      className={`font-semibold ${
-                        it.defectReportStatus === "Present"
-                          ? "text-emerald-600"
-                          : "text-rose-600"
-                      }`}
+                      className={`font-semibold ${getDefectReportClass(
+                        row?.defectReportStatus,
+                      )}`}
                     >
-                      {it.defectReportStatus || "N/A"}
+                      {row?.defectReportStatus || "-"}
                     </div>
+
+                    <div className="flex justify-center pt-0.5">
+                      {scenarioId ? (
+                        <Link
+                          to={`/single-project/${projectId}/scenario-history/${scenarioId}`}
+                          className="text-indigo-600 hover:text-indigo-800"
+                          title="View"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <FaEye className="text-sm" />
+                        </Link>
+                      ) : (
+                        <span className="text-slate-300">
+                          <FaEye className="text-sm" />
+                        </span>
+                      )}
+                    </div>
+
+                    <RowHeightHandle
+                      onMouseDown={(e) =>
+                        startRowResize(`${row?.scenarioNumber}-${idx}`, e)
+                      }
+                    />
                   </div>
                 );
               })}
             </div>
+
+            {renderCount < pageSlice.length && (
+              <div className="text-center text-xs text-slate-500 py-3">
+                Rendering more…
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
-        {/* GRID VIEW */}
-        {view === "grid" && (
-          <div className={`grid ${getNumberOfColumns("grid")} gap-4 mt-8`}>
-            {current.map((it, idx) => {
-              const m = getRowModule(it);
-              return (
-                <div
-                  key={`${it.scenarioNumber}-grid-${idx}`}
-                  className="bg-white rounded-lg shadow p-4 border border-slate-200"
-                >
-                  <div className="text-sm font-semibold text-slate-700 flex items-center justify-between">
-                    <span>Scenario: {it.scenarioNumber}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {m.name}
-                    </span>
-                  </div>
-                  <div className="text-sm text-slate-700 mt-1">
-                    {it.scenarioText}
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Test Case #</div>
-                      <div
-                        className={`font-medium ${
-                          it.testCaseNumber === "Missing"
-                            ? "text-rose-600"
-                            : "text-slate-800"
-                        }`}
-                      >
-                        {it.testCaseNumber || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Status</div>
-                      <div
-                        className={`font-semibold ${
-                          it.testCaseStatus === "Fail"
-                            ? "text-rose-600"
-                            : "text-emerald-600"
-                        }`}
-                      >
-                        {it.testCaseStatus || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Defect #</div>
-                      <div className="font-medium text-slate-800">
-                        {it.defectNumber || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Defect Report</div>
-                      <div
-                        className={`font-semibold ${
-                          it.defectReportStatus === "Present"
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {it.defectReportStatus || "N/A"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* CARD VIEW */}
-        {view === "card" && (
-          <div className={`grid ${getNumberOfColumns("card")} gap-4 mt-8`}>
-            {current.map((it, idx) => {
-              const m = getRowModule(it);
-              return (
-                <div
-                  key={`${it.scenarioNumber}-card-${idx}`}
-                  className="bg-white rounded-lg shadow p-4 border border-slate-200"
-                >
-                  <div className="text-sm font-semibold text-slate-700 flex items-center justify-between">
-                    <span>Scenario: {it.scenarioNumber}</span>
-                    <span className="inline-flex items-center rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
-                      {m.name}
-                    </span>
-                  </div>
-                  <div className="text-sm text-slate-700 mt-1">
-                    {it.scenarioText}
-                  </div>
-
-                  <div className="mt-3 grid grid-cols-2 gap-2 text-[12px]">
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Test Case #</div>
-                      <div
-                        className={`font-medium ${
-                          it.testCaseNumber === "Missing"
-                            ? "text-rose-600"
-                            : "text-slate-800"
-                        }`}
-                      >
-                        {it.testCaseNumber || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Status</div>
-                      <div
-                        className={`font-semibold ${
-                          it.testCaseStatus === "Fail"
-                            ? "text-rose-600"
-                            : "text-emerald-600"
-                        }`}
-                      >
-                        {it.testCaseStatus || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Defect #</div>
-                      <div className="font-medium text-slate-800">
-                        {it.defectNumber || "N/A"}
-                      </div>
-                    </div>
-                    <div className="border rounded-md p-2">
-                      <div className="text-slate-500">Defect Report</div>
-                      <div
-                        className={`font-semibold ${
-                          it.defectReportStatus === "Present"
-                            ? "text-emerald-600"
-                            : "text-rose-600"
-                        }`}
-                      >
-                        {it.defectReportStatus || "N/A"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        {/* Pagination */}
         <div className="flex justify-center items-center gap-2 mt-8">
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            onClick={() => handlePageChange(currentPage - 1)}
           >
             <FaArrowLeft className="text-lg" />
           </button>
@@ -547,7 +993,7 @@ export default function TraceabilityMatrix() {
           <button
             className="px-3 py-1.5 bg-gray-400 text-white rounded-md hover:bg-gray-500 disabled:opacity-50"
             disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+            onClick={() => handlePageChange(currentPage + 1)}
           >
             <FaArrowRight className="text-lg" />
           </button>
