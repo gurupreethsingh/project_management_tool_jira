@@ -1547,8 +1547,6 @@ const resolveScenarioModules = async ({
 /* ============================== CREATE =============================== */
 
 const addScenario = async (req, res) => {
-  const session = await mongoose.startSession();
-
   try {
     const projectId = req.params.id;
     const {
@@ -1579,11 +1577,9 @@ const addScenario = async (req, res) => {
     });
 
     if (existingScenario) {
-      return res
-        .status(409)
-        .json({
-          error: "A scenario with similar text already exists in this project.",
-        });
+      return res.status(409).json({
+        error: "A scenario with similar text already exists in this project.",
+      });
     }
 
     const { uniqueResolved, resolvedDocs } = await resolveScenarioModules({
@@ -1613,34 +1609,23 @@ const addScenario = async (req, res) => {
       primaryModule?.name || "",
     );
 
-    let savedScenarioId = null;
-
-    await session.withTransaction(async () => {
-      const created = await Scenario.create(
-        [
-          {
-            scenario_text: cleanedScenarioText,
-            scenario_key,
-            scenario_number,
-            project: projectId,
-            module: primaryModuleId,
-            modules: uniqueResolved,
-            createdBy,
-          },
-        ],
-        { session },
-      );
-
-      savedScenarioId = created[0]._id;
-
-      await Project.findByIdAndUpdate(
-        projectId,
-        { $addToSet: { scenarios: savedScenarioId } },
-        { session },
-      );
+    const scenario = new Scenario({
+      scenario_text: cleanedScenarioText,
+      scenario_key,
+      scenario_number,
+      project: projectId,
+      module: primaryModuleId,
+      modules: uniqueResolved,
+      createdBy,
     });
 
-    const populated = await Scenario.findById(savedScenarioId)
+    await scenario.save();
+
+    await Project.findByIdAndUpdate(projectId, {
+      $addToSet: { scenarios: scenario._id },
+    });
+
+    const populated = await Scenario.findById(scenario._id)
       .populate("module", "name")
       .populate("modules", "name")
       .lean();
@@ -1651,8 +1636,6 @@ const addScenario = async (req, res) => {
     });
   } catch (error) {
     return sendHandledError(res, error, "Error adding scenario");
-  } finally {
-    await session.endSession();
   }
 };
 
@@ -1730,7 +1713,7 @@ const updateScenario = async (req, res) => {
       (Array.isArray(module_names) && module_names.length > 0);
 
     if (wantsModuleUpdate) {
-      const { uniqueResolved } = await resolveScenarioModules({
+      const { uniqueResolved, resolvedDocs } = await resolveScenarioModules({
         projectId: scenario.project._id,
         createdBy: actorId,
         moduleId,
@@ -1741,6 +1724,19 @@ const updateScenario = async (req, res) => {
 
       scenario.modules = uniqueResolved;
       scenario.module = uniqueResolved[0] || undefined;
+
+      if (uniqueResolved.length > 0) {
+        const primaryModuleId = uniqueResolved[0];
+        const primaryModule =
+          resolvedDocs.find((m) => String(m._id) === String(primaryModuleId)) ||
+          null;
+
+        scenario.scenario_number = await safeGenerateScenarioNumber(
+          scenario.project._id,
+          scenario.project.project_name,
+          primaryModule?.name || "",
+        );
+      }
     }
 
     scenario.updatedBy = {
@@ -2224,8 +2220,9 @@ const searchScenarios = async (req, res) => {
         if (normalizedRow === normalizedInput) score += 100;
         if (normalizedRow.includes(normalizedInput)) score += 40;
 
+        const searchableRow = buildSearchableScenarioText(row.scenario_text);
         for (const token of tokens) {
-          if (buildSearchableScenarioText(row.scenario_text).includes(token)) {
+          if (searchableRow.includes(token)) {
             score += 5;
           }
         }
@@ -2243,8 +2240,6 @@ const searchScenarios = async (req, res) => {
 /* ============================== DELETE ============================== */
 
 const deleteScenario = async (req, res) => {
-  const session = await mongoose.startSession();
-
   try {
     const { scenarioId } = req.params;
 
@@ -2257,22 +2252,17 @@ const deleteScenario = async (req, res) => {
       return res.status(404).json({ message: "Scenario not found" });
     }
 
-    await session.withTransaction(async () => {
-      await Project.updateOne(
-        { _id: doc.project },
-        { $pull: { scenarios: doc._id } },
-        { session },
-      );
+    await Project.updateOne(
+      { _id: doc.project },
+      { $pull: { scenarios: doc._id } },
+    );
 
-      await Change.deleteMany({ scenario: doc._id }, { session });
-      await Scenario.deleteOne({ _id: doc._id }, { session });
-    });
+    await Change.deleteMany({ scenario: doc._id });
+    await Scenario.deleteOne({ _id: doc._id });
 
     return res.json({ message: "Scenario deleted", _id: scenarioId });
   } catch (error) {
     return sendHandledError(res, error, "Error deleting scenario");
-  } finally {
-    await session.endSession();
   }
 };
 
