@@ -2266,12 +2266,79 @@ const deleteScenario = async (req, res) => {
   }
 };
 
+const bulkDeleteScenarios = async (req, res) => {
+  try {
+    const { projectId } = req.params;
+    const { scenarioIds = [] } = req.body || {};
+
+    await ensureValidProject(projectId);
+
+    if (!Array.isArray(scenarioIds) || scenarioIds.length === 0) {
+      return res.status(400).json({
+        message: "scenarioIds is required and must be a non-empty array",
+      });
+    }
+
+    const validScenarioIds = [
+      ...new Set(
+        scenarioIds.map((id) => String(id)).filter((id) => isValidObjectId(id)),
+      ),
+    ];
+
+    if (validScenarioIds.length === 0) {
+      return res.status(400).json({
+        message: "No valid scenario IDs were provided",
+      });
+    }
+
+    const docs = await Scenario.find(
+      {
+        _id: { $in: validScenarioIds.map((id) => toObjectId(id)) },
+        project: projectId,
+      },
+      { _id: 1, project: 1 },
+    ).lean();
+
+    if (!docs.length) {
+      return res.status(404).json({
+        message: "No matching scenarios found for this project",
+      });
+    }
+
+    const foundIds = docs.map((doc) => doc._id);
+
+    await Change.deleteMany({
+      scenario: { $in: foundIds },
+    });
+
+    await Scenario.deleteMany({
+      _id: { $in: foundIds },
+      project: projectId,
+    });
+
+    await Project.updateOne(
+      { _id: projectId },
+      { $pull: { scenarios: { $in: foundIds } } },
+    );
+
+    return res.json({
+      message: "Scenarios deleted successfully",
+      deletedCount: foundIds.length,
+      deletedScenarioIds: foundIds.map(String),
+      requestedCount: scenarioIds.length,
+    });
+  } catch (error) {
+    return sendHandledError(res, error, "Error bulk deleting scenarios");
+  }
+};
+
 module.exports = {
   addScenario,
   updateScenario,
   listScenariosByProject,
   getScenarioHistory,
   deleteScenario,
+  bulkDeleteScenarios,
   getScenarioNumber,
   getScenariosSimple,
   listModulesByProject,

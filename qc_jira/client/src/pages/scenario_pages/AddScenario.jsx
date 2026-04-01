@@ -39,17 +39,14 @@
 //   const navigate = useNavigate();
 //   const { projectId } = useParams();
 
-//   // form
 //   const [scenarioText, setScenarioText] = useState("");
-//   const [mode, setMode] = useState("existing"); // "existing" | "new"
+//   const [mode, setMode] = useState("existing");
 //   const [selectedModuleIds, setSelectedModuleIds] = useState([]);
 //   const [newModuleNamesCSV, setNewModuleNamesCSV] = useState("");
 
-//   // data
 //   const [modules, setModules] = useState([]);
 //   const [suggestions, setSuggestions] = useState([]);
 
-//   // ui
 //   const [errors, setErrors] = useState({});
 //   const [successMessage, setSuccessMessage] = useState("");
 //   const [loadingMods, setLoadingMods] = useState(false);
@@ -57,16 +54,14 @@
 //   const [submitting, setSubmitting] = useState(false);
 //   const [deletingModule, setDeletingModule] = useState(false);
 
-//   // module search
 //   const [moduleSearch, setModuleSearch] = useState("");
-
-//   // duplicate warning
 //   const [dupWarning, setDupWarning] = useState("");
 //   const lastDupKeyRef = useRef("");
+//   const debounceRef = useRef(null);
 
-//   // delete module modal flow
 //   const [moduleToDelete, setModuleToDelete] = useState(null);
 //   const [transferToModuleId, setTransferToModuleId] = useState("");
+//   const [scenarioInputFocused, setScenarioInputFocused] = useState(false);
 
 //   const token = useMemo(() => localStorage.getItem("token") || "", []);
 //   const authHeaders = useMemo(
@@ -102,6 +97,16 @@
 //     (raw) => String(raw || "").trim(),
 //     [],
 //   );
+
+//   const normalizeForComparison = useCallback((value = "") => {
+//     return String(value || "")
+//       .toLowerCase()
+//       .replace(/([a-z])([A-Z])/g, "$1 $2")
+//       .replace(/[_/\\-]+/g, " ")
+//       .replace(/["'`.,!?()[\]{}:;<>@#$%^&*+=|~]/g, " ")
+//       .replace(/\s+/g, " ")
+//       .trim();
+//   }, []);
 
 //   const validateScenarioText = useCallback(
 //     (raw) => {
@@ -220,7 +225,7 @@
 //         { headers: authHeaders },
 //       );
 
-//       const data = await res.json();
+//       const data = await res.json().catch(() => []);
 //       const list = Array.isArray(data) ? data : [];
 
 //       setModules(
@@ -275,12 +280,11 @@
 //     );
 //   }, [moduleSearch, loadingMods, modules, filteredModules]);
 
-//   const debounceRef = useRef(null);
-
 //   const runSearch = useCallback(
 //     async (q) => {
 //       const cleaned = String(q || "").trim();
-//       if (!cleaned) {
+
+//       if (cleaned.length < 3) {
 //         setSuggestions([]);
 //         return;
 //       }
@@ -293,7 +297,7 @@
 //         )}`;
 
 //         const res = await fetch(url, { headers: authHeaders });
-//         const data = await res.json();
+//         const data = await res.json().catch(() => []);
 //         setSuggestions(Array.isArray(data) ? data : []);
 //       } catch {
 //         setSuggestions([]);
@@ -304,16 +308,50 @@
 //     [authHeaders, projectId],
 //   );
 
+//   const visibleSuggestions = useMemo(() => {
+//     const cleaned = sanitizeScenarioText(scenarioText);
+
+//     if (!cleaned || cleaned.length < 3) return [];
+
+//     const normalizedInput = normalizeForComparison(cleaned);
+//     const inputTokens = normalizedInput.split(" ").filter((t) => t.length >= 3);
+
+//     if (!normalizedInput) return [];
+
+//     return (suggestions || []).filter((item) => {
+//       const scenario = String(item?.scenario_text || "");
+//       const normalizedScenario = normalizeForComparison(scenario);
+
+//       if (!normalizedScenario) return false;
+
+//       if (normalizedScenario === normalizedInput) return true;
+//       if (normalizedScenario.includes(normalizedInput)) return true;
+
+//       if (inputTokens.length >= 2) {
+//         return inputTokens.every((token) => normalizedScenario.includes(token));
+//       }
+
+//       if (inputTokens.length === 1) {
+//         const token = inputTokens[0];
+//         return token && normalizedScenario.includes(token);
+//       }
+
+//       return false;
+//     });
+//   }, [scenarioText, suggestions, sanitizeScenarioText, normalizeForComparison]);
+
 //   const handleScenarioChange = (e) => {
 //     const value = e.target.value;
 //     setScenarioText(value);
 
 //     setErrors((prev) => {
-//       if (!prev?.scenario_text) return prev;
 //       const cp = { ...prev };
 //       delete cp.scenario_text;
+//       delete cp.submit;
 //       return cp;
 //     });
+
+//     setSuccessMessage("");
 
 //     if (debounceRef.current) clearTimeout(debounceRef.current);
 //     debounceRef.current = setTimeout(() => runSearch(value), 300);
@@ -321,12 +359,18 @@
 
 //   const handleScenarioBlur = () => {
 //     setScenarioText((prev) => sanitizeScenarioText(prev));
+
+//     setTimeout(() => {
+//       setScenarioInputFocused(false);
+//     }, 150);
 //   };
 
 //   const handlePickSuggestion = (text) => {
 //     const cleaned = sanitizeScenarioText(text);
 //     setScenarioText(cleaned);
 //     setSuggestions([]);
+//     setDupWarning("");
+//     lastDupKeyRef.current = "";
 //   };
 
 //   const toggleModuleId = (id) => {
@@ -382,13 +426,15 @@
 
 //   const likelyDuplicate = useMemo(() => {
 //     const cleaned = sanitizeScenarioText(scenarioText);
-//     if (!cleaned || !suggestions.length) return false;
+//     if (!cleaned || !visibleSuggestions.length) return false;
 
 //     const mine = normForDup(cleaned);
 //     if (!mine) return false;
 
-//     return suggestions.some((s) => normForDup(s?.scenario_text) === mine);
-//   }, [scenarioText, suggestions, sanitizeScenarioText, normForDup]);
+//     return visibleSuggestions.some(
+//       (s) => normForDup(s?.scenario_text) === mine,
+//     );
+//   }, [scenarioText, visibleSuggestions, sanitizeScenarioText, normForDup]);
 
 //   useEffect(() => {
 //     const cleaned = sanitizeScenarioText(scenarioText);
@@ -569,6 +615,21 @@
 //     }
 //   };
 
+//   const showSuggestionBox = useMemo(() => {
+//     const cleaned = sanitizeScenarioText(scenarioText);
+//     return (
+//       scenarioInputFocused &&
+//       cleaned.length >= 3 &&
+//       (searching || visibleSuggestions.length > 0)
+//     );
+//   }, [
+//     scenarioInputFocused,
+//     scenarioText,
+//     sanitizeScenarioText,
+//     searching,
+//     visibleSuggestions,
+//   ]);
+
 //   return (
 //     <div className="py-6 sm:py-8 bg-slate-50/40">
 //       <div className="mx-auto container px-4 sm:px-6 lg:px-8">
@@ -604,6 +665,7 @@
 //                   value={scenarioText}
 //                   onChange={handleScenarioChange}
 //                   onBlur={handleScenarioBlur}
+//                   onFocus={() => setScenarioInputFocused(true)}
 //                   className="block w-full rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-200"
 //                   placeholder="Describe the scenario…"
 //                 />
@@ -618,7 +680,7 @@
 //                   <p className="mt-1 text-xs text-amber-600">{dupWarning}</p>
 //                 )}
 
-//                 {(searching || suggestions.length > 0) && (
+//                 {showSuggestionBox && (
 //                   <div className="absolute z-20 mt-2 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-auto text-sm">
 //                     {searching && (
 //                       <div className="px-3 py-2 text-xs text-slate-500">
@@ -627,12 +689,14 @@
 //                     )}
 
 //                     {!searching &&
-//                       suggestions.map((s) => (
+//                       visibleSuggestions.map((s) => (
 //                         <button
 //                           type="button"
 //                           key={s._id}
 //                           className="block w-full text-left px-3 py-2 hover:bg-slate-50 text-xs text-slate-800"
-//                           onClick={() => handlePickSuggestion(s.scenario_text)}
+//                           onMouseDown={() =>
+//                             handlePickSuggestion(s.scenario_text)
+//                           }
 //                           title={
 //                             Array.isArray(s.modules) && s.modules.length
 //                               ? `Modules: ${s.modules
@@ -650,11 +714,13 @@
 //                         </button>
 //                       ))}
 
-//                     {!searching && suggestions.length === 0 && scenarioText && (
-//                       <div className="px-3 py-2 text-xs text-slate-400">
-//                         No similar scenarios found.
-//                       </div>
-//                     )}
+//                     {!searching &&
+//                       visibleSuggestions.length === 0 &&
+//                       sanitizeScenarioText(scenarioText).length >= 3 && (
+//                         <div className="px-3 py-2 text-xs text-slate-400">
+//                           No close matching scenarios found.
+//                         </div>
+//                       )}
 //                   </div>
 //                 )}
 //               </div>
@@ -928,6 +994,8 @@
 //   );
 // }
 
+// fully working code, the scenario count fixed code,
+
 import React, {
   useCallback,
   useEffect,
@@ -1144,34 +1212,94 @@ export default function AddScenario() {
     [toPascalCase],
   );
 
+  const getScenarioModules = useCallback((scenario) => {
+    if (Array.isArray(scenario?.modules) && scenario.modules.length) {
+      return scenario.modules
+        .filter(Boolean)
+        .map((m) =>
+          typeof m === "object"
+            ? { _id: m._id, name: m.name }
+            : { _id: m, name: "" },
+        )
+        .filter((m) => m && m._id);
+    }
+
+    if (scenario?.module?._id || scenario?.module?.name) {
+      return [{ _id: scenario.module._id, name: scenario.module.name }];
+    }
+
+    return [];
+  }, []);
+
+  const buildModuleCountMapFromScenarios = useCallback(
+    (scenarioList) => {
+      const counts = new Map();
+
+      for (const scenario of Array.isArray(scenarioList) ? scenarioList : []) {
+        const mods = getScenarioModules(scenario);
+        const seen = new Set();
+
+        for (const mod of mods) {
+          const id = String(mod?._id || "").trim();
+          if (!id || seen.has(id)) continue;
+
+          seen.add(id);
+          counts.set(id, (counts.get(id) || 0) + 1);
+        }
+      }
+
+      return counts;
+    },
+    [getScenarioModules],
+  );
+
   const loadModules = useCallback(async () => {
     if (!projectId) return;
 
     try {
       setLoadingMods(true);
 
-      const res = await fetch(
-        `${globalBackendRoute}/api/single-projects/${projectId}/modules-with-counts`,
-        { headers: authHeaders },
-      );
+      const [modulesRes, scenariosRes] = await Promise.all([
+        fetch(
+          `${globalBackendRoute}/api/single-projects/${projectId}/modules-with-counts`,
+          { headers: authHeaders },
+        ),
+        fetch(
+          `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`,
+          { headers: authHeaders },
+        ),
+      ]);
 
-      const data = await res.json().catch(() => []);
-      const list = Array.isArray(data) ? data : [];
+      const modulesData = await modulesRes.json().catch(() => []);
+      const scenariosData = await scenariosRes.json().catch(() => []);
 
-      setModules(
-        list.filter(
+      const moduleList = Array.isArray(modulesData) ? modulesData : [];
+      const scenarioList = Array.isArray(scenariosData) ? scenariosData : [];
+
+      const accurateCountMap = buildModuleCountMapFromScenarios(scenarioList);
+
+      const normalizedModules = moduleList
+        .filter(
           (m) =>
             String(m?.name || "")
               .trim()
               .toLowerCase() !== "unassigned",
-        ),
-      );
+        )
+        .map((m) => {
+          const id = String(m?._id || "");
+          return {
+            ...m,
+            count: accurateCountMap.get(id) || 0,
+          };
+        });
+
+      setModules(normalizedModules);
     } catch {
       setModules([]);
     } finally {
       setLoadingMods(false);
     }
-  }, [projectId, authHeaders]);
+  }, [projectId, authHeaders, buildModuleCountMapFromScenarios]);
 
   useEffect(() => {
     loadModules();

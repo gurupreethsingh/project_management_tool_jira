@@ -56,6 +56,12 @@ router.delete(
   ctrl.deleteScenario,
 );
 
+router.delete(
+  "/single-project/:projectId/scenarios/bulk-delete",
+  authenticateToken,
+  ctrl.bulkDeleteScenarios,
+);
+
 router.get(
   "/single-project/scenario/:scenarioId/scenario-number",
   authenticateToken,
