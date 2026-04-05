@@ -1,48 +1,65 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 
-const isTokenExpired = (token) => {
+const parseJwt = (token) => {
   try {
-    if (!token) return true;
+    if (!token) return null;
 
-    const payloadPart = token.split(".")[1];
-    if (!payloadPart) return true;
+    const parts = token.split(".");
+    if (parts.length !== 3) return null;
 
+    const payloadPart = parts[1];
     const base64 = payloadPart.replace(/-/g, "+").replace(/_/g, "/");
-    const payload = JSON.parse(atob(base64));
+    const decodedPayload = JSON.parse(atob(base64));
 
-    if (!payload.exp) return true;
-
-    return Date.now() >= payload.exp * 1000;
+    return decodedPayload;
   } catch (error) {
-    return true;
+    return null;
   }
 };
 
+const isTokenExpired = (token) => {
+  const payload = parseJwt(token);
+
+  if (!payload || !payload.exp) {
+    return true;
+  }
+
+  return Date.now() >= payload.exp * 1000;
+};
+
+const clearAuthStorage = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+};
+
 const PrivateRoute = ({ children, allowedRoles = [] }) => {
+  const location = useLocation();
+
   const token = localStorage.getItem("token");
   const userRaw = localStorage.getItem("user");
 
   let user = null;
+
   try {
     user = userRaw ? JSON.parse(userRaw) : null;
   } catch (error) {
-    localStorage.removeItem("user");
-    user = null;
+    clearAuthStorage();
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
 
   if (!token || !user) {
-    return <Navigate to="/" replace />;
+    clearAuthStorage();
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
 
   if (isTokenExpired(token)) {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    return <Navigate to="/" replace />;
+    clearAuthStorage();
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
 
   if (allowedRoles.length > 0 && !allowedRoles.includes(user.role)) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/" replace state={{ from: location }} />;
   }
 
   return children;

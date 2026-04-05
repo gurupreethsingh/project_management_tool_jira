@@ -48,6 +48,74 @@
 //   return res.status(401).json({ message: "Not authorized, no token" });
 // };
 
+// // ====== SEARCH / PAGINATION HELPERS ======
+// const STOP_WORDS = new Set([
+//   "a",
+//   "an",
+//   "the",
+//   "and",
+//   "or",
+//   "of",
+//   "in",
+//   "on",
+//   "at",
+//   "to",
+//   "for",
+//   "with",
+//   "by",
+//   "from",
+//   "is",
+//   "are",
+//   "was",
+//   "were",
+//   "be",
+//   "been",
+//   "being",
+//   "i",
+//   "you",
+//   "he",
+//   "she",
+//   "it",
+//   "we",
+//   "they",
+//   "me",
+//   "him",
+//   "her",
+//   "us",
+//   "them",
+//   "this",
+//   "that",
+//   "these",
+//   "those",
+//   "there",
+//   "here",
+//   "please",
+//   "pls",
+//   "plz",
+//   "show",
+//   "find",
+//   "search",
+//   "look",
+//   "list",
+//   "user",
+//   "users",
+//   "role",
+//   "named",
+//   "called",
+// ]);
+
+// const escapeRegex = (value = "") =>
+//   String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+// const tokenize = (raw = "") => {
+//   const trimmed = String(raw).trim().toLowerCase();
+//   if (!trimmed) return [];
+//   return trimmed
+//     .split(/\s+/)
+//     .filter(Boolean)
+//     .filter((t) => !STOP_WORDS.has(t));
+// };
+
 // // ====== AVATAR UPLOAD (multer) ======
 // const storage = multer.diskStorage({
 //   destination: async function (req, file, cb) {
@@ -66,7 +134,7 @@
 //   filename: function (_req, file, cb) {
 //     cb(
 //       null,
-//       file.fieldname + "-" + Date.now() + path.extname(file.originalname)
+//       file.fieldname + "-" + Date.now() + path.extname(file.originalname),
 //     );
 //   },
 // });
@@ -104,7 +172,7 @@
 //     const userToken = jwt.sign(
 //       { id: user._id, email: user.email, name: user.name, role: user.role },
 //       JWT_SECRET,
-//       { expiresIn: "1d" }
+//       { expiresIn: "1d" },
 //     );
 
 //     res.json({
@@ -134,13 +202,61 @@
 //   }
 // };
 
-// exports.getAllUsers = async (_req, res) => {
+// // ====== OPTIMIZED ALL USERS ======
+// exports.getAllUsers = async (req, res) => {
 //   try {
-//     const users = await User.find();
-//     res.json(users);
+//     const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+//     const limit = Math.min(
+//       Math.max(parseInt(req.query.limit, 10) || 10, 1),
+//       100,
+//     );
+//     const sort = req.query.sort === "desc" ? -1 : 1;
+//     const rawSearch = req.query.search || "";
+
+//     const tokens = tokenize(rawSearch);
+
+//     let query = {};
+
+//     if (tokens.length > 0) {
+//       query = {
+//         $and: tokens.map((token) => {
+//           const safe = escapeRegex(token);
+//           return {
+//             $or: [
+//               { name: { $regex: safe, $options: "i" } },
+//               { email: { $regex: safe, $options: "i" } },
+//               { role: { $regex: safe, $options: "i" } },
+//             ],
+//           };
+//         }),
+//       };
+//     }
+
+//     const totalUsers = await User.countDocuments(query);
+
+//     const users = await User.find(query)
+//       .sort({ name: sort, _id: 1 })
+//       .skip((page - 1) * limit)
+//       .limit(limit)
+//       .lean();
+
+//     return res.json({
+//       users,
+//       totalUsers,
+//       currentPage: page,
+//       totalPages: Math.max(1, Math.ceil(totalUsers / limit)),
+//       limit,
+//     });
 //   } catch (error) {
 //     console.error("Error fetching users:", error);
-//     res.status(500).json({ message: "Server error" });
+//     return res.status(500).json({
+//       message: "Server error",
+//       users: [],
+//       totalUsers: 0,
+//       currentPage: 1,
+//       totalPages: 1,
+//       limit: 10,
+//     });
 //   }
 // };
 
@@ -210,16 +326,17 @@
 //     if (!userToDelete) return res.status(404).json({ error: "User not found" });
 
 //     if (userToDelete.avatar) {
-//       // avatar may already include folders; be defensive resolving
 //       const imagePath = path.isAbsolute(userToDelete.avatar)
 //         ? userToDelete.avatar
 //         : path.join(__dirname, "..", "uploads", userToDelete.avatar);
+
 //       if (fs.existsSync(imagePath)) {
 //         fs.unlink(imagePath, (err) => {
 //           if (err) console.error("Error deleting image file:", err);
 //         });
 //       }
 //     }
+
 //     res.status(200).json({ message: "User deleted successfully" });
 //   } catch (error) {
 //     console.error("Error deleting user:", error);
@@ -300,23 +417,22 @@
 //   }
 // };
 
-// // Add at the bottom of controllers/UserController.js (and export it)
+// // ====== APPROVER / REVIEW LISTS ======
 // exports.listApproverEligibleUsers = async (_req, res) => {
 //   try {
-//     // accept both canonical and common typos/aliases
 //     const roles = [
 //       "superadmin",
 //       "admin",
 //       "test_lead",
-//       "developer_lead", // canonical
-//       "develpment_lead", // alias/typo seen in requests
-//       "business_analyst", // canonical
-//       "Business_analyst", // alias case
+//       "developer_lead",
+//       "develpment_lead",
+//       "business_analyst",
+//       "Business_analyst",
 //       "qa_lead",
 //     ];
 
 //     const users = await User.find({ role: { $in: roles } }).select(
-//       "_id name email role"
+//       "_id name email role",
 //     );
 //     res.status(200).json(users);
 //   } catch (error) {
@@ -325,7 +441,6 @@
 //   }
 // };
 
-// // Who can approve: superadmin, admin, test_lead, developer_lead, business_analyst, qa_lead
 // const APPROVER_ROLES = [
 //   "superadmin",
 //   "admin",
@@ -351,7 +466,7 @@
 //   try {
 //     const users = await User.find(
 //       { role: { $in: APPROVER_ROLES } },
-//       "_id name role"
+//       "_id name role",
 //     )
 //       .sort({ name: 1 })
 //       .lean();
@@ -374,44 +489,90 @@ const multer = require("multer");
 const User = require("../models/UserModel");
 const Project = require("../models/ProjectModel");
 
-// ====== AUTH HELPERS (exported) ======
+// ====== AUTH HELPERS ======
 const JWT_SECRET = process.env.JWT_SECRET || "ecoders_jwt_secret";
 
+// Keep this only if you still want lightweight token-only validation for some routes.
+// Otherwise you can remove it later. For now, keeping it avoids breaking features.
 exports.authenticateToken = (req, res, next) => {
-  let token;
-  if (req.headers.authorization?.startsWith("Bearer")) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = decoded;
-      return next();
-    } catch (err) {
-      return res.status(403).json({ message: "Invalid token." });
-    }
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      code: "NO_TOKEN",
+      message: "No token provided",
+    });
   }
-  return res.status(401).json({ message: "No token provided" });
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    return next();
+  } catch (err) {
+    if (err.name === "TokenExpiredError") {
+      return res.status(401).json({
+        code: "TOKEN_EXPIRED",
+        message: "Token expired. Please login again.",
+      });
+    }
+
+    return res.status(401).json({
+      code: "TOKEN_INVALID",
+      message: "Invalid token.",
+    });
+  }
 };
 
 exports.requireAdmin = (req, res, next) => {
-  if (req.user && ["admin", "superadmin"].includes(req.user.role))
+  if (req.user && ["admin", "superadmin"].includes(req.user.role)) {
     return next();
+  }
+
   return res.status(403).json({ error: "Permission denied" });
 };
 
+// Keeping this to avoid breaking any existing imports.
+// Internally it now behaves consistently.
 exports.protect = async (req, res, next) => {
-  let token;
-  if (req.headers.authorization?.startsWith("Bearer")) {
-    try {
-      token = req.headers.authorization.split(" ")[1];
-      const decoded = jwt.verify(token, JWT_SECRET);
-      req.user = await User.findById(decoded.id).select("-password");
-      if (!req.user) return res.status(401).json({ message: "User not found" });
-      return next();
-    } catch (error) {
-      return res.status(401).json({ message: "Not authorized, token failed" });
-    }
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({
+      code: "NO_TOKEN",
+      message: "No token provided",
+    });
   }
-  return res.status(401).json({ message: "Not authorized, no token" });
+
+  const token = authHeader.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+
+    req.user = await User.findById(decoded.id).select("-password");
+
+    if (!req.user) {
+      return res.status(401).json({
+        code: "USER_NOT_FOUND",
+        message: "User not found",
+      });
+    }
+
+    return next();
+  } catch (error) {
+    if (error.name === "TokenExpiredError") {
+      return res.status(401).json({
+        code: "TOKEN_EXPIRED",
+        message: "Token expired. Please login again.",
+      });
+    }
+
+    return res.status(401).json({
+      code: "TOKEN_INVALID",
+      message: "Not authorized, token failed",
+    });
+  }
 };
 
 // ====== SEARCH / PAGINATION HELPERS ======
@@ -476,6 +637,7 @@ const escapeRegex = (value = "") =>
 const tokenize = (raw = "") => {
   const trimmed = String(raw).trim().toLowerCase();
   if (!trimmed) return [];
+
   return trimmed
     .split(/\s+/)
     .filter(Boolean)
@@ -488,15 +650,20 @@ const storage = multer.diskStorage({
     try {
       const user = await User.findById(req.params.id);
       let uploadFolder = "uploads/";
+
       if (user?.role) uploadFolder += user.role;
       else uploadFolder += "others";
-      if (!fs.existsSync(uploadFolder))
+
+      if (!fs.existsSync(uploadFolder)) {
         fs.mkdirSync(uploadFolder, { recursive: true });
+      }
+
       cb(null, uploadFolder);
     } catch (err) {
       cb(err);
     }
   },
+
   filename: function (_req, file, cb) {
     cb(
       null,
@@ -504,18 +671,25 @@ const storage = multer.diskStorage({
     );
   },
 });
+
 exports.uploadAvatar = multer({ storage });
 
 // ====== AUTH + USER CONTROLLERS ======
 exports.register = async (req, res) => {
   const { name, email, password } = req.body;
+
   try {
     let user = await User.findOne({ email });
-    if (user) return res.status(400).json({ msg: "User already exists" });
+
+    if (user) {
+      return res.status(400).json({ msg: "User already exists" });
+    }
 
     user = new User({ name, email, password });
+
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(password, salt);
+
     await user.save();
 
     res.status(201).json({ msg: "User registered successfully" });
@@ -527,21 +701,32 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
+
   try {
     const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: "Invalid credentials" });
+
+    if (!user) {
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch)
+
+    if (!isMatch) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const userToken = jwt.sign(
-      { id: user._id, email: user.email, name: user.name, role: user.role },
+      {
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+      },
       JWT_SECRET,
       { expiresIn: "1d" },
     );
 
-    res.json({
+    return res.json({
       status: true,
       userToken,
       user: {
@@ -553,18 +738,22 @@ exports.login = async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.getUserById = async (req, res) => {
   try {
     const u = await User.findById(req.params.id);
-    if (!u) return res.status(404).json({ message: "User not found" });
-    res.json(u);
+
+    if (!u) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.json(u);
   } catch (error) {
     console.error("Error fetching user by ID:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -587,6 +776,7 @@ exports.getAllUsers = async (req, res) => {
       query = {
         $and: tokens.map((token) => {
           const safe = escapeRegex(token);
+
           return {
             $or: [
               { name: { $regex: safe, $options: "i" } },
@@ -615,6 +805,7 @@ exports.getAllUsers = async (req, res) => {
     });
   } catch (error) {
     console.error("Error fetching users:", error);
+
     return res.status(500).json({
       message: "Server error",
       users: [],
@@ -629,9 +820,13 @@ exports.getAllUsers = async (req, res) => {
 exports.updateUser = async (req, res) => {
   const { name, email, phone, street, city, state, postalCode, country } =
     req.body;
+
   try {
     const u = await User.findById(req.params.id);
-    if (!u) return res.status(404).json({ msg: "User not found" });
+
+    if (!u) {
+      return res.status(404).json({ msg: "User not found" });
+    }
 
     if (name) u.name = name;
     if (email) u.email = email;
@@ -639,6 +834,7 @@ exports.updateUser = async (req, res) => {
 
     if (street || city || state || postalCode || country) {
       u.address = u.address || {};
+
       if (street) u.address.street = street;
       if (city) u.address.city = city;
       if (state) u.address.state = state;
@@ -652,12 +848,16 @@ exports.updateUser = async (req, res) => {
     }
 
     u.updatedAt = Date.now();
+
     await u.save();
 
-    res.status(200).json({ msg: "User updated successfully", user: u });
+    return res.status(200).json({
+      msg: "User updated successfully",
+      user: u,
+    });
   } catch (error) {
     console.error("Update user error:", error);
-    res.status(500).send("Server error");
+    return res.status(500).send("Server error");
   }
 };
 
@@ -667,34 +867,43 @@ exports.updateUserRole = async (req, res) => {
     const { id } = req.params;
     const { role } = req.body;
 
-    if (!role) return res.status(400).json({ message: "Role is required" });
+    if (!role) {
+      return res.status(400).json({ message: "Role is required" });
+    }
 
     const user = await User.findById(id);
-    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
     user.role = role;
     user.updatedAt = Date.now();
+
     await user.save();
 
-    res.status(200).json({
+    return res.status(200).json({
       message: `User role updated successfully to ${role}`,
       user,
     });
   } catch (error) {
     console.error("Error updating user role:", error);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
 exports.deleteUser = async (req, res) => {
   try {
     const userToDelete = await User.findByIdAndDelete(req.params.id);
-    if (!userToDelete) return res.status(404).json({ error: "User not found" });
+
+    if (!userToDelete) {
+      return res.status(404).json({ error: "User not found" });
+    }
 
     if (userToDelete.avatar) {
       const imagePath = path.isAbsolute(userToDelete.avatar)
         ? userToDelete.avatar
-        : path.join(__dirname, "..", "uploads", userToDelete.avatar);
+        : path.join(__dirname, "..", userToDelete.avatar);
 
       if (fs.existsSync(imagePath)) {
         fs.unlink(imagePath, (err) => {
@@ -703,10 +912,10 @@ exports.deleteUser = async (req, res) => {
       }
     }
 
-    res.status(200).json({ message: "User deleted successfully" });
+    return res.status(200).json({ message: "User deleted successfully" });
   } catch (error) {
     console.error("Error deleting user:", error);
-    res.status(500).json({ error: "Failed to delete user" });
+    return res.status(500).json({ error: "Failed to delete user" });
   }
 };
 
@@ -714,20 +923,20 @@ exports.deleteUser = async (req, res) => {
 exports.listDevelopers = async (_req, res) => {
   try {
     const devs = await User.find({ role: "developer" });
-    res.status(200).json(devs);
+    return res.status(200).json(devs);
   } catch (error) {
     console.error("Error fetching developers:", error);
-    res.status(500).json({ message: "Error fetching developers" });
+    return res.status(500).json({ message: "Error fetching developers" });
   }
 };
 
 exports.listTestEngineers = async (_req, res) => {
   try {
     const tes = await User.find({ role: "test_engineer" });
-    res.status(200).json(tes);
+    return res.status(200).json(tes);
   } catch (error) {
     console.error("Error fetching test engineers:", error);
-    res.status(500).json({ message: "Error fetching test engineers" });
+    return res.status(500).json({ message: "Error fetching test engineers" });
   }
 };
 
@@ -739,23 +948,25 @@ exports.countDevelopersFromProjects = async (_req, res) => {
       { $group: { _id: "$developers" } },
       { $count: "totalDevelopers" },
     ]);
-    res.json({ totalDevelopers: agg[0]?.totalDevelopers || 0 });
+
+    return res.json({ totalDevelopers: agg[0]?.totalDevelopers || 0 });
   } catch (error) {
     console.error("Error fetching developers count:", error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
 exports.countByRole = (role) => async (_req, res) => {
   try {
     const total = await User.countDocuments({ role });
-    res.json({
-      [`total${role.replace(/(^|\_)(\w)/g, (_, __, c) => c.toUpperCase())}`]:
+
+    return res.json({
+      [`total${role.replace(/(^|_)(\w)/g, (_, __, c) => c.toUpperCase())}`]:
         total,
     });
   } catch (error) {
     console.error(`Error fetching ${role} count:`, error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -769,7 +980,8 @@ exports.countUsersSummary = async (_req, res) => {
     });
     const totalDevelopers = await User.countDocuments({ role: "developer" });
     const totalUsers = await User.countDocuments({});
-    res.json({
+
+    return res.json({
       totalUsers,
       totalAdmins,
       totalSuperAdmins,
@@ -779,7 +991,7 @@ exports.countUsersSummary = async (_req, res) => {
     });
   } catch (error) {
     console.error("Error fetching user counts:", error);
-    res.status(500).json({ error: "Server error" });
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -800,10 +1012,11 @@ exports.listApproverEligibleUsers = async (_req, res) => {
     const users = await User.find({ role: { $in: roles } }).select(
       "_id name email role",
     );
-    res.status(200).json(users);
+
+    return res.status(200).json(users);
   } catch (error) {
     console.error("Error fetching approver-eligible users:", error);
-    res.status(500).json({ message: "Error fetching approvers" });
+    return res.status(500).json({ message: "Error fetching approvers" });
   }
 };
 
@@ -820,10 +1033,10 @@ const APPROVER_ROLES = [
 exports.listAllForReview = async (_req, res) => {
   try {
     const users = await User.find({}, "_id name role").sort({ name: 1 }).lean();
-    res.json(users);
+    return res.json(users);
   } catch (e) {
     console.error("listAllForReview error:", e);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };
 
@@ -836,9 +1049,10 @@ exports.listApprovers = async (_req, res) => {
     )
       .sort({ name: 1 })
       .lean();
-    res.json(users);
+
+    return res.json(users);
   } catch (e) {
     console.error("listApprovers error:", e);
-    res.status(500).json({ message: "Server error" });
+    return res.status(500).json({ message: "Server error" });
   }
 };

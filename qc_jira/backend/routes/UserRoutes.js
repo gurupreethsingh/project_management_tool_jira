@@ -19,7 +19,7 @@
 //   listApproverEligibleUsers,
 //   listAllForReview,
 //   listApprovers,
-//   updateUserRole, // ← add this
+//   updateUserRole,
 // } = require("../controllers/UserController");
 
 // const router = express.Router();
@@ -30,26 +30,25 @@
 // router.get("/user/:id", getUserById);
 // router.get("/get-user/:id", getUserById);
 
+// // ===== ALL USERS / SEARCH / PAGINATION =====
 // router.get("/all-users", getAllUsers);
 // router.get("/users", getAllUsers);
 // router.get("/users/all", getAllUsers);
-
-// // keep ONE of these (remove duplicates). Pick one path for each list:
-// router.get("/users/approvers", listApprovers); // approver roles only
-// router.get("/users/approver-eligible", listApproverEligibleUsers); // broader/alias list
-
-// router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
-
-// // restrict destructive ops to admins
-// router.delete("/delete-user/:id", authenticateToken, requireAdmin, deleteUser);
 
 // // ===== USER LISTS =====
 // router.get("/users/developers", listDevelopers);
 // router.get("/users/test-engineers", listTestEngineers);
 
-// // ===== DROPDOWNS =====
+// // ===== APPROVER / REVIEWER LISTS =====
+// router.get("/users/approvers", listApprovers);
+// router.get("/users/approver-eligible", listApproverEligibleUsers);
 // router.get("/users/reviewers", listAllForReview);
-// router.get("/users/approvers", listApprovers); // (keep only once)
+
+// // ===== UPDATE / DELETE =====
+// router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
+
+// // restrict destructive ops to admins
+// router.delete("/delete-user/:id", authenticateToken, requireAdmin, deleteUser);
 
 // // ===== COUNTS =====
 // router.get("/count-developers", countDevelopersFromProjects);
@@ -68,18 +67,16 @@
 // router.get("/count-hr-managers", countByRole("hr_manager"));
 // router.get("/count-users", countUsersSummary);
 
-// // ✅ Role update route (optional auth)
+// // ===== ROLE UPDATE =====
 // router.patch(
 //   "/user/:id/role",
-//   // authenticateToken, requireAdmin, // ← uncomment if you want only admins to change roles
-//   updateUserRole
+//   // authenticateToken, requireAdmin,
+//   updateUserRole,
 // );
 
 // module.exports = router;
 
 //
-
-// new code.
 
 // routes/UserRoutes.js
 const express = require("express");
@@ -92,7 +89,6 @@ const {
   deleteUser,
   authenticateToken,
   requireAdmin,
-  protect,
   uploadAvatar,
   listDevelopers,
   listTestEngineers,
@@ -130,7 +126,7 @@ router.get("/users/reviewers", listAllForReview);
 // ===== UPDATE / DELETE =====
 router.put("/update-user/:id", uploadAvatar.single("avatar"), updateUser);
 
-// restrict destructive ops to admins
+// Restrict destructive ops to admins
 router.delete("/delete-user/:id", authenticateToken, requireAdmin, deleteUser);
 
 // ===== COUNTS =====
@@ -151,10 +147,7 @@ router.get("/count-hr-managers", countByRole("hr_manager"));
 router.get("/count-users", countUsersSummary);
 
 // ===== ROLE UPDATE =====
-router.patch(
-  "/user/:id/role",
-  // authenticateToken, requireAdmin,
-  updateUserRole,
-);
+// Uncomment auth protection later if required
+router.patch("/user/:id/role", updateUserRole);
 
 module.exports = router;
