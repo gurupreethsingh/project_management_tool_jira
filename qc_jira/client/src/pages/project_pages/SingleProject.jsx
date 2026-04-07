@@ -23,6 +23,7 @@ import {
   FaUserTie,
   FaUsers,
   FaBusinessTime,
+  FaClipboardList,
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
@@ -59,7 +60,7 @@ const SingleProject = () => {
       const token = localStorage.getItem("token");
       const response = await axios.get(
         `${globalBackendRoute}/api/single-project/${projectId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        { headers: { Authorization: `Bearer ${token}` } },
       );
       setProject(response.data);
       setLoading(false);
@@ -78,14 +79,14 @@ const SingleProject = () => {
   const fetchTestCaseCount = async () => {
     try {
       const res = await axios.get(
-        `${globalBackendRoute}/api/projects/${projectId}/test-cases-count`
+        `${globalBackendRoute}/api/projects/${projectId}/test-cases-count`,
       );
       setTotalTestCases(res.data.totalTestCases || 0);
     } catch (err) {
       console.error(
         "Error fetching test case count:",
         err?.response?.status,
-        err?.message
+        err?.message,
       );
       setTotalTestCases(0);
     }
@@ -94,14 +95,14 @@ const SingleProject = () => {
   const fetchDefectsCount = async () => {
     try {
       const res = await axios.get(
-        `${globalBackendRoute}/api/single-project/${projectId}/defects-count`
+        `${globalBackendRoute}/api/single-project/${projectId}/defects-count`,
       );
       setTotalDefects(res.data.totalDefects || 0);
     } catch (err) {
       console.error(
         "Error fetching defects count:",
         err?.response?.status,
-        err?.message
+        err?.message,
       );
       setTotalDefects(0);
     }
@@ -398,23 +399,6 @@ const SingleProject = () => {
                   Traceability Matrix
                 </Link>
 
-                {/* Execute Test Cases */}
-                {(normRole === "superadmin" ||
-                  normRole === "admin" ||
-                  normRole === "project_manager" ||
-                  normRole === "developer_lead" ||
-                  normRole === "qa_lead" ||
-                  normRole === "test_engineer" ||
-                  normRole === "test_lead") && (
-                  <Link
-                    to={`/single-project/${projectId}/test-case-execution`}
-                    className={baseBtn}
-                  >
-                    <FaNetworkWired className="text-[10px]" />
-                    Execute Test Cases
-                  </Link>
-                )}
-
                 {/* Tasks */}
                 {(normRole === "superadmin" ||
                   normRole === "admin" ||
@@ -463,6 +447,33 @@ const SingleProject = () => {
                   <FaBusinessTime className="text-[10px]" />
                   View All Reports
                 </Link>
+
+                {/* Test Executions */}
+                {(normRole === "superadmin" ||
+                  normRole === "admin" ||
+                  normRole === "project_manager" ||
+                  normRole === "developer_lead" ||
+                  normRole === "qa_lead" ||
+                  normRole === "test_engineer" ||
+                  normRole === "test_lead") && (
+                  <>
+                    <Link
+                      to={`/single-project/${projectId}/add-test-execution`}
+                      className={baseBtn}
+                    >
+                      <FaPlus className="text-[10px]" />
+                      Add Test Execution
+                    </Link>
+
+                    <Link
+                      to={`/single-project/${projectId}/all-test-executions`}
+                      className={baseBtn}
+                    >
+                      <FaClipboardList className="text-[10px]" />
+                      View Test Executions
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </div>

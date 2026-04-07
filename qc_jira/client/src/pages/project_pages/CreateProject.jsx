@@ -1,337 +1,4 @@
-// import React, { useState, useEffect } from "react";
-// import { useNavigate } from "react-router-dom";
-// import { MdOutlineWorkOutline } from "react-icons/md";
-// import { FaFileAlt, FaCalendarAlt, FaUserTie, FaUsers } from "react-icons/fa";
-// import axios from "axios";
-// import globalBackendRoute from "../../config/Config";
-
-// export default function CreateProject() {
-//   const [formData, setFormData] = useState({
-//     projectName: "",
-//     description: "",
-//     startDate: "",
-//     endDate: "",
-//     deadline: "",
-//     developers: [],
-//     testEngineers: [],
-//   });
-
-//   const [errors, setErrors] = useState({});
-//   const [successMessage, setSuccessMessage] = useState("");
-//   const [developers, setDevelopers] = useState([]);
-//   const [testEngineers, setTestEngineers] = useState([]);
-//   const navigate = useNavigate();
-
-//   useEffect(() => {
-//     const fetchDevelopers = async () => {
-//       try {
-//         const res = await axios.get(
-//           `${globalBackendRoute}/api/users/developers`
-//         );
-//         setDevelopers(Array.isArray(res.data) ? res.data : []);
-//       } catch (error) {
-//         console.error("Error fetching developers:", error);
-//       }
-//     };
-
-//     const fetchTestEngineers = async () => {
-//       try {
-//         const res = await axios.get(
-//           `${globalBackendRoute}/api/users/test-engineers`
-//         );
-//         setTestEngineers(Array.isArray(res.data) ? res.data : []);
-//       } catch (error) {
-//         console.error("Error fetching test engineers:", error);
-//       }
-//     };
-
-//     fetchDevelopers();
-//     fetchTestEngineers();
-//   }, []);
-
-//   const validateForm = () => {
-//     const formErrors = {};
-//     if (!formData.projectName.trim())
-//       formErrors.projectName = "Project name cannot be empty.";
-//     if (!formData.startDate) formErrors.startDate = "Start date is required.";
-//     if (!formData.deadline) formErrors.deadline = "Deadline is required.";
-//     setErrors(formErrors);
-//     return Object.keys(formErrors).length === 0;
-//   };
-
-//   const handleChange = (e) =>
-//     setFormData({ ...formData, [e.target.name]: e.target.value });
-
-//   const handleDropdownChange = (e) => {
-//     const { name, options } = e.target;
-//     const selectedValues = Array.from(options)
-//       .filter((o) => o.selected)
-//       .map((o) => o.value);
-//     setFormData({ ...formData, [name]: selectedValues });
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault();
-//     if (!validateForm()) return;
-
-//     try {
-//       const userToken = localStorage.getItem("token");
-//       const rawUser = localStorage.getItem("user");
-//       const user = rawUser ? JSON.parse(rawUser) : null;
-//       const creatorId = user?._id || user?.id;
-
-//       // Send createdBy so backend passes schema validation even if req.user is absent
-//       const payload = {
-//         ...formData,
-//         createdBy: creatorId,
-//       };
-
-//       const response = await axios.post(
-//         `${globalBackendRoute}/api/create-project`,
-//         payload,
-//         {
-//           headers: {
-//             Authorization: `Bearer ${userToken}`,
-//             "Content-Type": "application/json",
-//           },
-//         }
-//       );
-
-//       if (response.status === 201) {
-//         setSuccessMessage("Project created successfully!");
-//         setFormData({
-//           projectName: "",
-//           description: "",
-//           startDate: "",
-//           endDate: "",
-//           deadline: "",
-//           developers: [],
-//           testEngineers: [],
-//         });
-//         setErrors({});
-//         alert("Project Created Successfully.");
-//         navigate("/all-projects");
-//       } else {
-//         setErrors({ submit: "Project creation failed." });
-//       }
-//     } catch (error) {
-//       const serverMsg =
-//         error?.response?.data?.message || error?.message || "Server error";
-//       console.error(
-//         "Error during project creation:",
-//         error?.response?.data || error
-//       );
-//       setErrors({ submit: serverMsg });
-//     }
-//   };
-
-//   return (
-//     <div className="flex min-h-full flex-1 flex-col justify-center px-6 py-12 lg:px-8">
-//       <div className="sm:mx-auto sm:w-full sm:max-w-3xl text-center">
-//         <MdOutlineWorkOutline
-//           className="text-indigo-600 mx-auto mb-2"
-//           size={48}
-//         />
-//         <h2 className="mt-4 text-center text-2xl font-bold leading-9 tracking-tight text-gray-900">
-//           Create New Project
-//         </h2>
-//       </div>
-
-//       <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-3xl">
-//         <form onSubmit={handleSubmit} className="space-y-6">
-//           {/* Project Name */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="projectName"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaFileAlt className="text-green-500 mr-2 inline-block" /> Project
-//               Name
-//             </label>
-//             <div className="w-2/3">
-//               <input
-//                 id="projectName"
-//                 name="projectName"
-//                 type="text"
-//                 required
-//                 value={formData.projectName}
-//                 onChange={handleChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               />
-//               {errors.projectName && (
-//                 <p className="mt-2 text-sm text-red-600">
-//                   {errors.projectName}
-//                 </p>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Description */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="description"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaFileAlt className="text-blue-500 mr-2 inline-block" />{" "}
-//               Description
-//             </label>
-//             <div className="w-2/3">
-//               <textarea
-//                 id="description"
-//                 name="description"
-//                 value={formData.description}
-//                 onChange={handleChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               ></textarea>
-//             </div>
-//           </div>
-
-//           {/* Start Date */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="startDate"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaCalendarAlt className="text-purple-500 mr-2 inline-block" />{" "}
-//               Start Date
-//             </label>
-//             <div className="w-2/3">
-//               <input
-//                 id="startDate"
-//                 name="startDate"
-//                 type="date"
-//                 required
-//                 value={formData.startDate}
-//                 onChange={handleChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               />
-//               {errors.startDate && (
-//                 <p className="mt-2 text-sm text-red-600">{errors.startDate}</p>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* End Date */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="endDate"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaCalendarAlt className="text-orange-500 mr-2 inline-block" />{" "}
-//               End Date
-//             </label>
-//             <div className="w-2/3">
-//               <input
-//                 id="endDate"
-//                 name="endDate"
-//                 type="date"
-//                 value={formData.endDate}
-//                 onChange={handleChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               />
-//             </div>
-//           </div>
-
-//           {/* Deadline */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="deadline"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaCalendarAlt className="text-red-500 mr-2 inline-block" />{" "}
-//               Deadline
-//             </label>
-//             <div className="w-2/3">
-//               <input
-//                 id="deadline"
-//                 name="deadline"
-//                 type="date"
-//                 required
-//                 value={formData.deadline}
-//                 onChange={handleChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               />
-//               {errors.deadline && (
-//                 <p className="mt-2 text-sm text-red-600">{errors.deadline}</p>
-//               )}
-//             </div>
-//           </div>
-
-//           {/* Developers */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="developers"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaUserTie className="text-green-500 mr-2 inline-block" />{" "}
-//               Developers
-//             </label>
-//             <div className="w-2/3">
-//               <select
-//                 id="developers"
-//                 name="developers"
-//                 multiple
-//                 value={formData.developers}
-//                 onChange={handleDropdownChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               >
-//                 {developers.map((developer) => (
-//                   <option key={developer._id} value={developer._id}>
-//                     {developer.name}
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-//           </div>
-
-//           {/* Test Engineers */}
-//           <div className="flex items-center space-x-4">
-//             <label
-//               htmlFor="testEngineers"
-//               className="block w-1/3 text-sm font-medium leading-6 text-gray-900"
-//             >
-//               <FaUsers className="text-blue-500 mr-2 inline-block" /> Test
-//               Engineers
-//             </label>
-//             <div className="w-2/3">
-//               <select
-//                 id="testEngineers"
-//                 name="testEngineers"
-//                 multiple
-//                 value={formData.testEngineers}
-//                 onChange={handleDropdownChange}
-//                 className="block w-full rounded-md border-0 py-1.5 text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
-//               >
-//                 {testEngineers.map((testEngineer) => (
-//                   <option key={testEngineer._id} value={testEngineer._id}>
-//                     {testEngineer.name}
-//                   </option>
-//                 ))}
-//               </select>
-//             </div>
-//           </div>
-
-//           {errors.submit && <div className="text-red-600">{errors.submit}</div>}
-//           {successMessage && (
-//             <div className="text-green-600">{successMessage}</div>
-//           )}
-
-//           <div>
-//             <button
-//               type="submit"
-//               className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-//             >
-//               Create Project
-//             </button>
-//           </div>
-//         </form>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-// new code from there. 
+// new code from there.
 
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
@@ -368,20 +35,29 @@ function RoleAssigner({ label, availableSource, assignedIds, setAssignedIds }) {
     return map;
   }, [availableSource]);
 
-  const assignedSet = useMemo(() => new Set((assignedIds || []).map(String)), [assignedIds]);
-  const available = (availableSource || []).filter((u) => !assignedSet.has(String(u._id)));
+  const assignedSet = useMemo(
+    () => new Set((assignedIds || []).map(String)),
+    [assignedIds],
+  );
+  const available = (availableSource || []).filter(
+    (u) => !assignedSet.has(String(u._id)),
+  );
 
   const canAdd = availableSelection.length > 0;
 
   const handleAdd = () => {
     if (!canAdd) return;
-    const merged = Array.from(new Set([...(assignedIds || []), ...availableSelection.map(String)]));
+    const merged = Array.from(
+      new Set([...(assignedIds || []), ...availableSelection.map(String)]),
+    );
     setAssignedIds(merged);
     setAvailableSelection([]);
   };
 
   const handleRemove = (userId) => {
-    setAssignedIds((assignedIds || []).filter((id) => String(id) !== String(userId)));
+    setAssignedIds(
+      (assignedIds || []).filter((id) => String(id) !== String(userId)),
+    );
   };
 
   const handleClear = () => setAssignedIds([]);
@@ -396,7 +72,9 @@ function RoleAssigner({ label, availableSource, assignedIds, setAssignedIds }) {
             onClick={handleAdd}
             disabled={!canAdd}
             className={`rounded-md px-2 py-1 text-xs font-semibold text-white ${
-              canAdd ? "bg-indigo-600 hover:bg-indigo-500" : "bg-gray-400 cursor-not-allowed"
+              canAdd
+                ? "bg-indigo-600 hover:bg-indigo-500"
+                : "bg-gray-400 cursor-not-allowed"
             }`}
             title={canAdd ? "Add selected" : "Select from the left list first"}
           >
@@ -492,7 +170,9 @@ export default function CreateProject() {
 
   const nameIndex = useMemo(() => {
     const idx = new Map();
-    projects.forEach((p) => idx.set((p.project_name || "").trim().toLowerCase(), p));
+    projects.forEach((p) =>
+      idx.set((p.project_name || "").trim().toLowerCase(), p),
+    );
     return idx;
   }, [projects]);
 
@@ -508,10 +188,10 @@ export default function CreateProject() {
     const arr = Array.isArray(raw?.users)
       ? raw.users
       : Array.isArray(raw)
-      ? raw
-      : Array.isArray(raw?.data)
-      ? raw.data
-      : [];
+        ? raw
+        : Array.isArray(raw?.data)
+          ? raw.data
+          : [];
     return arr
       .filter(Boolean)
       .map((u) => ({
@@ -542,7 +222,11 @@ export default function CreateProject() {
         ]);
         setDevelopersList(Array.isArray(devRes.data) ? devRes.data : []);
         setTestEngineersList(Array.isArray(teRes.data) ? teRes.data : []);
-        setProjects(Array.isArray(projNamesRes.data?.projects) ? projNamesRes.data.projects : []);
+        setProjects(
+          Array.isArray(projNamesRes.data?.projects)
+            ? projNamesRes.data.projects
+            : [],
+        );
       } catch (e) {
         console.error("Initial fetch (dev/te/projects) failed:", e);
       }
@@ -588,30 +272,42 @@ export default function CreateProject() {
       }
       setMode("edit");
 
-      const res = await axios.get(`${globalBackendRoute}/api/projects/${projectId}`);
+      const res = await axios.get(
+        `${globalBackendRoute}/api/projects/${projectId}`,
+      );
       const proj = res.data || {};
 
       setFormData((prev) => ({
         ...prev,
         projectName: proj.projectName || proj.project_name || "",
         description: proj.description || "",
-        startDate: proj.startDate ? String(proj.startDate).substring(0, 10) : "",
+        startDate: proj.startDate
+          ? String(proj.startDate).substring(0, 10)
+          : "",
         endDate: proj.endDate ? String(proj.endDate).substring(0, 10) : "",
         deadline: proj.deadline ? String(proj.deadline).substring(0, 10) : "",
         developers: (proj.developers || []).map((u) => String(u._id || u)),
-        testEngineers: (proj.testEngineers || []).map((u) => String(u._id || u)),
+        testEngineers: (proj.testEngineers || []).map((u) =>
+          String(u._id || u),
+        ),
         superAdmins: (proj.superAdmins || []).map((u) => String(u._id || u)),
-        projectManagers: (proj.projectManagers || []).map((u) => String(u._id || u)),
+        projectManagers: (proj.projectManagers || []).map((u) =>
+          String(u._id || u),
+        ),
         admins: (proj.admins || []).map((u) => String(u._id || u)),
         hrs: (proj.hrs || []).map((u) => String(u._id || u)),
         testLeads: (proj.testLeads || []).map((u) => String(u._id || u)),
         qaLeads: (proj.qaLeads || []).map((u) => String(u._id || u)),
-        developerLeads: (proj.developerLeads || []).map((u) => String(u._id || u)),
+        developerLeads: (proj.developerLeads || []).map((u) =>
+          String(u._id || u),
+        ),
         bas: (proj.bas || []).map((u) => String(u._id || u)),
       }));
     } catch (e) {
       console.error("Failed to load project:", e?.response?.data || e);
-      setErrors({ submit: e?.response?.data?.message || "Failed to load project" });
+      setErrors({
+        submit: e?.response?.data?.message || "Failed to load project",
+      });
     }
   };
 
@@ -623,12 +319,16 @@ export default function CreateProject() {
 
     try {
       const payload = { ...formData, createdBy: creatorId };
-      const res = await axios.post(`${globalBackendRoute}/api/create-project`, payload, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          "Content-Type": "application/json",
+      const res = await axios.post(
+        `${globalBackendRoute}/api/create-project`,
+        payload,
+        {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            "Content-Type": "application/json",
+          },
         },
-      });
+      );
 
       if (res.status === 201) {
         setSuccessMessage("Project created successfully!");
@@ -638,7 +338,8 @@ export default function CreateProject() {
         setErrors({ submit: "Project creation failed." });
       }
     } catch (error) {
-      const serverMsg = error?.response?.data?.message || error?.message || "Server error";
+      const serverMsg =
+        error?.response?.data?.message || error?.message || "Server error";
       setErrors({ submit: serverMsg });
     }
   };
@@ -684,12 +385,13 @@ export default function CreateProject() {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
             "Content-Type": "application/json",
           },
-        }
+        },
       );
 
       setSuccessMessage("Members updated successfully!");
     } catch (e) {
-      const serverMsg = e?.response?.data?.message || e?.message || "Server error";
+      const serverMsg =
+        e?.response?.data?.message || e?.message || "Server error";
       setErrors({ submit: serverMsg });
     }
   };
@@ -708,7 +410,10 @@ export default function CreateProject() {
     <div className="px-4 py-6">
       <div className="max-w-7xl mx-auto">
         <div className="text-center">
-          <MdOutlineWorkOutline className="text-indigo-600 mx-auto mb-2" size={40} />
+          <MdOutlineWorkOutline
+            className="text-indigo-600 mx-auto mb-2"
+            size={40}
+          />
           <h2 className="text-xl font-bold text-gray-900">
             {mode === "create" ? "Create New Project" : "Edit Existing Project"}
           </h2>
@@ -752,7 +457,10 @@ export default function CreateProject() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Project Name */}
             <div className="flex items-center gap-2">
-              <label htmlFor="projectName" className="w-36 text-sm font-medium text-gray-700">
+              <label
+                htmlFor="projectName"
+                className="w-36 text-sm font-medium text-gray-700"
+              >
                 <FaFileAlt className="text-green-500 inline-block mr-1" />
                 Name
               </label>
@@ -778,7 +486,10 @@ export default function CreateProject() {
             {/* Dates row */}
             <div className="grid grid-cols-3 gap-2">
               <div className="flex items-center gap-2">
-                <label htmlFor="startDate" className="text-xs text-gray-700 whitespace-nowrap">
+                <label
+                  htmlFor="startDate"
+                  className="text-xs text-gray-700 whitespace-nowrap"
+                >
                   <FaCalendarAlt className="text-purple-500 inline-block mr-1" />
                   Start
                 </label>
@@ -793,7 +504,10 @@ export default function CreateProject() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label htmlFor="endDate" className="text-xs text-gray-700 whitespace-nowrap">
+                <label
+                  htmlFor="endDate"
+                  className="text-xs text-gray-700 whitespace-nowrap"
+                >
                   <FaCalendarAlt className="text-orange-500 inline-block mr-1" />
                   End
                 </label>
@@ -807,7 +521,10 @@ export default function CreateProject() {
                 />
               </div>
               <div className="flex items-center gap-2">
-                <label htmlFor="deadline" className="text-xs text-gray-700 whitespace-nowrap">
+                <label
+                  htmlFor="deadline"
+                  className="text-xs text-gray-700 whitespace-nowrap"
+                >
                   <FaCalendarAlt className="text-red-500 inline-block mr-1" />
                   Deadline
                 </label>
@@ -825,7 +542,10 @@ export default function CreateProject() {
 
             {/* Description */}
             <div className="md:col-span-2 flex items-start gap-2">
-              <label htmlFor="description" className="w-36 text-sm font-medium text-gray-700">
+              <label
+                htmlFor="description"
+                className="w-36 text-sm font-medium text-gray-700"
+              >
                 <FaFileAlt className="text-blue-500 inline-block mr-1" />
                 Description
               </label>
@@ -851,7 +571,9 @@ export default function CreateProject() {
               }
               availableSource={allUsers}
               assignedIds={formData.developers}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, developers: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, developers: ids }))
+              }
             />
             <RoleAssigner
               label={
@@ -861,7 +583,9 @@ export default function CreateProject() {
               }
               availableSource={allUsers}
               assignedIds={formData.testEngineers}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, testEngineers: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, testEngineers: ids }))
+              }
             />
 
             {/* New role pickers */}
@@ -869,19 +593,25 @@ export default function CreateProject() {
               label="Super Admins"
               availableSource={allUsers}
               assignedIds={formData.superAdmins}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, superAdmins: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, superAdmins: ids }))
+              }
             />
             <RoleAssigner
               label="Project Managers"
               availableSource={allUsers}
               assignedIds={formData.projectManagers}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, projectManagers: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, projectManagers: ids }))
+              }
             />
             <RoleAssigner
               label="Admins"
               availableSource={allUsers}
               assignedIds={formData.admins}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, admins: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, admins: ids }))
+              }
             />
             <RoleAssigner
               label="HRs"
@@ -893,19 +623,25 @@ export default function CreateProject() {
               label="Test Leads"
               availableSource={allUsers}
               assignedIds={formData.testLeads}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, testLeads: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, testLeads: ids }))
+              }
             />
             <RoleAssigner
               label="QA Leads"
               availableSource={allUsers}
               assignedIds={formData.qaLeads}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, qaLeads: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, qaLeads: ids }))
+              }
             />
             <RoleAssigner
               label="Developer Leads"
               availableSource={allUsers}
               assignedIds={formData.developerLeads}
-              setAssignedIds={(ids) => setFormData((p) => ({ ...p, developerLeads: ids }))}
+              setAssignedIds={(ids) =>
+                setFormData((p) => ({ ...p, developerLeads: ids }))
+              }
             />
             <RoleAssigner
               label="Business Analysts"
@@ -916,11 +652,21 @@ export default function CreateProject() {
           </div>
 
           {/* Messages */}
-          {errors.projectName && <p className="text-red-600 text-sm">{errors.projectName}</p>}
-          {errors.startDate && <p className="text-red-600 text-sm">{errors.startDate}</p>}
-          {errors.deadline && <p className="text-red-600 text-sm">{errors.deadline}</p>}
-          {errors.submit && <div className="text-red-600 text-sm">{errors.submit}</div>}
-          {successMessage && <div className="text-green-600 text-sm">{successMessage}</div>}
+          {errors.projectName && (
+            <p className="text-red-600 text-sm">{errors.projectName}</p>
+          )}
+          {errors.startDate && (
+            <p className="text-red-600 text-sm">{errors.startDate}</p>
+          )}
+          {errors.deadline && (
+            <p className="text-red-600 text-sm">{errors.deadline}</p>
+          )}
+          {errors.submit && (
+            <div className="text-red-600 text-sm">{errors.submit}</div>
+          )}
+          {successMessage && (
+            <div className="text-green-600 text-sm">{successMessage}</div>
+          )}
 
           {/* Submit */}
           <div className="sticky bottom-2 bg-white/70 backdrop-blur p-2 rounded-md shadow flex justify-end">
@@ -936,4 +682,3 @@ export default function CreateProject() {
     </div>
   );
 }
-

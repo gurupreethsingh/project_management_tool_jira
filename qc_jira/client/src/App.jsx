@@ -142,6 +142,10 @@ import WaitOperationsForAutomation from "./pages/selenium_testing_pages/WaitOper
 import ServicePageRenderer from "./components/common_components/ServicePageRenderer";
 import BrokenLinksOperations from "./pages/selenium_testing_pages/BrokenLinksOperations";
 
+// test execution pages.
+import AddTestExecution from "./pages/test_execution_pages/AddTestExecution";
+import AllTestExecutions from "./pages/test_execution_pages/AllTestExecutions";
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     BrokenLinksOperations;
@@ -1464,6 +1468,50 @@ function App() {
             <PageTitle title="ECODERS">
               <ServicePageRenderer />
             </PageTitle>
+          }
+        />
+
+        {/* test execution pages.  */}
+
+        <Route
+          path="/single-project/:projectId/add-test-execution"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "developer_lead",
+                "qa_lead",
+                "test_engineer",
+                "test_lead",
+              ]}
+            >
+              <PageTitle title="Add Test Execution">
+                <AddTestExecution />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-project/:projectId/all-test-executions"
+          element={
+            <PrivateRoute
+              allowedRoles={[
+                "superadmin",
+                "admin",
+                "project_manager",
+                "developer_lead",
+                "qa_lead",
+                "test_engineer",
+                "test_lead",
+              ]}
+            >
+              <PageTitle title="All Test Executions">
+                <AllTestExecutions />
+              </PageTitle>
+            </PrivateRoute>
           }
         />
 
