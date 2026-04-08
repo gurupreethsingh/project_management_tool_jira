@@ -37,7 +37,7 @@ const SOCIAL = [
 
 export default function Footer() {
   return (
-    <footer className=" bg-white mt-10 bg-gray-100">
+    <footer className="mt-10 bg-gray-200">
       {/* Top content */}
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         {/* 5 columns responsive grid */}
@@ -95,7 +95,7 @@ export default function Footer() {
       </div>
 
       {/* Bottom bar */}
-      <div className="border-t border-gray-200">
+      <div className="border-t border-dark-200">
         <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-indigo-500">

@@ -1,5 +1,6 @@
 // src/pages/common_pages/Contact.jsx
 import React, { useMemo, useState } from "react";
+import { useAuth } from "../../managers/AuthManager";
 
 // ✅ HERO PROPS FOR THIS PAGE (unique)
 export const contactHero = {
@@ -98,6 +99,7 @@ function isValidPhone(phone = "") {
 }
 
 export default function Contact() {
+  const { api } = useAuth();
   const [form, setForm] = useState({
     fullName: "",
     email: "",
@@ -129,8 +131,8 @@ export default function Contact() {
       email: !emailTrimmed
         ? "Email is required."
         : !isValidEmail(emailTrimmed)
-        ? "Please enter a valid email address."
-        : "",
+          ? "Please enter a valid email address."
+          : "",
       phone: phoneCheck.ok ? "" : phoneCheck.reason,
       message: !messageTrimmed ? "Message is required." : "",
     };
@@ -163,7 +165,6 @@ export default function Contact() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    // Mark all as touched
     setTouched({
       fullName: true,
       email: true,
@@ -171,16 +172,15 @@ export default function Contact() {
       message: true,
     });
 
-    // Enforce trim on submit too
     const next = {
       fullName: normalizeTrim(form.fullName),
       email: normalizeTrim(form.email),
       phone: normalizeTrim(form.phone),
       message: normalizeTrim(form.message),
     };
+
     setForm(next);
 
-    // Validate
     const fullNameCheck = isValidFullName(next.fullName);
     const emailOk = next.email && isValidEmail(next.email);
     const phoneCheck = isValidPhone(next.phone);
@@ -198,14 +198,23 @@ export default function Contact() {
     try {
       setStatus({ submitting: true, ok: false, error: "" });
 
-      // ✅ TODO: Integrate your API here (axios/fetch)
-      // await fetch("/api/contact", { method:"POST", headers:{...}, body: JSON.stringify(next) });
-
-      // Fake delay (remove when API connected)
-      await new Promise((r) => setTimeout(r, 600));
+      // 🔥 REAL API CALL (THIS WAS MISSING)
+      await api.post("/contact/create-contact-message", {
+        fullName: next.fullName,
+        email: next.email,
+        phone: next.phone,
+        message: next.message,
+      });
 
       setStatus({ submitting: false, ok: true, error: "" });
-      setForm({ fullName: "", email: "", phone: "", message: "" });
+
+      setForm({
+        fullName: "",
+        email: "",
+        phone: "",
+        message: "",
+      });
+
       setTouched({
         fullName: false,
         email: false,
@@ -213,10 +222,14 @@ export default function Contact() {
         message: false,
       });
     } catch (err) {
+      console.error("ERROR:", err);
+
       setStatus({
         submitting: false,
         ok: false,
-        error: "Something went wrong. Please try again.",
+        error:
+          err?.response?.data?.message ||
+          "Something went wrong. Please try again.",
       });
     }
   }
@@ -234,7 +247,7 @@ export default function Contact() {
       "
     >
       {/* PAGE FRAME: same spacing system across all breakpoints */}
-      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 ">
+      <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 ">
         {/* HERO (matches Homepage spacing & typography) */}
         <section className="pt-10 sm:pt-12 lg:pt-14">
           <div className="mx-auto w-full">

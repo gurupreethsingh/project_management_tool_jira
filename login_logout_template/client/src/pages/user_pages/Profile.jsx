@@ -1,9 +1,9 @@
-// src/pages/user_pages/Profile.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FaUser } from "react-icons/fa";
+import { useAuth } from "../../managers/AuthManager";
 
-// ✅ HERO PROPS (used by MainLayout)
+// ✅ HERO PROPS
 export const profileHero = {
   heroTitle: "",
   heroSubtitle: "",
@@ -11,87 +11,94 @@ export const profileHero = {
 };
 
 export default function Profile() {
-  const user = {
-    name: "John Doe",
-    email: "john@example.com",
-    phone: "+91 90000 00000",
-    role: "User",
-  };
+  const { user, fetchProfile } = useAuth();
+  const [profile, setProfile] = useState(user || null);
 
-  const inputClass =
-    "block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 " +
-    "ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 " +
-    "focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-600 " +
-    "sm:text-sm/6";
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const data = await fetchProfile();
+        setProfile(data || user || null);
+      } catch (error) {
+        console.error("Failed to fetch profile:", error);
+        setProfile(user || null);
+      }
+    };
+
+    loadProfile();
+  }, [fetchProfile, user]);
 
   return (
-    <>
-      <div className="flex flex-col justify-center px-6 py-12 lg:px-8 bg-transparent">
-        <div className="sm:mx-auto sm:w-full sm:max-w-sm">
-          <FaUser className="mx-auto h-10 w-10 text-indigo-600" />
-          <h2 className="mt-10 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-            My Profile
-          </h2>
-          <p className="mt-2 text-center text-sm/6 text-gray-500">
-            View your account details.
-          </p>
+    <div className="min-h-screen bg-gradient-to-b from-white via-slate-50 to-white px-6 py-10">
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <FaUser className="text-indigo-600 text-2xl" />
+              <h1 className="text-3xl font-semibold text-gray-900">
+                My Profile
+              </h1>
+            </div>
+            <p className="mt-2 text-sm text-gray-600">
+              Manage your account details
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Link
+              to="/update-profile"
+              className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+            >
+              Update Profile
+            </Link>
+
+            {profile?.role === "superadmin" && (
+              <Link
+                to="/all-users"
+                className="rounded-full border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-100"
+              >
+                All Users
+              </Link>
+            )}
+          </div>
         </div>
 
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm space-y-6">
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-900">
-              Full name
-            </label>
-            <div className="mt-2">
-              <input value={user.name} disabled className={inputClass} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-900">
-              Email address
-            </label>
-            <div className="mt-2">
-              <input value={user.email} disabled className={inputClass} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-900">
-              Phone
-            </label>
-            <div className="mt-2">
-              <input value={user.phone} disabled className={inputClass} />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm/6 font-medium text-gray-900">
-              Role
-            </label>
-            <div className="mt-2">
-              <input value={user.role} disabled className={inputClass} />
-            </div>
-          </div>
-
-          <Link
-            to="/update-profile"
-            className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-          >
-            Update Profile
-          </Link>
-
-          <p className="mt-6 text-center text-sm/6 text-gray-500">
-            Back to{" "}
-            <Link
-              to="/user-dashboard"
-              className="font-semibold text-indigo-600 hover:text-indigo-500"
-            >
-              Dashboard &rarr;
-            </Link>
-          </p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ProfileCard label="Full Name" value={profile?.fullName} />
+          <ProfileCard label="Email" value={profile?.email} />
+          <ProfileCard label="Phone" value={profile?.phone} />
+          <ProfileCard
+            label="Date of Birth"
+            value={profile?.dateOfBirth?.slice(0, 10)}
+          />
+          <ProfileCard label="Gender" value={profile?.gender} />
+          <ProfileCard label="Role" value={profile?.role} />
+          <ProfileCard label="Country" value={profile?.country} />
+          <ProfileCard label="State" value={profile?.state} />
+          <ProfileCard label="City" value={profile?.city} />
+          <ProfileCard label="Postal Code" value={profile?.postalCode} />
+          <ProfileCard label="Address Line 1" value={profile?.addressLine1} />
+          <ProfileCard label="Address Line 2" value={profile?.addressLine2} />
+          <ProfileCard label="Nationality" value={profile?.nationality} />
+          <ProfileCard
+            label="Preferred Currency"
+            value={profile?.preferredCurrency}
+          />
         </div>
       </div>
-    </>
+    </div>
   );
 }
+
+const ProfileCard = ({ label, value }) => {
+  return (
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
+      <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+        {label}
+      </p>
+      <p className="mt-2 text-sm font-medium text-gray-900">
+        {value || "Not provided"}
+      </p>
+    </div>
+  );
+};

@@ -1,93 +1,94 @@
 // src/pages/user_pages/UserDashboard.jsx
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../../managers/AuthManager";
 
-// ✅ HERO PROPS FOR THIS PAGE (named export used in MainLayout)
 export const userDashboardHero = {
   heroTitle: "",
   heroSubtitle: "",
-  showHero: true, // keep header background visible
+  showHero: true,
 };
 
 export default function UserDashboard() {
+  const { user, fetchProfile, logout } = useAuth();
+
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const data = user || (await fetchProfile());
+      setProfile(data);
+    };
+    load();
+  }, []);
+
   const cards = [
     { title: "Profile", desc: "View your account details.", to: "/profile" },
     {
       title: "Update Profile",
-      desc: "Edit your name, email, and phone.",
+      desc: "Edit your details.",
       to: "/update-profile",
     },
-    {
-      title: "Employee Dashboard",
-      desc: "Dummy navigation link (role-based later).",
-      to: "/employee-dashboard",
-    },
+    ...(profile?.role === "superadmin"
+      ? [
+          {
+            title: "Admin Panel",
+            desc: "Manage system users.",
+            to: "/all-users",
+          },
+        ]
+      : []),
   ];
 
   return (
-    <>
-      <div className="flex min-h-screen flex-col justify-center px-6 py-12 lg:px-8 bg-transparent">
-        <div className="sm:mx-auto sm:w-full sm:max-w-5xl">
-          <h2 className="mt-2 text-center text-2xl/9 font-bold tracking-tight text-gray-900">
-            User Dashboard
+    <div className="bg-gradient-to-b from-white via-slate-50 to-white px-6 py-10 mb-20">
+      <div className="mx-auto max-w-6xl">
+        {/* HEADER */}
+        <div className="mb-8 flex flex-col gap-2 text-center">
+          <h2 className="text-3xl font-semibold text-gray-900">
+            Welcome, {profile?.fullName || "User"}
           </h2>
-          <p className="mt-2 text-center text-sm/6 text-gray-500">
-            Quick access to your account pages (dummy UI).
+          <p className="text-sm text-gray-500">
+            Role: {profile?.role || "user"}
           </p>
         </div>
 
-        <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-5xl">
-          <div className="rounded-2xl bg-white p-5 sm:p-6 shadow-sm ring-1 ring-gray-900/10">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">
-                  Quick actions
-                </div>
-                <p className="mt-1 text-xs text-gray-500">
-                  Connect real data after backend integration.
-                </p>
+        {/* CARDS */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {cards.map((c) => (
+            <Link
+              key={c.title}
+              to={c.to}
+              className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-900/10 hover:shadow-md transition"
+            >
+              <div className="text-sm font-semibold text-gray-900">
+                {c.title}
               </div>
-              <span className="rounded-full bg-indigo-50 px-3 py-1 text-xs font-semibold text-indigo-700">
-                User
-              </span>
-            </div>
+              <p className="mt-2 text-sm text-gray-600">{c.desc}</p>
+              <div className="mt-4 text-xs font-semibold text-indigo-600">
+                Open →
+              </div>
+            </Link>
+          ))}
+        </div>
 
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {cards.map((c) => (
-                <Link
-                  key={c.title}
-                  to={c.to}
-                  className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-gray-900/10 hover:ring-indigo-200 transition"
-                >
-                  <div className="text-sm font-semibold text-gray-900">
-                    {c.title}
-                  </div>
-                  <p className="mt-2 text-sm text-gray-600">{c.desc}</p>
-                  <div className="mt-4 text-xs font-semibold text-indigo-600">
-                    Open →
-                  </div>
-                </Link>
-              ))}
-            </div>
+        {/* ACTIONS */}
+        <div className="mt-10 flex flex-wrap gap-3 justify-center">
+          <Link
+            to="/"
+            className="rounded-full bg-indigo-600 px-5 py-2 text-sm font-semibold text-white hover:bg-indigo-500"
+          >
+            Home
+          </Link>
 
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                to="/"
-                className="inline-flex items-center justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm/6 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Back to Home
-              </Link>
-
-              <Link
-                to="/login"
-                className="inline-flex items-center justify-center rounded-md bg-white px-3 py-1.5 text-sm/6 font-semibold text-gray-900 shadow-xs ring-1 ring-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-              >
-                Logout (Dummy)
-              </Link>
-            </div>
-          </div>
+          <button
+            onClick={logout}
+            className="rounded-full border border-red-200 px-5 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
+          >
+            Logout
+          </button>
         </div>
       </div>
-    </>
+    </div>
   );
 }
