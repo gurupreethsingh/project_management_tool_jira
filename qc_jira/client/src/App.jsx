@@ -146,6 +146,18 @@ import BrokenLinksOperations from "./pages/selenium_testing_pages/BrokenLinksOpe
 import AddTestExecution from "./pages/test_execution_pages/AddTestExecution";
 import AllTestExecutions from "./pages/test_execution_pages/AllTestExecutions";
 
+// job pages.
+import CreateJob from "./pages/job_pages/CreateJob";
+import AllCreatedJobs from "./pages/job_pages/AllCreatedJobs";
+import SingleCreatedJob from "./pages/job_pages/SingleCreatedJob";
+import UpdateJob from "./pages/job_pages/UpdateJob";
+
+//internship pages.
+import CreateInternship from "./pages/internship_pages/CreateInternship";
+import AllCreatedInternships from "./pages/internship_pages/AllCreatedInternships";
+import SingleCreatedInternship from "./pages/internship_pages/SingleCreatedInternship";
+import UpdateInternship from "./pages/internship_pages/UpdateInternship";
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     BrokenLinksOperations;
@@ -343,37 +355,6 @@ function App() {
             <PageTitle title="About Us">
               <AboutUs />
             </PageTitle>
-          }
-        />
-
-        <Route
-          path="/careers"
-          element={
-            <PageTitle title="Careers">
-              <Careers />
-            </PageTitle>
-          }
-        />
-
-        <Route
-          path="/all-careers-applications"
-          element={
-            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <PageTitle title="All Careers Applications">
-                <AllCareersApplications />
-              </PageTitle>
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/single-careers-applications/:id"
-          element={
-            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
-              <PageTitle title="Single Careers Application">
-                <SingleCareersApplication />
-              </PageTitle>
-            </PrivateRoute>
           }
         />
 
@@ -1510,6 +1491,98 @@ function App() {
             >
               <PageTitle title="All Test Executions">
                 <AllTestExecutions />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* job pages  */}
+
+        <Route
+          path="/create-job"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Create Job">
+                <CreateJob />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/all-created-jobs"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="All Created Jobs">
+                <AllCreatedJobs />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-created-job/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Single Created Job">
+                <SingleCreatedJob />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/update-job/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Update Job">
+                <UpdateJob />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* internship pages  */}
+
+        <Route
+          path="/create-internship"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Create Internship">
+                <CreateInternship />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/all-created-internships"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="All Created Internships">
+                <AllCreatedInternships />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-created-internship/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Single Created Internship">
+                <SingleCreatedInternship />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/update-internship/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
+              <PageTitle title="Update Internship">
+                <UpdateInternship />
               </PageTitle>
             </PrivateRoute>
           }

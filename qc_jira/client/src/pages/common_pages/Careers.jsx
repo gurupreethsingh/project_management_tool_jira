@@ -1,719 +1,1076 @@
-import React, { useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import axios from "axios";
 import {
+  FaBook,
+  FaFileUpload,
+  FaGraduationCap,
+  FaLaptopCode,
+  FaLinkedin,
+  FaGithub,
+  FaUniversity,
+  FaCode,
+  FaPhoneAlt,
+  FaEnvelope,
   FaMapMarkerAlt,
+  FaCheckCircle,
+  FaInfoCircle,
   FaBriefcase,
   FaClock,
-  FaGlobe,
   FaSearch,
-  FaLaptopCode,
-  FaBook,
-  FaChartLine,
-  FaFileUpload,
 } from "react-icons/fa";
-import { SiReact, SiJavascript, SiMongodb, SiNodedotjs } from "react-icons/si";
 import globalBackendRoute from "../../config/Config";
+import careersHeroBanner from "../../assets/images/careers_banner.jpg";
 
-// ✅ OS-independent, build-safe import (Windows + Linux server safe)
-import careersHeroBanner from "../../assets/images/careers_banner.jpg"; // ✅ change filename if needed
+const SECTION_TITLE_STYLE = "text-sm sm:text-base font-semibold text-slate-900";
+const SECTION_DESC_STYLE = "text-xs sm:text-sm text-slate-600 leading-relaxed";
+const INPUT_STYLE =
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
+const LABEL_STYLE =
+  "mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-slate-600";
+const CARD_STYLE =
+  "rounded-2xl border border-slate-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.06)]";
+const PRIMARY_BUTTON_STYLE =
+  "inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-5 py-2.5 text-sm font-semibold text-white shadow-md transition hover:-translate-y-0.5 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60";
+const SECONDARY_BUTTON_STYLE =
+  "inline-flex items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:border-indigo-300 hover:text-indigo-700";
+const SECONDARY_BADGE_STYLE =
+  "inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-xs text-white backdrop-blur-md";
 
-const JOBS = [
-  {
-    id: "fs-001",
-    title: "Software Engineer — Full Stack (MERN)",
-    dept: "Engineering",
-    type: "Job",
-    mode: "Full-time",
-    location: "Bengaluru, India",
-    remote: true,
-    experience: "1–3 years",
-    salary: "₹8–14 LPA",
-    tags: ["React", "Node", "MongoDB", "REST"],
-    posted: "2025-10-15",
-    summary:
-      "Build and ship features across our learning & e-commerce platforms with a focus on performance and reliability.",
-  },
-  {
-    id: "ux-003",
-    title: "Product Designer — UI/UX",
-    dept: "Design",
-    type: "Job",
-    mode: "Full-time",
-    location: "Hybrid — Bengaluru",
-    remote: false,
-    experience: "0–2 years",
-    salary: "₹6–10 LPA",
-    tags: ["Figma", "Design systems", "Accessibility"],
-    posted: "2025-10-20",
-    summary:
-      "Own end-to-end product design: research, flows, prototypes, and thoughtful handoff.",
-  },
-  {
-    id: "qa-005",
-    title: "QA Automation Engineer",
-    dept: "Quality Assurance",
-    type: "Job",
-    mode: "Full-time",
-    location: "Remote (India)",
-    remote: true,
-    experience: "1–3 years",
-    salary: "₹7–12 LPA",
-    tags: ["Selenium", "TestNG", "POM", "CI/CD"],
-    posted: "2025-11-01",
-    summary:
-      "Design robust test frameworks, expand coverage, and champion quality in quick iterations.",
-  },
-  {
-    id: "ml-010",
-    title: "Machine Learning Intern (NLP)",
-    dept: "AI/ML",
-    type: "Internship",
-    mode: "Internship",
-    location: "Remote",
-    remote: true,
-    experience: "Internship",
-    salary: "Stipend",
-    tags: ["Python", "Pandas", "Transformers"],
-    posted: "2025-09-28",
-    summary:
-      "Help build data pipelines and prototypes for personalization and recommendations.",
-  },
-];
+const initialFormData = {
+  fullName: "",
+  email: "",
+  phone: "",
+  applyType: "internship",
+  desiredRole: "",
+  experienceLevel: "",
+  preferredLocation: "",
+  portfolioUrl: "",
+  linkedinUrl: "",
+  githubUrl: "",
+  aboutYou: "",
+  collegeName: "",
+  universityName: "",
+  degree: "",
+  department: "",
+  specialization: "",
+  yearOfStudy: "",
+  semester: "",
+  graduationYear: "",
+  cgpa: "",
+  totalYears: "",
+  currentCompany: "",
+  currentDesignation: "",
+  currentCTC: "",
+  expectedCTC: "",
+  noticePeriod: "",
+  skills: "",
+  certifications: "",
+  jobId: "",
+};
 
-const TYPES = ["All", "Job", "Internship"];
-const LOCATIONS = [
-  "All",
-  "Remote",
-  "Bengaluru, India",
-  "Hybrid — Bengaluru",
-  "Remote (India)",
-];
-const EXPERIENCES = [
-  "All",
-  "Internship",
-  "0–2 years",
-  "1–3 years",
-  "3–5 years",
-  "5+ years",
-];
+function getSafeErrorMessage(error) {
+  const apiMessage = error?.response?.data?.message;
+  if (typeof apiMessage === "string" && apiMessage.trim()) {
+    return apiMessage.trim();
+  }
 
-const MAIN_HEADING_STYLE =
-  "text-lg sm:text-xl lg:text-2xl font-semibold text-slate-900 text-uppercase tracking-[0.1em]";
+  const status = error?.response?.status;
 
-const SUB_HEADING_STYLE = "text-sm sm:text-base font-semibold text-indigo-600";
+  if (status === 400) {
+    return "Please check the entered details and try again.";
+  }
 
-const BADGE_MAIN_HEADING_STYLE =
-  "text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-indigo-700";
+  if (status === 413) {
+    return "Uploaded file is too large. Please upload smaller files and try again.";
+  }
 
-const PARAGRAPH_STYLE = "text-sm sm:text-base text-slate-600 leading-relaxed";
-const SMALL_PARAGRAPH_STYLE =
-  "text-[12px] sm:text-xs text-slate-600 leading-relaxed mt-2";
-const PRIMARY_GRADIENT_BUTTON_STYLE =
-  "inline-flex items-center rounded-xl bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 px-4 py-2.5 text-xs sm:text-sm font-medium text-white shadow-md hover:shadow-lg hover:brightness-110";
+  if (status === 415) {
+    return "Unsupported file type. Please upload PDF, DOC, DOCX, PNG, JPG, or JPEG files.";
+  }
+
+  if (!navigator.onLine) {
+    return "You appear to be offline. Please check your internet connection and try again.";
+  }
+
+  return "We could not submit your application right now. Please try again in a moment.";
+}
+
+function validateFiles(selectedFiles) {
+  const allowedTypes = [
+    "application/pdf",
+    "application/msword",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+  ];
+
+  const maxFiles = 10;
+  const maxFileSize = 10 * 1024 * 1024;
+
+  if (selectedFiles.length > maxFiles) {
+    return {
+      valid: false,
+      message: "You can upload up to 10 files only.",
+    };
+  }
+
+  for (const file of selectedFiles) {
+    if (file.size > maxFileSize) {
+      return {
+        valid: false,
+        message: `${file.name} is larger than 10 MB.`,
+      };
+    }
+
+    if (file.type && !allowedTypes.includes(file.type)) {
+      return {
+        valid: false,
+        message: `${file.name} has an unsupported file type.`,
+      };
+    }
+  }
+
+  return { valid: true, message: "" };
+}
+
+function normalizeOpportunityType(value = "") {
+  const lower = String(value).toLowerCase();
+  if (lower.includes("job")) return "Job";
+  return "Internship";
+}
+
+function normalizeSkills(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
 
 export default function Careers() {
-  const [q, setQ] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All");
-  const [loc, setLoc] = useState("All");
-  const [exp, setExp] = useState("All");
-  const [remoteOnly, setRemoteOnly] = useState(false);
-  const [view, setView] = useState("grid");
-  const [submitting, setSubmitting] = useState(false);
-  const [submitMessage, setSubmitMessage] = useState(null);
-  const [submitError, setSubmitError] = useState(null);
-  const [files, setFiles] = useState([]);
-
-  const rolesRef = useRef(null);
   const formRef = useRef(null);
+  const fileInputRef = useRef(null);
 
-  const [formData, setFormData] = useState({
-    fullName: "",
-    email: "",
-    phone: "",
-    applyType: "internship", // "internship" | "job"
-    desiredRole: "",
-    experienceLevel: "",
-    preferredLocation: "",
-    portfolioUrl: "",
-    linkedinUrl: "",
-    aboutYou: "",
-  });
+  const [formData, setFormData] = useState(initialFormData);
+  const [files, setFiles] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState("");
+  const [submitError, setSubmitError] = useState("");
+  const [fileError, setFileError] = useState("");
 
-  const filtered = useMemo(() => {
-    return JOBS.filter((j) => {
-      const textHit =
-        !q ||
-        [j.title, j.summary, j.dept, j.location, j.tags.join(" ")]
-          .join(" ")
-          .toLowerCase()
-          .includes(q.toLowerCase());
+  const [opportunities, setOpportunities] = useState([]);
+  const [loadingOpportunities, setLoadingOpportunities] = useState(true);
+  const [opportunityQuery, setOpportunityQuery] = useState("");
+  const [opportunityType, setOpportunityType] = useState("All");
 
-      const typeHit = typeFilter === "All" || j.type === typeFilter;
-      const locHit =
-        loc === "All" ||
-        (loc === "Remote"
-          ? j.remote
-          : j.location.toLowerCase() === loc.toLowerCase());
-      const expHit = exp === "All" || j.experience === exp;
-      const remoteHit = !remoteOnly || j.remote;
+  useEffect(() => {
+    let isMounted = true;
 
-      return textHit && typeHit && locHit && expHit && remoteHit;
+    const fetchOpportunities = async () => {
+      setLoadingOpportunities(true);
+
+      try {
+        const response = await axios.get(
+          `${globalBackendRoute}/api/careers/public`,
+          {
+            params: {
+              limit: 50,
+            },
+          },
+        );
+
+        if (!isMounted) return;
+
+        const rawItems = Array.isArray(response?.data?.items)
+          ? response.data.items
+          : [];
+
+        const mapped = rawItems
+          .filter((item) => !item?.isDeleted)
+          .map((item) => ({
+            id: item?._id || Math.random().toString(36).slice(2),
+            title: item?.desiredRole || "Untitled Opportunity",
+            type: normalizeOpportunityType(item?.applyType),
+            location: item?.preferredLocation || "Location not specified",
+            experience: item?.experienceLevel || "Not specified",
+            summary:
+              item?.aboutYou || "Opportunity details will be updated soon.",
+            posted: item?.createdAt
+              ? new Date(item.createdAt).toLocaleDateString()
+              : "Recently",
+            skills: normalizeSkills(item?.skills),
+            sourceItem: item,
+          }));
+
+        setOpportunities(mapped);
+      } catch (_error) {
+        if (!isMounted) return;
+        setOpportunities([]);
+      } finally {
+        if (isMounted) {
+          setLoadingOpportunities(false);
+        }
+      }
+    };
+
+    fetchOpportunities();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const selectedFileNames = useMemo(() => {
+    if (!files.length) return "";
+    return files.map((file) => file.name).join(", ");
+  }, [files]);
+
+  const filteredOpportunities = useMemo(() => {
+    return opportunities.filter((item) => {
+      const matchesType =
+        opportunityType === "All" || item.type === opportunityType;
+
+      const q = opportunityQuery.trim().toLowerCase();
+      const haystack = [
+        item.title,
+        item.location,
+        item.experience,
+        item.summary,
+        ...(item.skills || []),
+      ]
+        .join(" ")
+        .toLowerCase();
+
+      const matchesQuery = !q || haystack.includes(q);
+
+      return matchesType && matchesQuery;
     });
-  }, [q, typeFilter, loc, exp, remoteOnly]);
+  }, [opportunities, opportunityQuery, opportunityType]);
+
+  const scrollToForm = () => {
+    formRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
   };
 
   const handleFilesChange = (e) => {
-    const filesArr = Array.from(e.target.files || []);
-    setFiles(filesArr);
+    const nextFiles = Array.from(e.target.files || []);
+    setFileError("");
+
+    if (!nextFiles.length) {
+      setFiles([]);
+      return;
+    }
+
+    const validation = validateFiles(nextFiles);
+
+    if (!validation.valid) {
+      setFiles([]);
+      setFileError(validation.message);
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+      return;
+    }
+
+    setFiles(nextFiles);
   };
 
-  const scrollToRoles = () => {
-    rolesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const handleSelectOpportunity = (item) => {
+    setFormData((prev) => ({
+      ...prev,
+      jobId: item.id || "",
+      applyType: item.type.toLowerCase() === "job" ? "job" : "internship",
+      desiredRole: item.title || prev.desiredRole,
+      preferredLocation: item.location || prev.preferredLocation,
+      experienceLevel:
+        item.experience && item.experience !== "Not specified"
+          ? item.experience
+          : prev.experienceLevel,
+    }));
+
+    scrollToForm();
   };
 
-  const scrollToForm = () => {
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setFiles([]);
+    setFileError("");
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (submitting) return;
+
+    setSubmitMessage("");
+    setSubmitError("");
+    setFileError("");
+
+    if (
+      !formData.fullName.trim() ||
+      !formData.email.trim() ||
+      !formData.aboutYou.trim()
+    ) {
+      setSubmitError("Please fill in full name, email, and about yourself.");
+      return;
+    }
+
+    const currentFileValidation = validateFiles(files);
+    if (!currentFileValidation.valid) {
+      setFileError(currentFileValidation.message);
+      return;
+    }
+
     setSubmitting(true);
-    setSubmitError(null);
-    setSubmitMessage(null);
 
     try {
       const fd = new FormData();
-      Object.entries(formData).forEach(([k, v]) => {
-        fd.append(k, v || "");
-      });
+
+      fd.append("fullName", formData.fullName.trim());
+      fd.append("email", formData.email.trim());
+      fd.append("phone", formData.phone.trim());
+      fd.append("applyType", formData.applyType);
+      fd.append("desiredRole", formData.desiredRole.trim());
+      fd.append("experienceLevel", formData.experienceLevel.trim());
+      fd.append("preferredLocation", formData.preferredLocation.trim());
+      fd.append("portfolioUrl", formData.portfolioUrl.trim());
+      fd.append("linkedinUrl", formData.linkedinUrl.trim());
+      fd.append("githubUrl", formData.githubUrl.trim());
+      fd.append("aboutYou", formData.aboutYou.trim());
+      fd.append("jobId", formData.jobId.trim());
+      fd.append("source", "career_page");
+
+      fd.append("collegeName", formData.collegeName.trim());
+      fd.append("universityName", formData.universityName.trim());
+      fd.append("degree", formData.degree.trim());
+      fd.append("department", formData.department.trim());
+      fd.append("specialization", formData.specialization.trim());
+      fd.append("yearOfStudy", formData.yearOfStudy.trim());
+      fd.append("semester", formData.semester.trim());
+      fd.append("graduationYear", formData.graduationYear.trim());
+      fd.append("cgpa", formData.cgpa.trim());
+
+      fd.append("totalYears", formData.totalYears.trim());
+      fd.append("currentCompany", formData.currentCompany.trim());
+      fd.append("currentDesignation", formData.currentDesignation.trim());
+      fd.append("currentCTC", formData.currentCTC.trim());
+      fd.append("expectedCTC", formData.expectedCTC.trim());
+      fd.append("noticePeriod", formData.noticePeriod.trim());
+
+      fd.append("skills", formData.skills.trim());
+      fd.append("certifications", formData.certifications.trim());
+
       files.forEach((file) => {
         fd.append("files", file);
       });
 
-      const res = await axios.post(
+      const response = await axios.post(
         `${globalBackendRoute}/api/careers/apply`,
         fd,
         {
-          headers: { "Content-Type": "multipart/form-data" },
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+          timeout: 30000,
         },
       );
 
-      if (res.status === 201 || res.data?.status === true) {
-        setSubmitMessage(
-          "Application submitted! Our team will review it and get back to you over email/phone.",
-        );
+      const isSuccess =
+        response?.status === 201 || response?.data?.status === true;
 
-        setFormData({
-          fullName: "",
-          email: "",
-          phone: "",
-          applyType: "internship",
-          desiredRole: "",
-          experienceLevel: "",
-          preferredLocation: "",
-          portfolioUrl: "",
-          linkedinUrl: "",
-          aboutYou: "",
-        });
-        setFiles([]);
+      if (isSuccess) {
+        setSubmitMessage(
+          `Your ${
+            formData.applyType === "job" ? "job" : "internship"
+          } application has been submitted successfully. Our team will review it and contact you by email or phone.`,
+        );
+        resetForm();
       } else {
-        setSubmitError("Could not submit application. Please try again.");
+        setSubmitError("We received an unexpected response. Please try again.");
       }
-    } catch (err) {
-      console.error("Careers apply error:", err);
-      setSubmitError(
-        "There was an error submitting your application. Please try again.",
-      );
+    } catch (error) {
+      setSubmitError(getSafeErrorMessage(error));
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-white text-slate-900 min-h-screen">
-      {/* HERO (WITH BACKGROUND IMAGE) */}
+    <div className="min-h-screen bg-slate-50 text-slate-900">
       <section
-        className="relative overflow-hidden border-b border-slate-100 bg-center bg-no-repeat bg-cover"
+        className="relative overflow-hidden bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: `url(${careersHeroBanner})` }}
       >
-        {/* ✅ LESS overlay so image is visible */}
-        <div className="absolute inset-0 bg-gradient-to-r from-white/35 via-white/15 to-white/5" />
-        {/* ✅ Bright text helper (thin dark fade only at top) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/10 to-transparent" />
+        <div className="absolute inset-0 bg-slate-950/55" />
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-900/55 via-violet-800/30 to-fuchsia-700/25" />
 
-        <div className="relative mx-auto container px-4 sm:px-6 lg:px-10 py-12 sm:py-16 lg:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr),minmax(0,1.1fr)] gap-10 items-center">
+        <div className="relative mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
+          <div className="grid gap-6 lg:grid-cols-[1.25fr_0.95fr] lg:items-center">
             <div>
-              {/* ✅ Brighter label */}
-              <p className="text-[11px] sm:text-xs font-semibold tracking-[0.3em] uppercase text-white drop-shadow-[0_3px_18px_rgba(0,0,0,0.75)]">
-                CAREERS · INTERNSHIPS · ENGINEERING · DESIGN
+              <p className="text-xs font-semibold uppercase tracking-[0.35em] text-white/90">
+                Careers · Jobs · Internships
               </p>
 
-              {/* ✅ Brighter title */}
-              <h1 className="mt-2 text-3xl sm:text-4xl lg:text-5xl font-semibold tracking-tight leading-tight text-white drop-shadow-[0_4px_22px_rgba(0,0,0,0.85)]">
-                Build your career with{" "}
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 via-purple-200 to-pink-200 drop-shadow-[0_4px_22px_rgba(0,0,0,0.85)]">
+              <h1 className="mt-4 max-w-3xl text-3xl font-bold leading-tight text-white sm:text-4xl lg:text-5xl">
+                Apply for jobs and internships at{" "}
+                <span className="bg-gradient-to-r from-indigo-200 via-violet-200 to-pink-200 bg-clip-text text-transparent">
                   Ecoders
                 </span>
               </h1>
 
-              {/* ✅ Brighter paragraph */}
-              <p className="mt-4 text-sm sm:text-base lg:text-lg text-white/95 max-w-2xl leading-relaxed drop-shadow-[0_3px_18px_rgba(0,0,0,0.85)]">
-                Whether you&apos;re exploring your first internship or your next
-                role in engineering, QA or AI — we focus on real projects,
-                mentorship and calm, product-first work.
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/90 sm:text-base">
+                Explore current opportunities and apply directly without login.
               </p>
 
-              <div className="mt-6 flex flex-wrap gap-3 text-xs sm:text-sm">
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 backdrop-blur-md px-4 py-2 text-white shadow-sm">
+              <div className="mt-6 flex flex-wrap gap-2.5">
+                <span className={SECONDARY_BADGE_STYLE}>
                   <FaLaptopCode className="text-indigo-200" />
-                  <span>Hands-on project experience</span>
+                  Real project exposure
                 </span>
-                <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/10 backdrop-blur-md px-4 py-2 text-white shadow-sm">
+                <span className={SECONDARY_BADGE_STYLE}>
                   <FaBook className="text-emerald-200" />
-                  <span>Structured mentoring & reviews</span>
+                  Guided mentorship
+                </span>
+                <span className={SECONDARY_BADGE_STYLE}>
+                  <FaBriefcase className="text-amber-200" />
+                  Jobs & internships
                 </span>
               </div>
 
-              <div className="mt-6 flex flex-wrap gap-4 text-xs sm:text-sm">
-                <Stat label="Internships / year" value="20+" />
-                <Stat label="Tech stack" value="MERN · AI · QA" />
-                <Stat label="Remote friendly" value="Yes" />
-              </div>
-
-              {/* Hero CTAs */}
-              <div className="mt-7 flex flex-wrap gap-3 text-xs sm:text-sm">
+              <div className="mt-7 flex flex-wrap gap-3">
                 <button
                   type="button"
                   onClick={scrollToForm}
-                  className={`${PRIMARY_GRADIENT_BUTTON_STYLE} self-start`}
+                  className={PRIMARY_BUTTON_STYLE}
                 >
-                  Apply for Internship / Job
-                </button>
-                <button
-                  type="button"
-                  onClick={scrollToRoles}
-                  className="inline-flex items-center rounded-xl border border-white/25 bg-white/10 backdrop-blur-md px-5 py-2.5 font-medium text-white hover:bg-white/15"
-                >
-                  View Open Roles
+                  Apply Now
                 </button>
               </div>
             </div>
 
-            {/* Right: Internship pitch */}
-            <div className="rounded-3xl bg-white/40 backdrop-blur-xl border border-white/35 shadow-xl p-6 sm:p-7 lg:p-8">
-              <h2 className="text-base sm:text-lg font-semibold text-slate-900">
-                Internship @ Ecoders — why it&apos;s different
+            <div className={`${CARD_STYLE} p-5 sm:p-6`}>
+              <h2 className="text-lg font-semibold text-slate-900">
+                Important confirmation
               </h2>
-              <ul className="mt-3 space-y-2 text-xs sm:text-sm text-slate-700">
-                <li>
-                  • You work on <b>real codebases</b> – our learning platform,
-                  QA dashboards, internal tools.
-                </li>
-                <li>
-                  • Weekly <b>1:1 mentorship</b> with seniors (code reviews,
-                  design walkthroughs, career guidance).
-                </li>
-                <li>
-                  • Exposure to{" "}
-                  <b>AI systems, automation, and project management</b> in
-                  production.
-                </li>
-                <li>
-                  • Strong <b>placement assistance</b> for standout interns.
-                </li>
-              </ul>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-xs sm:text-sm">
-                <HighlightCard
-                  icon={<SiReact className="text-[#61DAFB]" />}
-                  title="MERN stack"
-                  desc="React, Node.js, MongoDB, REST."
-                />
-                <HighlightCard
-                  icon={<SiJavascript className="text-[#F7DF1E]" />}
-                  title="Clean JS"
-                  desc="Modern patterns & best practices."
-                />
-                <HighlightCard
-                  icon={<SiMongodb className="text-[#47A248]" />}
-                  title="Data modelling"
-                  desc="Schemas, queries, indexing."
-                />
-                <HighlightCard
-                  icon={<SiNodedotjs className="text-[#3C873A]" />}
-                  title="Services & APIs"
-                  desc="Express, routes, controllers."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+              <div className="mt-4 space-y-3 text-sm text-slate-700">
+                <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <FaInfoCircle className="mt-0.5 shrink-0 text-sky-600" />
+                  <p>
+                    Anyone can open this page and see available jobs and
+                    internships.
+                  </p>
+                </div>
 
-      {/* FILTER + OPEN ROLES */}
-      <section ref={rolesRef} className="py-10 sm:py-12 lg:py-14 bg-white">
-        <div className="mx-auto container px-4 sm:px-6 lg:px-10">
-          <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-6">
-            <div>
-              <h2 className={MAIN_HEADING_STYLE}>
-                Open roles — internships & jobs
-              </h2>
-              <p className={SUB_HEADING_STYLE}>
-                Start by searching for a role that fits you, or just scroll down
-                to apply directly.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={scrollToForm}
-              className={`${PRIMARY_GRADIENT_BUTTON_STYLE} self-start`}
-            >
-              Apply without picking a role
-            </button>
-          </div>
+                <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <FaInfoCircle className="mt-0.5 shrink-0 text-sky-600" />
+                  <p>Anyone can apply directly without login.</p>
+                </div>
 
-          {/* Filters */}
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 shadow-sm p-4 sm:p-5 mb-6">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
-              {/* Search */}
-              <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                  <span className="inline-flex items-center gap-1">
-                    <FaSearch className="text-indigo-500" /> Search roles
-                  </span>
-                </label>
-                <div className="flex rounded-xl border border-indigo-400 bg-white px-3 py-2 items-center gap-2 shadow-sm">
-                  <FaSearch className="text-indigo-500" />
-                  <input
-                    className="w-full text-sm outline-none bg-transparent"
-                    placeholder="Search by role, skill, or keyword…"
-                    value={q}
-                    onChange={(e) => setQ(e.target.value)}
-                  />
+                <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <FaInfoCircle className="mt-0.5 shrink-0 text-sky-600" />
+                  <p>
+                    Admin-only management routes remain protected in the
+                    backend.
+                  </p>
                 </div>
               </div>
-
-              {/* Type */}
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                  <span className="inline-flex items-center gap-1">
-                    <FaBriefcase className="text-purple-500" /> Type
-                  </span>
-                </label>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                  value={typeFilter}
-                  onChange={(e) => setTypeFilter(e.target.value)}
-                >
-                  {TYPES.map((t) => (
-                    <option key={t}>{t}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Location */}
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                  <span className="inline-flex items-center gap-1">
-                    <FaMapMarkerAlt className="text-emerald-500" /> Location
-                  </span>
-                </label>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                  value={loc}
-                  onChange={(e) => setLoc(e.target.value)}
-                >
-                  {LOCATIONS.map((l) => (
-                    <option key={l}>{l}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Experience */}
-              <div>
-                <label className="block text-[11px] font-medium text-slate-600 mb-1">
-                  <span className="inline-flex items-center gap-1">
-                    <FaClock className="text-orange-400" /> Experience
-                  </span>
-                </label>
-                <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-                  value={exp}
-                  onChange={(e) => setExp(e.target.value)}
-                >
-                  {EXPERIENCES.map((eOpt) => (
-                    <option key={eOpt}>{eOpt}</option>
-                  ))}
-                </select>
-              </div>
             </div>
-
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setRemoteOnly((r) => !r)}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 ${
-                    remoteOnly
-                      ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                      : "border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  <FaGlobe className="text-emerald-500" />
-                  <span>Remote only</span>
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <span>View:</span>
-                <button
-                  type="button"
-                  onClick={() => setView("grid")}
-                  className={`px-3 py-1 rounded-full border ${
-                    view === "grid"
-                      ? "border-indigo-500 bg-indigo-500 text-white"
-                      : "border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  Grid
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setView("list")}
-                  className={`px-3 py-1 rounded-full border ${
-                    view === "list"
-                      ? "border-purple-500 bg-purple-500 text-white"
-                      : "border-slate-200 bg-white text-slate-600"
-                  }`}
-                >
-                  List
-                </button>
-                <span className="ml-2">
-                  Showing{" "}
-                  <span className="font-semibold text-slate-800">
-                    {filtered.length}
-                  </span>{" "}
-                  role(s)
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Results */}
-          <div
-            className={
-              view === "grid"
-                ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5"
-                : "space-y-4"
-            }
-          >
-            {filtered.map((job) =>
-              view === "grid" ? (
-                <JobCard key={job.id} job={job} />
-              ) : (
-                <JobRow key={job.id} job={job} />
-              ),
-            )}
-
-            {filtered.length === 0 && (
-              <div className="text-center py-10 text-sm text-slate-500 border border-dashed border-slate-200 rounded-2xl">
-                No roles match your filters right now.
-              </div>
-            )}
           </div>
         </div>
       </section>
 
-      {/* APPLICATION FORM - centered & more horizontal */}
-      <section
-        ref={formRef}
-        id="apply"
-        className="py-10 sm:py-12 lg:py-14 bg-white"
-      >
-        <div className="mx-auto container px-4 sm:px-6 lg:px-10">
-          <div className="max-w-9xl mx-auto">
-            <div className="text-center">
-              <h2 className={MAIN_HEADING_STYLE}>
-                Apply for an internship / job
-              </h2>
-              <p className={PARAGRAPH_STYLE}>
-                No login required. Share your details, attach your resume /
-                portfolio and we&apos;ll get back to you over email.
-              </p>
+      <section className="py-8 sm:py-10">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className={`${CARD_STYLE} p-4 sm:p-5`}>
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-slate-900">
+                  Current Opportunities
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Browse all public jobs and internships.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:w-[520px]">
+                <div className="relative">
+                  <FaSearch className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={opportunityQuery}
+                    onChange={(e) => setOpportunityQuery(e.target.value)}
+                    placeholder="Search opportunities"
+                    className={`${INPUT_STYLE} pl-10`}
+                  />
+                </div>
+
+                <select
+                  value={opportunityType}
+                  onChange={(e) => setOpportunityType(e.target.value)}
+                  className={INPUT_STYLE}
+                >
+                  <option value="All">All</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Job">Job</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-5">
+              {loadingOpportunities ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500">
+                  Loading opportunities...
+                </div>
+              ) : filteredOpportunities.length === 0 ? (
+                <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
+                  <p className="text-sm font-medium text-slate-700">
+                    No current job or internship opportunities to display yet.
+                  </p>
+                  <p className="mt-2 text-sm text-slate-500">
+                    Please check back later.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  {filteredOpportunities.map((item) => (
+                    <OpportunityCard
+                      key={item.id}
+                      item={item}
+                      onApply={() => handleSelectOpportunity(item)}
+                    />
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section ref={formRef} id="apply" className="pb-10 sm:pb-12 lg:pb-16">
+        <div className="mx-auto w-full px-4 sm:px-6 lg:px-8">
+          <div className={`${CARD_STYLE} p-4 sm:p-5 lg:p-6`}>
+            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold text-slate-900">
+                  Application Form
+                </h2>
+                <p className="mt-1 text-sm text-slate-600">
+                  Apply for the selected role or submit a direct application.
+                </p>
+              </div>
+
+              <div className="w-full sm:w-[220px]">
+                <label className={LABEL_STYLE}>Apply Type</label>
+                <select
+                  name="applyType"
+                  value={formData.applyType}
+                  onChange={handleChange}
+                  className={INPUT_STYLE}
+                >
+                  <option value="internship">Internship</option>
+                  <option value="job">Job</option>
+                </select>
+              </div>
             </div>
 
             <form
               onSubmit={handleSubmit}
               encType="multipart/form-data"
-              className="mt-6 rounded-2xl border border-slate-200 bg-white shadow-sm p-5 sm:p-6 lg:p-7"
+              noValidate
             >
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-                <FormField label="Full name" required>
-                  <input
-                    name="fullName"
-                    type="text"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Your full name"
-                    required
-                  />
-                </FormField>
-                <FormField label="Email" required>
-                  <input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="you@example.com"
-                    required
-                  />
-                </FormField>
-                <FormField label="Phone">
-                  <input
-                    name="phone"
-                    type="tel"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="+91…"
-                  />
-                </FormField>
-
-                <FormField label="Apply for" required>
-                  <select
-                    name="applyType"
-                    value={formData.applyType}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+                <div className="xl:col-span-4">
+                  <CompactSection
+                    icon={<FaEnvelope className="text-indigo-600" />}
+                    title="Basic Details"
                   >
-                    <option value="internship">Internship</option>
-                    <option value="job">Job</option>
-                  </select>
-                </FormField>
-                <FormField label="Desired role">
-                  <input
-                    name="desiredRole"
-                    type="text"
-                    value={formData.desiredRole}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., Full Stack Intern, QA Engineer…"
-                  />
-                </FormField>
-                <FormField label="Experience level">
-                  <input
-                    name="experienceLevel"
-                    type="text"
-                    value={formData.experienceLevel}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="e.g., 3rd year, 1 year exp…"
-                  />
-                </FormField>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <FormField label="Full Name" required>
+                        <input
+                          name="fullName"
+                          type="text"
+                          value={formData.fullName}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Enter your full name"
+                          required
+                        />
+                      </FormField>
 
-                <FormField label="Preferred location">
-                  <input
-                    name="preferredLocation"
-                    type="text"
-                    value={formData.preferredLocation}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Remote / Bengaluru / …"
-                  />
-                </FormField>
-                <FormField label="Portfolio / GitHub">
-                  <input
-                    name="portfolioUrl"
-                    type="url"
-                    value={formData.portfolioUrl}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="Link to your work"
-                  />
-                </FormField>
-                <FormField label="LinkedIn">
-                  <input
-                    name="linkedinUrl"
-                    type="url"
-                    value={formData.linkedinUrl}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="LinkedIn profile URL"
-                  />
-                </FormField>
+                      <FormField label="Email" required>
+                        <input
+                          name="email"
+                          type="email"
+                          value={formData.email}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Enter your email"
+                          required
+                        />
+                      </FormField>
 
-                <FormField
-                  label="Tell us about yourself"
-                  required
-                  className="sm:col-span-2 lg:col-span-3"
-                >
-                  <textarea
-                    name="aboutYou"
-                    rows={4}
-                    value={formData.aboutYou}
-                    onChange={handleChange}
-                    className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="A short note about your background and why you'd like to work with us…"
-                    required
-                  />
-                </FormField>
+                      <FormField label="Phone Number">
+                        <div className="relative">
+                          <FaPhoneAlt className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            name="phone"
+                            type="tel"
+                            value={formData.phone}
+                            onChange={handleChange}
+                            className={`${INPUT_STYLE} pl-10`}
+                            placeholder="+91 98765 43210"
+                          />
+                        </div>
+                      </FormField>
+
+                      <FormField
+                        label={
+                          formData.applyType === "job"
+                            ? "Desired Job Role"
+                            : "Desired Internship Role"
+                        }
+                      >
+                        <input
+                          name="desiredRole"
+                          type="text"
+                          value={formData.desiredRole}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Full Stack Developer / QA Intern / AI Engineer"
+                        />
+                      </FormField>
+
+                      <FormField label="Experience Level">
+                        <input
+                          name="experienceLevel"
+                          type="text"
+                          value={formData.experienceLevel}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Fresher / 1-3 years / Final Year"
+                        />
+                      </FormField>
+
+                      <FormField label="Preferred Location">
+                        <div className="relative">
+                          <FaMapMarkerAlt className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            name="preferredLocation"
+                            type="text"
+                            value={formData.preferredLocation}
+                            onChange={handleChange}
+                            className={`${INPUT_STYLE} pl-10`}
+                            placeholder="Remote / Bengaluru / Hybrid"
+                          />
+                        </div>
+                      </FormField>
+                    </div>
+                  </CompactSection>
+                </div>
+
+                <div className="xl:col-span-4">
+                  <CompactSection
+                    icon={<FaGraduationCap className="text-violet-600" />}
+                    title="Education"
+                  >
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                      <FormField label="College Name">
+                        <input
+                          name="collegeName"
+                          type="text"
+                          value={formData.collegeName}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Enter college name"
+                        />
+                      </FormField>
+
+                      <FormField label="University Name">
+                        <div className="relative">
+                          <FaUniversity className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            name="universityName"
+                            type="text"
+                            value={formData.universityName}
+                            onChange={handleChange}
+                            className={`${INPUT_STYLE} pl-10`}
+                            placeholder="Enter university"
+                          />
+                        </div>
+                      </FormField>
+
+                      <FormField label="Degree">
+                        <input
+                          name="degree"
+                          type="text"
+                          value={formData.degree}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="B.E / B.Tech / MCA"
+                        />
+                      </FormField>
+
+                      <FormField label="Department">
+                        <input
+                          name="department"
+                          type="text"
+                          value={formData.department}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="CSE / ISE / ECE / IT"
+                        />
+                      </FormField>
+
+                      <FormField label="Specialization">
+                        <input
+                          name="specialization"
+                          type="text"
+                          value={formData.specialization}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="AI / Data Science / Web"
+                        />
+                      </FormField>
+
+                      <FormField label="Year of Study">
+                        <input
+                          name="yearOfStudy"
+                          type="text"
+                          value={formData.yearOfStudy}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="2nd Year / Final Year"
+                        />
+                      </FormField>
+
+                      <FormField label="Semester">
+                        <input
+                          name="semester"
+                          type="text"
+                          value={formData.semester}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Semester 5 / 8"
+                        />
+                      </FormField>
+
+                      <FormField label="Graduation Year">
+                        <input
+                          name="graduationYear"
+                          type="number"
+                          value={formData.graduationYear}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="2027"
+                        />
+                      </FormField>
+
+                      <FormField label="CGPA / Percentage">
+                        <input
+                          name="cgpa"
+                          type="text"
+                          value={formData.cgpa}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="8.2 CGPA / 78%"
+                        />
+                      </FormField>
+                    </div>
+                  </CompactSection>
+                </div>
+
+                <div className="xl:col-span-4">
+                  <CompactSection
+                    icon={<FaCode className="text-emerald-600" />}
+                    title="Profile & Application Details"
+                  >
+                    <div className="grid grid-cols-1 gap-3">
+                      {formData.applyType === "job" && (
+                        <>
+                          <FormField label="Total Experience">
+                            <input
+                              name="totalYears"
+                              type="text"
+                              value={formData.totalYears}
+                              onChange={handleChange}
+                              className={INPUT_STYLE}
+                              placeholder="2 years"
+                            />
+                          </FormField>
+
+                          <FormField label="Current Company">
+                            <input
+                              name="currentCompany"
+                              type="text"
+                              value={formData.currentCompany}
+                              onChange={handleChange}
+                              className={INPUT_STYLE}
+                              placeholder="Current company"
+                            />
+                          </FormField>
+
+                          <FormField label="Current Designation">
+                            <input
+                              name="currentDesignation"
+                              type="text"
+                              value={formData.currentDesignation}
+                              onChange={handleChange}
+                              className={INPUT_STYLE}
+                              placeholder="Software Engineer"
+                            />
+                          </FormField>
+
+                          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                            <FormField label="Current CTC">
+                              <input
+                                name="currentCTC"
+                                type="text"
+                                value={formData.currentCTC}
+                                onChange={handleChange}
+                                className={INPUT_STYLE}
+                                placeholder="6 LPA"
+                              />
+                            </FormField>
+
+                            <FormField label="Expected CTC">
+                              <input
+                                name="expectedCTC"
+                                type="text"
+                                value={formData.expectedCTC}
+                                onChange={handleChange}
+                                className={INPUT_STYLE}
+                                placeholder="8 LPA"
+                              />
+                            </FormField>
+                          </div>
+
+                          <FormField label="Notice Period">
+                            <input
+                              name="noticePeriod"
+                              type="text"
+                              value={formData.noticePeriod}
+                              onChange={handleChange}
+                              className={INPUT_STYLE}
+                              placeholder="30 days"
+                            />
+                          </FormField>
+                        </>
+                      )}
+
+                      <FormField label="Portfolio URL">
+                        <input
+                          name="portfolioUrl"
+                          type="url"
+                          value={formData.portfolioUrl}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="https://yourportfolio.com"
+                        />
+                      </FormField>
+
+                      <FormField label="LinkedIn URL">
+                        <div className="relative">
+                          <FaLinkedin className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            name="linkedinUrl"
+                            type="url"
+                            value={formData.linkedinUrl}
+                            onChange={handleChange}
+                            className={`${INPUT_STYLE} pl-10`}
+                            placeholder="https://linkedin.com/in/yourprofile"
+                          />
+                        </div>
+                      </FormField>
+
+                      <FormField label="GitHub URL">
+                        <div className="relative">
+                          <FaGithub className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <input
+                            name="githubUrl"
+                            type="url"
+                            value={formData.githubUrl}
+                            onChange={handleChange}
+                            className={`${INPUT_STYLE} pl-10`}
+                            placeholder="https://github.com/yourprofile"
+                          />
+                        </div>
+                      </FormField>
+
+                      <FormField label="Skills">
+                        <textarea
+                          name="skills"
+                          rows={2}
+                          value={formData.skills}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="React, Node.js, MongoDB, Selenium"
+                        />
+                      </FormField>
+
+                      <FormField label="Certifications">
+                        <textarea
+                          name="certifications"
+                          rows={2}
+                          value={formData.certifications}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="AWS, Coursera React, NPTEL Java"
+                        />
+                      </FormField>
+
+                      <FormField label="About You" required>
+                        <textarea
+                          name="aboutYou"
+                          rows={4}
+                          value={formData.aboutYou}
+                          onChange={handleChange}
+                          className={INPUT_STYLE}
+                          placeholder="Write a short summary about your background, projects, strengths, and why you want to join Ecoders."
+                          required
+                        />
+                      </FormField>
+                    </div>
+                  </CompactSection>
+                </div>
               </div>
 
-              {/* Files */}
-              <div className="mt-4">
-                <label className="block text-xs font-medium text-slate-600 mb-1">
-                  Attach resume / portfolio / documents
-                </label>
-                <label className="flex flex-wrap items-center gap-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-xs sm:text-sm text-slate-600 cursor-pointer hover:border-indigo-400">
-                  <FaFileUpload className="text-indigo-500" />
-                  <span className="flex-1 min-w-[180px]">
-                    Click to upload (PDF, DOC, images). You can attach multiple
-                    files.
-                  </span>
-                  <input
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFilesChange}
-                  />
-                </label>
-                {files.length > 0 && (
-                  <p className="mt-2 text-[11px] text-slate-500">
-                    {files.length} file(s) selected:{" "}
-                    {files.map((f) => f.name).join(", ")}
-                  </p>
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                <div className="mb-3 flex items-center gap-2">
+                  <FaFileUpload className="text-indigo-600" />
+                  <div>
+                    <h3 className={SECTION_TITLE_STYLE}>Upload Documents</h3>
+                    <p className={SECTION_DESC_STYLE}>
+                      Resume, portfolio, certificates, or supporting files.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+                  <label
+                    htmlFor="career-files-input"
+                    className="flex cursor-pointer items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-4 text-center transition hover:border-indigo-400 hover:bg-indigo-50/40"
+                  >
+                    <div>
+                      <FaFileUpload className="mx-auto mb-2 text-xl text-indigo-500" />
+                      <span className="text-sm font-medium text-slate-700">
+                        Click here to select files
+                      </span>
+                      <p className="mt-1 text-xs text-slate-500">
+                        PDF, DOC, DOCX, PNG, JPG supported
+                      </p>
+                    </div>
+
+                    <input
+                      id="career-files-input"
+                      ref={fileInputRef}
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFilesChange}
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFiles([]);
+                      setFileError("");
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    className={SECONDARY_BUTTON_STYLE}
+                  >
+                    Clear Files
+                  </button>
+                </div>
+
+                {selectedFileNames && (
+                  <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-600">
+                      Selected Files
+                    </p>
+                    <p className="mt-1 break-words text-sm text-slate-700">
+                      {selectedFileNames}
+                    </p>
+                  </div>
+                )}
+
+                {fileError && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    {fileError}
+                  </div>
                 )}
               </div>
 
               {submitMessage && (
-                <p className="mt-4 text-xs sm:text-sm text-emerald-600">
-                  {submitMessage}
-                </p>
-              )}
-              {submitError && (
-                <p className="mt-4 text-xs sm:text-sm text-rose-600">
-                  {submitError}
-                </p>
+                <div className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                  <div className="flex items-start gap-3">
+                    <FaCheckCircle className="mt-0.5 shrink-0" />
+                    <span>{submitMessage}</span>
+                  </div>
+                </div>
               )}
 
-              <div className="mt-6 text-center">
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className={`${PRIMARY_GRADIENT_BUTTON_STYLE} justify-center px-6 text-sm disabled:opacity-60 disabled:cursor-not-allowed`}
-                >
-                  {submitting ? "Submitting…" : "Submit application"}
-                </button>
-                <p className={SMALL_PARAGRAPH_STYLE}>
-                  By submitting, you agree to be contacted via email/phone for
-                  opportunities at Ecoders.
+              {submitError && (
+                <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                  {submitError}
+                </div>
+              )}
+
+              <div className="mt-5 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="max-w-2xl text-xs leading-6 text-slate-500 sm:text-sm">
+                  By submitting this form, you agree to be contacted regarding
+                  career opportunities at Ecoders.
                 </p>
+
+                <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className={SECONDARY_BUTTON_STYLE}
+                    disabled={submitting}
+                  >
+                    Reset
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={submitting}
+                    className={PRIMARY_BUTTON_STYLE}
+                  >
+                    {submitting
+                      ? "Submitting Application..."
+                      : `Submit ${
+                          formData.applyType === "job" ? "Job" : "Internship"
+                        } Application`}
+                  </button>
+                </div>
               </div>
             </form>
           </div>
@@ -723,33 +1080,22 @@ export default function Careers() {
   );
 }
 
-/* Small UI pieces */
-
-function Stat({ label, value }) {
+function CompactSection({ icon, title, children }) {
   return (
-    <div className="rounded-xl border border-white/25 bg-white/10 backdrop-blur-md px-4 py-3 text-xs sm:text-sm text-white shadow-sm drop-shadow-[0_3px_14px_rgba(0,0,0,0.75)]">
-      <div className="text-[11px] text-white/80">{label}</div>
-      <div className="text-sm font-semibold text-white">{value}</div>
-    </div>
-  );
-}
-
-function HighlightCard({ icon, title, desc }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 text-xs sm:text-sm">
-      <div className="flex items-center gap-2 text-slate-800">
-        <span className="text-lg">{icon}</span>
-        <span className="font-semibold">{title}</span>
+    <div className="h-full rounded-2xl border border-slate-200 bg-slate-50 p-4">
+      <div className="mb-3 flex items-center gap-2">
+        <div className="rounded-xl bg-white p-2 shadow-sm">{icon}</div>
+        <h3 className={SECTION_TITLE_STYLE}>{title}</h3>
       </div>
-      <p className="mt-1 text-[11px] text-slate-600">{desc}</p>
+      {children}
     </div>
   );
 }
 
-function FormField({ label, required, children, className = "" }) {
+function FormField({ label, required = false, children }) {
   return (
-    <div className={`mt-3 sm:mt-4 ${className}`}>
-      <label className="block text-xs font-medium text-slate-600 mb-1">
+    <div>
+      <label className={LABEL_STYLE}>
         {label} {required && <span className="text-rose-500">*</span>}
       </label>
       {children}
@@ -757,158 +1103,66 @@ function FormField({ label, required, children, className = "" }) {
   );
 }
 
-function JobCard({ job }) {
+function OpportunityCard({ item, onApply }) {
   const badgeClasses =
-    job.type === "Internship"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
-      : "border-indigo-200 bg-indigo-50 text-indigo-700";
+    item.type === "Job"
+      ? "border-indigo-200 bg-indigo-50 text-indigo-700"
+      : "border-amber-200 bg-amber-50 text-amber-700";
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5 flex flex-col h-full">
-      <div className="flex items-start justify-between gap-2">
+    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-            {job.title}
-          </h3>
-          <p className="mt-1 text-xs text-slate-500">{job.dept}</p>
+          <h3 className="text-sm font-semibold text-slate-900">{item.title}</h3>
+          <p className="mt-1 text-xs text-slate-500">{item.location}</p>
         </div>
+
         <span
-          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ${badgeClasses}`}
+          className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium ${badgeClasses}`}
         >
-          <FaBriefcase className="text-[13px]" />
-          {job.type}
+          <FaBriefcase className="text-[11px]" />
+          {item.type}
         </span>
       </div>
-      <p className="mt-3 text-xs sm:text-sm text-slate-600 flex-1">
-        {job.summary}
-      </p>
 
-      <div className="mt-3 space-y-1 text-[11px] text-slate-600">
-        <div className="flex items-center gap-2">
-          <FaMapMarkerAlt className="text-emerald-500" />
-          <span>{job.location}</span>
-          {job.remote && (
-            <span className="ml-1 text-emerald-600 font-medium">
-              (Remote friendly)
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-2">
+      <p className="mt-3 line-clamp-3 text-sm text-slate-600">{item.summary}</p>
+
+      <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-600">
+        <span className="inline-flex items-center gap-1">
           <FaClock className="text-orange-400" />
-          <span>{job.experience}</span>
-        </div>
-        <div className="flex items-center gap-2">
-          <FaChartLine className="text-sky-500" />
-          <span>{job.salary}</span>
-        </div>
+          {item.experience}
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <FaMapMarkerAlt className="text-emerald-500" />
+          {item.location}
+        </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1">
-        {job.tags.map((t) => (
-          <span
-            key={t}
-            className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-600"
-          >
-            {t}
-          </span>
-        ))}
-      </div>
+      {item.skills?.length > 0 && (
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {item.skills.slice(0, 4).map((skill) => (
+            <span
+              key={skill}
+              className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-600"
+            >
+              {skill}
+            </span>
+          ))}
+        </div>
+      )}
 
-      <div className="mt-4 flex items-center justify-between text-[11px] text-slate-500">
-        <span>Posted: {job.posted}</span>
+      <div className="mt-4 flex items-center justify-between">
+        <span className="text-[11px] text-slate-500">
+          Posted: {item.posted}
+        </span>
+
         <button
           type="button"
-          onClick={() =>
-            document
-              .getElementById("apply")
-              ?.scrollIntoView({ behavior: "smooth", block: "start" })
-          }
-          className="text-indigo-600 font-medium hover:underline"
+          onClick={onApply}
+          className="text-sm font-semibold text-indigo-600 hover:text-indigo-700"
         >
-          Apply for this role
+          Apply
         </button>
-      </div>
-    </article>
-  );
-}
-
-function JobRow({ job }) {
-  const badgeClasses =
-    job.type === "Internship"
-      ? "border-amber-200 bg-amber-50 text-amber-700"
-      : "border-indigo-200 bg-indigo-50 text-indigo-700";
-
-  return (
-    <article className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4 sm:p-5">
-      <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-3">
-        <div>
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <h3 className="text-sm sm:text-base font-semibold text-slate-900">
-                {job.title}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500">{job.dept}</p>
-            </div>
-            <span
-              className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] ${badgeClasses}`}
-            >
-              <FaBriefcase className="text-[13px]" />
-              {job.type}
-            </span>
-          </div>
-
-          <p className="mt-2 text-xs sm:text-sm text-slate-600">
-            {job.summary}
-          </p>
-
-          <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-600">
-            <span className="inline-flex items-center gap-1">
-              <FaMapMarkerAlt className="text-emerald-500" />
-              {job.location}
-              {job.remote && (
-                <span className="ml-1 text-emerald-600 font-medium">
-                  (Remote)
-                </span>
-              )}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <FaClock className="text-orange-400" />
-              {job.experience}
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <FaChartLine className="text-sky-500" />
-              {job.salary}
-            </span>
-          </div>
-
-          <div className="mt-2 flex flex-wrap gap-1">
-            {job.tags.map((t) => (
-              <span
-                key={t}
-                className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-600"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-col items-start md:items-end gap-2">
-          <button
-            type="button"
-            onClick={() =>
-              document
-                .getElementById("apply")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" })
-            }
-            className={`${PRIMARY_GRADIENT_BUTTON_STYLE} text-xs px-4 py-2`}
-          >
-            Apply now
-          </button>
-          <span className="text-[11px] text-slate-500">
-            Posted: {job.posted}
-          </span>
-        </div>
       </div>
     </article>
   );

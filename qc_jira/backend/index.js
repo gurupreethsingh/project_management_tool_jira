@@ -1,4 +1,3 @@
-// index.js
 const express = require("express");
 const cors = require("cors");
 const mongoose = require("mongoose");
@@ -22,15 +21,15 @@ const defectRoutes = require("./routes/DefectRoutes");
 const contactRoutes = require("./routes/ContactRoutes");
 const userRoutes = require("./routes/UserRoutes");
 const eventRoutes = require("./routes/EventRoutes");
-const careersRoutes = require("./routes/CareersRoutes");
 const reportRoutes = require("./routes/ReportRoutes");
 const toDoRoutes = require("./routes/ToDoRoutes");
 const testExecutionRoutes = require("./routes/TestExecutionRoutes");
+const jobRoutes = require("./routes/JobRoutes");
+const internshipRoutes = require("./routes/InternshipRoutes");
 
-// 2. give a name to your api backend. app = express()
 dotenv.config();
 
-// Middleware
+// ===== CORS =====
 app.use(
   cors({
     origin: [
@@ -38,8 +37,8 @@ app.use(
       "http://localhost:5174",
       "http://localhost:5175",
       "http://localhost:5176",
-    ], // Replace with your frontend's URL
-    credentials: true, // Enable credentials
+    ],
+    credentials: true,
   }),
 );
 
@@ -58,34 +57,46 @@ app.use((req, res, next) => {
     "Access-Control-Allow-Methods",
     "GET,POST,PUT,PATCH,DELETE,OPTIONS",
   );
-  if (req.method === "OPTIONS") return res.sendStatus(200);
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
   next();
 });
 
-// index.js (near the top, after app = express() and before route mounts)
+// ===== CACHE / EXPORT HELPERS =====
 const nocache = (_req, res, next) => {
   res.set("Cache-Control", "no-store");
   next();
 };
+
 const skipCompression = (req, _res, next) => {
-  // tell any compression middleware/proxy to skip this response
   req.headers["x-no-compression"] = "1";
   next();
 };
 
-// Important: register these BEFORE app.use("/api", attendanceRoutes)
 app.get(
   "/api/attendance/export.xlsx",
   skipCompression,
   nocache,
-  (req, res, next) => next(),
+  (_req, _res, next) => next(),
 );
+
 app.get(
   "/api/attendance/export.test.xlsx",
   skipCompression,
   nocache,
-  (req, res, next) => next(),
+  (_req, _res, next) => next(),
 );
+
+// ===== HEALTH CHECK =====
+app.get("/api/health", (_req, res) => {
+  return res.status(200).json({
+    success: true,
+    message: "API is working",
+  });
+});
 
 // ===== ROUTE MOUNTS =====
 app.use("/api/developers", developerRoutes);
@@ -101,12 +112,21 @@ app.use("/api", defectRoutes);
 app.use("/api", contactRoutes);
 app.use("/api", userRoutes);
 app.use("/api", eventRoutes);
-app.use("/api", careersRoutes);
 app.use("/api", reportRoutes);
 app.use("/api/todos", toDoRoutes);
 app.use("/api", testExecutionRoutes);
+app.use("/api", jobRoutes); // ✅ fixed mount
+app.use("/api", internshipRoutes);
 
-// ===== DB + SERVER ====
+// ===== 404 HANDLER =====
+app.use((req, res) => {
+  return res.status(404).json({
+    success: false,
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+  });
+});
+
+// ===== DB + SERVER =====
 mongoose
   .connect(process.env.MONGO_URI || "mongodb://127.0.0.1:27017/ecoders_jira")
   .then(() => console.log("Connected to mongodb."))

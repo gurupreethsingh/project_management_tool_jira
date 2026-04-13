@@ -41,6 +41,7 @@ import ThankYou from "../../pages/orders_page/ThankYou";
 
 // wishlist page..
 import Wishlist from "../../pages/wishlist_pages/Wishlist";
+import UserHistory from "../history_components/UserHistory";
 
 const MainLayout = () => {
   return (
@@ -324,6 +325,7 @@ const MainLayout = () => {
           />
         </Routes>
       </main>
+      <UserHistory />
       <Footer />
     </div>
   );
