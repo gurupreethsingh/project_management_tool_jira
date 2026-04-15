@@ -3,17 +3,17 @@ const router = express.Router();
 const wishlistController = require("../controllers/WishlistController");
 const { verifyToken } = require("../middleware/AuthMiddleware");
 
-router.get("/get-wishlist", verifyToken, wishlistController.getWishlist);
-router.post("/add-to-wishlist", verifyToken, wishlistController.addToWishlist);
+router.get("/get-wishlist", verifyToken, wishlistController.getWishlist); // wishlist page
+router.post("/add-to-wishlist", verifyToken, wishlistController.addToWishlist); // shop
 router.delete(
   "/remove-from-wishlist/:productId",
   verifyToken,
-  wishlistController.removeFromWishlist
-);
+  wishlistController.removeFromWishlist,
+); // wishlits
 router.patch(
   "/toggle-save-for-later/:productId",
   verifyToken,
-  wishlistController.toggleSaveForLater
+  wishlistController.toggleSaveForLater,
 );
 router.post("/move-to-cart", verifyToken, wishlistController.moveToCart);
 

@@ -71,6 +71,7 @@ import DashboardGenerator from "./pages/chatbot_pages/DashboardGenerator";
 import RoadmapGen from "./pages/chatbot_pages/RoadmapGen";
 import ExamGenerator from "./pages/chatbot_pages/ExamGenerator";
 import TextCodeGenerator from "./pages/chatbot_pages/TextCodeGenerator";
+import EmotionDetector from "./components/emotion_detector_component/EmotionDetector";
 
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
@@ -563,6 +564,7 @@ function App() {
               <Footer />
             </div>
 
+            <EmotionDetector />
             <ChatBot />
             <TopArrow scrollTargetId="app-scroll" />
           </Router>

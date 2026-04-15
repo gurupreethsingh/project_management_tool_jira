@@ -519,6 +519,7 @@
 //     </header>
 //   );
 // }
+
 import { useContext, useMemo, useState, useEffect, useCallback } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Dialog, DialogPanel } from "@headlessui/react";
@@ -542,6 +543,7 @@ import globalBackendRoute from "../../config/Config";
 
 const GUEST_CART_KEY = "guest_cart_items";
 const GUEST_CART_EVENT = "guest-cart-updated";
+const CART_UPDATED_EVENT = "cart-updated";
 
 const getStoredToken = () =>
   localStorage.getItem("token") ||
@@ -590,38 +592,61 @@ export default function Header() {
     }
 
     try {
-      const response = await axios.get(
+      const possibleUrls = [
         `${globalBackendRoute}/api/get-cart-items`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
+        `${globalBackendRoute}/api/cart/get-cart-items`,
+        `${globalBackendRoute}/api/cart/items`,
+      ];
 
-      const items =
-        response?.data?.items ||
-        response?.data?.cart?.items ||
-        response?.data?.cartItems ||
-        response?.data ||
-        [];
+      let synced = false;
 
-      if (!Array.isArray(items)) {
-        setLiveCartCount(0);
-        return;
+      for (const url of possibleUrls) {
+        try {
+          const response = await axios.get(url, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          const items =
+            response?.data?.items ||
+            response?.data?.cart?.items ||
+            response?.data?.cartItems ||
+            response?.data?.data?.items ||
+            response?.data ||
+            [];
+
+          if (Array.isArray(items)) {
+            const total = items.reduce((sum, item) => {
+              const qty = Number(item?.quantity || 1);
+              return sum + (qty > 0 ? qty : 1);
+            }, 0);
+
+            setLiveCartCount(total);
+            synced = true;
+            break;
+          }
+        } catch {
+          // try next
+        }
       }
 
-      const total = items.reduce((sum, item) => {
-        const qty = Number(item?.quantity || 1);
-        return sum + (qty > 0 ? qty : 1);
-      }, 0);
-
-      setLiveCartCount(total);
+      if (!synced) {
+        if (Array.isArray(cartItems)) {
+          const total = cartItems.reduce((sum, item) => {
+            const qty = Number(item?.quantity || 1);
+            return sum + (qty > 0 ? qty : 1);
+          }, 0);
+          setLiveCartCount(total);
+        } else {
+          setLiveCartCount(0);
+        }
+      }
     } catch (error) {
       console.error("Header cart sync error:", error);
       setLiveCartCount(0);
     }
-  }, []);
+  }, [cartItems]);
 
   useEffect(() => {
     const handleCartUpdate = () => {
@@ -629,18 +654,21 @@ export default function Header() {
     };
 
     window.addEventListener(GUEST_CART_EVENT, handleCartUpdate);
+    window.addEventListener(CART_UPDATED_EVENT, handleCartUpdate);
     window.addEventListener("storage", handleCartUpdate);
 
     syncCartCount();
 
     return () => {
       window.removeEventListener(GUEST_CART_EVENT, handleCartUpdate);
+      window.removeEventListener(CART_UPDATED_EVENT, handleCartUpdate);
       window.removeEventListener("storage", handleCartUpdate);
     };
   }, [syncCartCount]);
 
   useEffect(() => {
     const token = getStoredToken();
+
     if (token) {
       syncCartCount();
     } else {
@@ -649,6 +677,16 @@ export default function Header() {
       setLiveCartCount(guestCount);
     }
   }, [isLoggedIn, syncCartCount]);
+
+  useEffect(() => {
+    if (Array.isArray(cartItems)) {
+      const total = cartItems.reduce((sum, item) => {
+        const qty = Number(item?.quantity || 1);
+        return sum + (qty > 0 ? qty : 1);
+      }, 0);
+      setLiveCartCount(total);
+    }
+  }, [cartItems]);
 
   const cartCount = useMemo(() => {
     if (liveCartCount > 0) return liveCartCount;

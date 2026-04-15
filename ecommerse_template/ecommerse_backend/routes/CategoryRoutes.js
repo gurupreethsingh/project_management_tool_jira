@@ -24,7 +24,7 @@ router.post(
   verifyToken,
   isSuperAdmin,
   categoryUpload.single("category_image"),
-  addCategory
+  addCategory,
 );
 
 // @route   GET /api/categories
@@ -51,14 +51,14 @@ router.put(
   verifyToken,
   isSuperAdmin,
   categoryUpload.single("category_image"),
-  updateCategory
+  updateCategory,
 );
 
 router.delete(
   "/delete-category/:id",
   verifyToken,
   isSuperAdmin,
-  deleteCategory
+  deleteCategory,
 );
 
 module.exports = router;

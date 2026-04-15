@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     state: { type: String },
     postalCode: { type: String },
     country: { type: String },
-  }, // New field to store address details
+  },
   role: {
     type: String,
     enum: [
@@ -24,7 +24,6 @@ const userSchema = new mongoose.Schema({
       "course_coordinator", // Course Coordinator
       "customer_support", // New role: Customer Support Representative
       "data_scientist", // New role: Data Scientist
-
       "department_head", // Head of Department
       "developer", // Software Developer
       "event_coordinator", // Event Coordinator
@@ -42,7 +41,6 @@ const userSchema = new mongoose.Schema({
       "registrar", // University Registrar
       "researcher", // Researcher
       "sales_executive", // New role: Sales Executive
-
       "superadmin", // Super Administrator
       "support_engineer", // Support Engineer
       "tech_lead", // Technical Lead

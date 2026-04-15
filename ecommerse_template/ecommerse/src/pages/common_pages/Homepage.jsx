@@ -1980,7 +1980,8 @@ const Homepage = () => {
         setCategories(categoryData);
 
         const shuffledAllProducts = shuffleArray(allProducts);
-        const shuffledFeatured = [...shuffledAllProducts].slice(0, 5);
+        const shuffledFeatured = [...shuffledAllProducts].slice(0, 8);
+        // const shuffledFeatured = [...shuffledAllProducts];
 
         const brandSet = new Set();
         const onlyBrandedProducts = [];
@@ -2958,7 +2959,7 @@ const Homepage = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-8 gap-3 sm:gap-4">
               {featuredProducts.map((item) => {
                 const productId = normalizeProductId(item);
                 const quantityInCart = getSafeNumber(cartCounts[productId], 0);
@@ -3116,7 +3117,7 @@ const Homepage = () => {
             </div>
 
             {isFetchingProducts ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 sm:gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-7 gap-3 sm:gap-4">
                 {Array.from({ length: 12 }).map((_, index) => (
                   <div
                     key={index}
