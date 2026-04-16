@@ -11,7 +11,7 @@ const {
   getCategoryProductCounts,
 } = require("../controllers/CategoryController");
 
-const { verifyToken, isSuperAdmin } = require("../middleware/authMiddleware");
+const { verifyToken, isSuperAdmin } = require("../middleware/AuthMiddleware");
 
 // -----------------------------------
 // ROUTES

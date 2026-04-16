@@ -2,12 +2,15 @@ const jwt = require("jsonwebtoken");
 
 exports.verifyToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
+
   if (authHeader && authHeader.startsWith("Bearer ")) {
     const token = authHeader.split(" ")[1];
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-      if (err) return res.status(403).json({ message: "Invalid token" });
 
-      // Attach both id and _id to avoid issues
+    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
+      if (err) {
+        return res.status(403).json({ message: "Invalid token" });
+      }
+
       req.user = {
         ...decoded,
         _id: decoded._id || decoded.id,
@@ -21,24 +24,28 @@ exports.verifyToken = (req, res, next) => {
   }
 };
 
-// 🔓 Middleware to optionally verify user if token exists
 exports.verifyTokenOptional = (req, res, next) => {
   const authHeader = req.headers.authorization;
+
   if (!authHeader) {
-    req.user = null; // 👈 allow guests
+    req.user = null;
     return next();
   }
 
   const token = authHeader.split(" ")[1];
 
   if (!token) {
-    req.user = null; // 👈 allow guests
+    req.user = null;
     return next();
   }
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    req.user = decoded;
+    req.user = {
+      ...decoded,
+      _id: decoded._id || decoded.id,
+      id: decoded.id || decoded._id,
+    };
     next();
   } catch (err) {
     req.user = null;
@@ -46,10 +53,7 @@ exports.verifyTokenOptional = (req, res, next) => {
   }
 };
 
-// in your existing auth middleware file
-
 exports.isSuperAdmin = (req, res, next) => {
-  // verifyToken must have already run and set req.user
   if (!req.user || req.user.role !== "superadmin") {
     return res.status(403).json({ message: "Access denied. Superadmin only." });
   }
