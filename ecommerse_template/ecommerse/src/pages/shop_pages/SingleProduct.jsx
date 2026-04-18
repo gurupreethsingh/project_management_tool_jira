@@ -1,9 +1,3 @@
-// // ✅ file: src/pages/shop_pages/SingleProduct.jsx
-// // ✅ ONLY UI redesign (NO logic changes)
-// // ✅ Mobile change requested:
-// // - Hide the 5 service icons row on mobile (show only on lg+)
-// // ✅ Also tuned spacing/margins to match Shop feel (more gutters + breathing room)
-
 // import React, {
 //   useEffect,
 //   useState,
@@ -36,6 +30,12 @@
 //   FiPackage,
 // } from "react-icons/fi";
 // import { RiShieldCheckLine, RiArrowLeftSLine } from "react-icons/ri";
+
+// const getStoredToken = () =>
+//   localStorage.getItem("token") ||
+//   localStorage.getItem("authToken") ||
+//   localStorage.getItem("userToken") ||
+//   "";
 
 // const SingleProduct = () => {
 //   const navigate = useNavigate();
@@ -78,8 +78,32 @@
 //         console.error("Failed to load product:", error.message);
 //       }
 //     };
+
 //     fetchProduct();
 //   }, [id]);
+
+//   useEffect(() => {
+//     const saveViewHistory = async () => {
+//       const token = getStoredToken();
+//       if (!token || !product?._id) return;
+
+//       try {
+//         await axios.post(
+//           `${globalBackendRoute}/api/user-history/add-view`,
+//           { productId: product._id },
+//           {
+//             headers: {
+//               Authorization: `Bearer ${token}`,
+//             },
+//           },
+//         );
+//       } catch (error) {
+//         console.error("Failed to save product view history:", error);
+//       }
+//     };
+
+//     saveViewHistory();
+//   }, [product?._id]);
 
 //   const images = useMemo(
 //     () => [product?.product_image, ...(product?.all_product_images || [])],
@@ -92,6 +116,7 @@
 //       const { offsetWidth, offsetHeight } = target;
 //       const x = (offsetX / offsetWidth) * 100;
 //       const y = (offsetY / offsetHeight) * 100;
+
 //       setZoomStyle({
 //         backgroundImage: `url(${getImageUrl(mainImage)})`,
 //         backgroundPosition: `${x}% ${y}%`,
@@ -190,11 +215,9 @@
 //         }
 //       `}</style>
 
-//       {/* ✅ Shop-like gutters + max width */}
 //       <div className="w-full">
 //         <div className="w-full px-3 sm:px-6 lg:px-10 2xl:px-16 py-5 sm:py-6">
 //           <div className="w-full max-w-[1700px] mx-auto">
-//             {/* breadcrumb/back */}
 //             <div className="flex items-center justify-between gap-3">
 //               <button
 //                 type="button"
@@ -214,12 +237,9 @@
 //               </div>
 //             </div>
 
-//             {/* main */}
 //             <div className="mt-6 flex flex-col lg:flex-row gap-10 xl:gap-14 2xl:gap-16">
-//               {/* LEFT */}
 //               <div className="w-full lg:w-[52%]">
 //                 <div className="flex gap-4">
-//                   {/* thumbs desktop */}
 //                   <div className="hidden sm:flex flex-col gap-3">
 //                     {images
 //                       .filter(Boolean)
@@ -232,17 +252,20 @@
 //                             type="button"
 //                             onClick={() => setMainImage(img)}
 //                             className={[
-//                               "h-[58px] w-[58px] rounded-2xl overflow-hidden bg-slate-50",
+//                               "h-[58px] w-[58px] rounded-2xl overflow-hidden bg-white",
 //                               "transition-transform hover:scale-[1.03]",
 //                               active ? "thumbActive" : "",
 //                             ].join(" ")}
 //                             title="Preview"
-//                             style={{ boxShadow: "none", border: "none" }}
+//                             style={{
+//                               boxShadow: "none",
+//                               border: "1px solid rgb(241,245,249)",
+//                             }}
 //                           >
 //                             <img
 //                               src={getImageUrl(img)}
 //                               alt={`thumb-${idx}`}
-//                               className="h-full w-full object-cover"
+//                               className="h-full w-full object-contain"
 //                               loading="lazy"
 //                             />
 //                           </button>
@@ -250,7 +273,6 @@
 //                       })}
 //                   </div>
 
-//                   {/* main image */}
 //                   <motion.div
 //                     initial={{ opacity: 0, y: 10 }}
 //                     animate={{ opacity: 1, y: 0 }}
@@ -265,22 +287,20 @@
 //                       <div
 //                         onMouseMove={handleZoom}
 //                         onMouseLeave={() => setZoomStyle({})}
-//                         className="w-full h-[300px] sm:h-[340px] md:h-[420px] rounded-2xl bg-no-repeat bg-center"
+//                         className="w-full h-[300px] sm:h-[340px] md:h-[420px] rounded-2xl bg-no-repeat bg-center overflow-hidden"
 //                         style={
 //                           Object.keys(zoomStyle).length > 0
 //                             ? {
 //                                 ...zoomStyle,
 //                                 backgroundRepeat: "no-repeat",
-//                                 backgroundColor: "rgba(248,250,252,.8)",
+//                                 backgroundColor: "#ffffff",
 //                               }
 //                             : {
-//                                 backgroundImage: `url(${getImageUrl(
-//                                   mainImage,
-//                                 )})`,
+//                                 backgroundImage: `url(${getImageUrl(mainImage)})`,
 //                                 backgroundSize: "contain",
 //                                 backgroundRepeat: "no-repeat",
 //                                 backgroundPosition: "center",
-//                                 backgroundColor: "rgba(248,250,252,.8)",
+//                                 backgroundColor: "#ffffff",
 //                               }
 //                         }
 //                       />
@@ -304,7 +324,6 @@
 //                         </span>
 //                       </div>
 
-//                       {/* thumbs mobile */}
 //                       <div className="sm:hidden mt-4 flex gap-3 overflow-x-auto hide-scrollbar pb-1">
 //                         {images
 //                           .filter(Boolean)
@@ -317,15 +336,18 @@
 //                                 type="button"
 //                                 onClick={() => setMainImage(img)}
 //                                 className={[
-//                                   "h-[62px] w-[62px] rounded-2xl overflow-hidden bg-slate-50 flex-shrink-0",
+//                                   "h-[62px] w-[62px] rounded-2xl overflow-hidden bg-white flex-shrink-0",
 //                                   active ? "thumbActive" : "",
 //                                 ].join(" ")}
 //                                 title="Preview"
+//                                 style={{
+//                                   border: "1px solid rgb(241,245,249)",
+//                                 }}
 //                               >
 //                                 <img
 //                                   src={getImageUrl(img)}
 //                                   alt={`thumb-${idx}`}
-//                                   className="h-full w-full object-cover"
+//                                   className="h-full w-full object-contain"
 //                                   loading="lazy"
 //                                 />
 //                               </button>
@@ -336,7 +358,6 @@
 //                   </motion.div>
 //                 </div>
 
-//                 {/* ✅ HIDE SERVICE ICONS ON MOBILE (show only on lg+) */}
 //                 <motion.div
 //                   initial={{ opacity: 0, y: 8 }}
 //                   animate={{ opacity: 1, y: 0 }}
@@ -389,7 +410,6 @@
 //                 </motion.div>
 //               </div>
 
-//               {/* RIGHT */}
 //               <div className="w-full lg:w-[48%]">
 //                 <motion.div
 //                   initial={{ opacity: 0, y: 10 }}
@@ -559,7 +579,6 @@
 //               </div>
 //             </div>
 
-//             {/* specs + delivery */}
 //             <motion.div
 //               initial={{ opacity: 0, y: 10 }}
 //               whileInView={{ opacity: 1, y: 0 }}
@@ -693,11 +712,10 @@
 //               </div>
 //             </motion.div>
 
-//             {/* related */}
 //             {categoryProducts.length > 0 && (
 //               <div className="mt-12 sm:mt-14">
 //                 <div className="flex items-end justify-between gap-4 mb-3">
-//                   <div>
+//                   <div className="rounded-2xl border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white px-3 py-3 sm:px-4">
 //                     <h2 className="text-[18px] font-extrabold text-slate-900">
 //                       Explore More from This Category
 //                     </h2>
@@ -750,16 +768,16 @@
 //                         to={`/single-product/${item._id}`}
 //                         className="min-w-[240px] sm:min-w-[260px] bg-white flex-shrink-0 rounded-3xl overflow-hidden"
 //                         style={{
-//                           border: "1px solid rgb(241,245,249)",
+//                           border: "1px solid rgb(213, 222, 231)",
 //                           boxShadow: "none",
 //                         }}
 //                       >
 //                         <div className="p-3">
-//                           <div className="rounded-2xl overflow-hidden bg-slate-50">
+//                           <div className="rounded-2xl overflow-hidden bg-white">
 //                             <img
 //                               src={getImageUrl(item.product_image)}
 //                               alt={item.product_name}
-//                               className="w-full h-44 object-cover"
+//                               className="w-full h-44 object-contain bg-white"
 //                               loading="lazy"
 //                             />
 //                           </div>
@@ -813,14 +831,6 @@
 // };
 
 // export default SingleProduct;
-
-// till here no history saved.
-
-// ✅ file: src/pages/shop_pages/SingleProduct.jsx
-// ✅ UI preserved
-// ✅ Added user product history tracking
-// ✅ History saves only when user is logged in
-// ✅ No other existing logic removed
 
 import React, {
   useEffect,
@@ -906,7 +916,6 @@ const SingleProduct = () => {
     fetchProduct();
   }, [id]);
 
-  // ✅ save viewed product into user history only for logged-in users
   useEffect(() => {
     const saveViewHistory = async () => {
       const token = getStoredToken();
@@ -1077,17 +1086,20 @@ const SingleProduct = () => {
                             type="button"
                             onClick={() => setMainImage(img)}
                             className={[
-                              "h-[58px] w-[58px] rounded-2xl overflow-hidden bg-slate-50",
+                              "h-[58px] w-[58px] rounded-2xl overflow-hidden bg-white",
                               "transition-transform hover:scale-[1.03]",
                               active ? "thumbActive" : "",
                             ].join(" ")}
                             title="Preview"
-                            style={{ boxShadow: "none", border: "none" }}
+                            style={{
+                              boxShadow: "none",
+                              border: "1px solid rgb(241,245,249)",
+                            }}
                           >
                             <img
                               src={getImageUrl(img)}
                               alt={`thumb-${idx}`}
-                              className="h-full w-full object-cover"
+                              className="h-full w-full object-contain"
                               loading="lazy"
                             />
                           </button>
@@ -1109,20 +1121,20 @@ const SingleProduct = () => {
                       <div
                         onMouseMove={handleZoom}
                         onMouseLeave={() => setZoomStyle({})}
-                        className="w-full h-[300px] sm:h-[340px] md:h-[420px] rounded-2xl bg-no-repeat bg-center"
+                        className="w-full h-[300px] sm:h-[340px] md:h-[420px] rounded-2xl bg-no-repeat bg-center overflow-hidden"
                         style={
                           Object.keys(zoomStyle).length > 0
                             ? {
                                 ...zoomStyle,
                                 backgroundRepeat: "no-repeat",
-                                backgroundColor: "rgba(248,250,252,.8)",
+                                backgroundColor: "#ffffff",
                               }
                             : {
                                 backgroundImage: `url(${getImageUrl(mainImage)})`,
                                 backgroundSize: "contain",
                                 backgroundRepeat: "no-repeat",
                                 backgroundPosition: "center",
-                                backgroundColor: "rgba(248,250,252,.8)",
+                                backgroundColor: "#ffffff",
                               }
                         }
                       />
@@ -1158,15 +1170,18 @@ const SingleProduct = () => {
                                 type="button"
                                 onClick={() => setMainImage(img)}
                                 className={[
-                                  "h-[62px] w-[62px] rounded-2xl overflow-hidden bg-slate-50 flex-shrink-0",
+                                  "h-[62px] w-[62px] rounded-2xl overflow-hidden bg-white flex-shrink-0",
                                   active ? "thumbActive" : "",
                                 ].join(" ")}
                                 title="Preview"
+                                style={{
+                                  border: "1px solid rgb(241,245,249)",
+                                }}
                               >
                                 <img
                                   src={getImageUrl(img)}
                                   alt={`thumb-${idx}`}
-                                  className="h-full w-full object-cover"
+                                  className="h-full w-full object-contain"
                                   loading="lazy"
                                 />
                               </button>
@@ -1176,6 +1191,7 @@ const SingleProduct = () => {
                     </div>
                   </motion.div>
                 </div>
+
                 <motion.div
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -1533,7 +1549,7 @@ const SingleProduct = () => {
             {categoryProducts.length > 0 && (
               <div className="mt-12 sm:mt-14">
                 <div className="flex items-end justify-between gap-4 mb-3">
-                  <div>
+                  <div className="rounded-2xl border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white px-3 py-3 sm:px-4">
                     <h2 className="text-[18px] font-extrabold text-slate-900">
                       Explore More from This Category
                     </h2>
@@ -1586,16 +1602,16 @@ const SingleProduct = () => {
                         to={`/single-product/${item._id}`}
                         className="min-w-[240px] sm:min-w-[260px] bg-white flex-shrink-0 rounded-3xl overflow-hidden"
                         style={{
-                          border: "1px solid rgb(241,245,249)",
+                          border: "1px solid rgb(213, 222, 231)",
                           boxShadow: "none",
                         }}
                       >
                         <div className="p-3">
-                          <div className="rounded-2xl overflow-hidden bg-slate-50">
+                          <div className="rounded-2xl overflow-hidden bg-white">
                             <img
                               src={getImageUrl(item.product_image)}
                               alt={item.product_name}
-                              className="w-full h-44 object-cover"
+                              className="w-full h-44 object-contain bg-white"
                               loading="lazy"
                             />
                           </div>

@@ -21,7 +21,6 @@ import ReplyMessage from "./pages/contact_pages/ReplyMessage";
 // common pages
 import PrivacyPolicy from "./pages/common_pages/PrivacyPolicy";
 import AboutUs from "./pages/common_pages/AboutUs";
-import Careers from "./pages/common_pages/Careers";
 import NewsLetter from "./components/NewsLetter";
 import WorkWithUs from "./components/WorkWithUs";
 import Projects from "./pages/common_pages/Projects";
@@ -30,10 +29,6 @@ import WebApps from "./pages/common_pages/WebApps";
 import Blockchain from "./pages/common_pages/Blockchain";
 import QaAutomation from "./pages/common_pages/QaAutomation";
 import AiSystems from "./pages/common_pages/AiSystems";
-
-// careers pages.
-import AllCareersApplications from "./pages/careers_pages/AllCareersApplications";
-import SingleCareersApplication from "./pages/careers_pages/SingleCareersApplication";
 
 // header and footer. and other common components
 import TopHeader from "./components/TopHeader";
@@ -157,6 +152,11 @@ import CreateInternship from "./pages/internship_pages/CreateInternship";
 import AllCreatedInternships from "./pages/internship_pages/AllCreatedInternships";
 import SingleCreatedInternship from "./pages/internship_pages/SingleCreatedInternship";
 import UpdateInternship from "./pages/internship_pages/UpdateInternship";
+
+// careers pages.
+import Careers from "./pages/careers_pages/Careers";
+import AllCareerApplications from "./pages/careers_pages/AllCareerApplications";
+import SingleCareerApplication from "./pages/careers_pages/SingleCareerApplication";
 
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
@@ -1583,6 +1583,39 @@ function App() {
             <PrivateRoute allowedRoles={["admin", "superadmin", "hr"]}>
               <PageTitle title="Update Internship">
                 <UpdateInternship />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        {/* careers path s  */}
+
+        <Route
+          path="/careers"
+          element={
+            <PageTitle title="Careers">
+              <Careers />
+            </PageTitle>
+          }
+        />
+
+        <Route
+          path="/all-career-applications"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="All Career Applications">
+                <AllCareerApplications />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/single-career-application/:id"
+          element={
+            <PrivateRoute allowedRoles={["admin", "superadmin"]}>
+              <PageTitle title="Single Career Applications">
+                <SingleCareerApplication />
               </PageTitle>
             </PrivateRoute>
           }

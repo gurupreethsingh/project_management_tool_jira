@@ -1,101 +1,716 @@
-import React, {
-  useContext,
-  useEffect,
-  useMemo,
-  useCallback,
-  useState,
-} from "react";
-import { WishlistContext } from "../../components/wishlist_components/WishlistContext";
-import { CartContext } from "../../components/cart_components/CartContext";
-import {
-  FaTrash,
-  FaCartPlus,
-  FaBookmark,
-  FaCheck,
-  FaRupeeSign,
-  FaTh,
-  FaThList,
-  FaIdBadge,
-  FaStar,
-} from "react-icons/fa";
+// import React, { useContext, useEffect, useMemo, useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import { motion } from "framer-motion";
+// import { BsViewList } from "react-icons/bs";
+// import { RiArrowLeftSLine } from "react-icons/ri";
+// import { FiShoppingCart, FiTrash2, FiHeart, FiEye } from "react-icons/fi";
+// import { AuthContext } from "../../components/auth_components/AuthManager";
+// import { CartContext } from "../../components/cart_components/CartContext";
+// import globalBackendRoute from "../../config/Config";
+
+// import useWishlistAnalytics from "../../hooks/wishlist/useWishlistAnalytics";
+// import useWishlistData from "../../hooks/wishlist/useWishlistData";
+// import useWishlistFilters from "../../hooks/wishlist/useWishlistFilters";
+// import useWishlistSelection from "../../hooks/wishlist/useWishlistSelection";
+
+// import WishlistToolbar from "../../components/wishlist_components/WishlistToolbar";
+// import WishlistPagination from "../../components/wishlist_components/WishlistPagination";
+// import WishlistSkeleton from "../../components/wishlist_components/WishlistSkeleton";
+// import WishlistEmptyState from "../../components/wishlist_components/WishlistEmptyState";
+// import WishlistSaveForLater from "../../components/wishlist_components/WishlistSaveForLater";
+
+// const cardMotion = {
+//   initial: { opacity: 0, y: 10, scale: 0.985 },
+//   animate: { opacity: 1, y: 0, scale: 1 },
+//   whileHover: { y: -3, scale: 1.01 },
+//   transition: { duration: 0.22, ease: "easeOut" },
+// };
+
+// const Wishlist = () => {
+//   const navigate = useNavigate();
+//   const { isLoggedIn } = useContext(AuthContext);
+//   const { addToCart, fetchServerCart } = useContext(CartContext);
+
+//   const analytics = useWishlistAnalytics();
+
+//   const {
+//     wishlistItems,
+//     isLoading,
+//     isFetching,
+//     isError,
+//     refetchWishlist,
+//     removeItem,
+//     toggleSaveForLater,
+//     moveSingleToCart,
+//     bulkMoveToCart,
+//     bulkCheckout,
+//     bulkSaveForLater,
+//     saveAllForLater,
+//     bulkRemove,
+//     clearWishlist,
+//     isMutating,
+//   } = useWishlistData({
+//     enabled: isLoggedIn,
+//     onCartRefresh: fetchServerCart,
+//     analytics,
+//   });
+
+//   const activeWishlistItems = useMemo(
+//     () => wishlistItems.filter((item) => !item.savedForLater),
+//     [wishlistItems],
+//   );
+
+//   const savedForLaterItems = useMemo(
+//     () => wishlistItems.filter((item) => item.savedForLater),
+//     [wishlistItems],
+//   );
+
+//   const {
+//     searchTerm,
+//     setSearchTerm,
+//     sortBy,
+//     setSortBy,
+//     filterBy,
+//     setFilterBy,
+//     density,
+//     setDensity,
+//     filteredSortedItems,
+//   } = useWishlistFilters(activeWishlistItems);
+
+//   const [currentPage, setCurrentPage] = useState(1);
+//   const [columns, setColumns] = useState(3);
+
+//   useEffect(() => {
+//     const computeCols = () => {
+//       const w = window.innerWidth;
+//       if (w >= 1536) return 3;
+//       if (w >= 1280) return 3;
+//       if (w >= 1024) return 2;
+//       if (w >= 640) return 2;
+//       return 1;
+//     };
+
+//     const update = () => setColumns(computeCols());
+//     update();
+
+//     window.addEventListener("resize", update);
+//     return () => window.removeEventListener("resize", update);
+//   }, []);
+
+//   const rowsPerPage = density === "tight" ? 2 : density === "compact" ? 2 : 2;
+//   const productsPerPage = Math.max(1, columns) * Math.max(1, rowsPerPage);
+
+//   useEffect(() => {
+//     setCurrentPage(1);
+//   }, [productsPerPage, columns, searchTerm, sortBy, filterBy, density]);
+
+//   const indexOfLastProduct = currentPage * productsPerPage;
+//   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
+
+//   const currentProducts = useMemo(
+//     () => filteredSortedItems.slice(indexOfFirstProduct, indexOfLastProduct),
+//     [filteredSortedItems, indexOfFirstProduct, indexOfLastProduct],
+//   );
+
+//   const {
+//     selectedIds,
+//     selectedSet,
+//     selectedCount,
+//     toggleSelectOne,
+//     selectAllVisible,
+//     deselectAllVisible,
+//     replaceSelection,
+//     clearSelection,
+//     removeFromSelection,
+//   } = useWishlistSelection(currentProducts);
+
+//   const filteredIds = useMemo(
+//     () => filteredSortedItems.map((item) => String(item._id)),
+//     [filteredSortedItems],
+//   );
+
+//   const totalCount = filteredSortedItems.length;
+//   const totalWishlistCount = activeWishlistItems.length;
+//   const totalSavedForLaterCount = savedForLaterItems.length;
+//   const overallWishlistCount = wishlistItems.length;
+
+//   const pageStart = totalCount === 0 ? 0 : indexOfFirstProduct + 1;
+//   const pageEnd = Math.min(indexOfLastProduct, totalCount);
+//   const totalPages = Math.max(1, Math.ceil(totalCount / productsPerPage));
+
+//   const handleCheckoutNow = (item) => {
+//     addToCart(item);
+//     analytics.track("wishlist_buy_now_single", { productId: item?._id });
+//     navigate("/checkout");
+//   };
+
+//   const handleOpenProduct = (id) => {
+//     analytics.track("wishlist_open_product", { productId: id });
+//     navigate(`/single-product/${id}`);
+//   };
+
+//   const handleSelectFiltered = () => {
+//     replaceSelection(filteredIds);
+//   };
+
+//   const resetFilters = () => {
+//     setSearchTerm("");
+//     setSortBy("latest");
+//     setFilterBy("all");
+//   };
+
+//   const handleSingleMoveToCart = (id) =>
+//     moveSingleToCart(id).then(() => removeFromSelection(id));
+
+//   const handleSingleRemove = (id) =>
+//     removeItem(id).then(() => removeFromSelection(id));
+
+//   const handleBulkMoveToCart = () =>
+//     bulkMoveToCart(selectedIds).then(() => clearSelection());
+
+//   const handleBulkCheckout = () =>
+//     bulkCheckout(selectedIds).then(() => {
+//       clearSelection();
+//       navigate("/checkout");
+//     });
+
+//   const handleBulkSaveForLater = () =>
+//     bulkSaveForLater({
+//       productIds: selectedIds,
+//       savedForLater: true,
+//     }).then(() => clearSelection());
+
+//   const handleBulkRemove = () =>
+//     bulkRemove(selectedIds).then(() => clearSelection());
+
+//   const getImageUrl = (img) => {
+//     if (!img) return "";
+//     if (String(img).startsWith("http")) return img;
+//     return `${globalBackendRoute}/${img}`;
+//   };
+
+//   if (!isLoggedIn) {
+//     return (
+//       <div className="min-h-[60vh] w-full bg-slate-50 px-3 py-10 sm:px-5">
+//         <div className="mx-auto max-w-3xl rounded-[28px] border border-slate-200 bg-white p-7 text-center shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+//           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+//             <FiHeart className="text-[22px]" />
+//           </div>
+
+//           <h2 className="mt-4 text-[20px] font-extrabold tracking-tight text-slate-900">
+//             Please sign in to view your wishlist
+//           </h2>
+
+//           <p className="mt-2 text-[13px] font-medium text-slate-500">
+//             Your wishlist is saved to your account.
+//           </p>
+
+//           <button
+//             type="button"
+//             onClick={() => navigate("/login")}
+//             className="mt-5 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-2.5 text-[12px] font-extrabold text-white shadow-sm transition hover:scale-[1.01]"
+//           >
+//             Go to Login
+//           </button>
+//         </div>
+//       </div>
+//     );
+//   }
+
+//   return (
+//     <div
+//       className="min-h-screen"
+//       aria-busy={isLoading || isFetching || isMutating}
+//     >
+//       <div className="mx-auto w-full max-w-[1560px] px-3 py-4 sm:px-4 lg:px-6 xl:px-8">
+//         <motion.div
+//           initial={{ opacity: 0, y: 8 }}
+//           animate={{ opacity: 1, y: 0 }}
+//           transition={{ duration: 0.22 }}
+//         >
+//           <div className="overflow-hidden rounded-[30px] border border-slate-200/80 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur">
+//             <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#fff7ed_45%,#fff1f2_100%)] px-4 py-2 sm:px-3 sm:py-4 lg:px-6">
+//               <div className="flex flex-col gap-5 xl:flex-row xl:items-end xl:justify-between">
+//                 <div className="min-w-0">
+//                   <button
+//                     type="button"
+//                     onClick={() => navigate(-1)}
+//                     className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-slate-600 transition hover:text-slate-900"
+//                   >
+//                     <RiArrowLeftSLine className="text-[15px]" />
+//                     Back
+//                   </button>
+
+//                   <div className="mt-3 flex flex-wrap items-center gap-3">
+//                     <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-orange-100 bg-white shadow-sm">
+//                       <BsViewList className="text-[18px] text-orange-500" />
+//                     </div>
+
+//                     <div>
+//                       <h1 className="text-[22px] font-extrabold tracking-tight text-slate-900 sm:text-[26px] xl:text-[30px]">
+//                         My Wishlist
+//                       </h1>
+//                     </div>
+
+//                     <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-bold text-slate-700 shadow-sm">
+//                       {overallWishlistCount} total
+//                     </span>
+//                   </div>
+
+//                   <div className="mt-4 flex flex-wrap gap-2.5">
+//                     <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm">
+//                       Active{" "}
+//                       <span className="font-extrabold text-slate-900">
+//                         {totalWishlistCount}
+//                       </span>
+//                     </div>
+
+//                     <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm">
+//                       Saved for later{" "}
+//                       <span className="font-extrabold text-slate-900">
+//                         {totalSavedForLaterCount}
+//                       </span>
+//                     </div>
+
+//                     {totalCount > 0 && (
+//                       <>
+//                         <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm">
+//                           Showing{" "}
+//                           <span className="font-extrabold text-slate-900">
+//                             {pageStart}-{pageEnd}
+//                           </span>{" "}
+//                           of{" "}
+//                           <span className="font-extrabold text-slate-900">
+//                             {totalCount}
+//                           </span>
+//                         </div>
+
+//                         <div className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm sm:block">
+//                           Page{" "}
+//                           <span className="font-extrabold text-slate-900">
+//                             {currentPage}
+//                           </span>
+//                           /
+//                           <span className="font-extrabold text-slate-900">
+//                             {totalPages}
+//                           </span>
+//                         </div>
+//                       </>
+//                     )}
+//                   </div>
+//                 </div>
+
+//                 <div className="flex flex-wrap items-center gap-2">
+//                   <button
+//                     type="button"
+//                     onClick={() => navigate("/shop")}
+//                     className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
+//                   >
+//                     Continue shopping
+//                   </button>
+//                 </div>
+//               </div>
+
+//               <div className="rounded-[24px]  bg-white p-3 shadow-sm sm:p-4">
+//                 <WishlistToolbar
+//                   searchTerm={searchTerm}
+//                   setSearchTerm={setSearchTerm}
+//                   sortBy={sortBy}
+//                   setSortBy={setSortBy}
+//                   filterBy={filterBy}
+//                   setFilterBy={setFilterBy}
+//                   density={density}
+//                   setDensity={setDensity}
+//                   bulkLoading={isMutating}
+//                   hasItems={filteredSortedItems.length > 0}
+//                   onSaveAll={() => saveAllForLater(true)}
+//                   onClearAll={() => clearWishlist()}
+//                   onSelectPage={selectAllVisible}
+//                   onDeselectPage={deselectAllVisible}
+//                   onSelectFiltered={handleSelectFiltered}
+//                   onClearSelection={clearSelection}
+//                   showSelectionTools={selectedCount > 0}
+//                 />
+
+//                 {selectedCount > 0 && (
+//                   <div className="mt-3 flex justify-start">
+//                     <div className="flex w-full flex-wrap items-center gap-2 rounded-2xl border border-orange-100 bg-orange-50/80 px-3 py-2.5 shadow-sm">
+//                       <span className="rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-slate-800">
+//                         {selectedCount} selected
+//                       </span>
+
+//                       <button
+//                         type="button"
+//                         disabled={isMutating}
+//                         onClick={handleBulkMoveToCart}
+//                         className="inline-flex items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-orange-600 disabled:opacity-60"
+//                       >
+//                         <FiShoppingCart className="text-[13px]" />
+//                         Move to cart
+//                       </button>
+
+//                       <button
+//                         type="button"
+//                         disabled={isMutating}
+//                         onClick={handleBulkCheckout}
+//                         className="rounded-full bg-slate-900 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-60"
+//                       >
+//                         Buy now
+//                       </button>
+
+//                       <button
+//                         type="button"
+//                         disabled={isMutating}
+//                         onClick={handleBulkSaveForLater}
+//                         className="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+//                       >
+//                         <FiHeart className="text-[13px]" />
+//                         Save for later
+//                       </button>
+
+//                       <button
+//                         type="button"
+//                         disabled={isMutating}
+//                         onClick={handleBulkRemove}
+//                         className="inline-flex items-center justify-center gap-1.5 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-[11px] font-extrabold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60"
+//                       >
+//                         <FiTrash2 className="text-[13px]" />
+//                         Remove
+//                       </button>
+
+//                       <button
+//                         type="button"
+//                         onClick={clearSelection}
+//                         className="ml-auto rounded-full px-2 py-2 text-[11px] font-bold text-slate-500 transition hover:text-slate-700"
+//                       >
+//                         Clear
+//                       </button>
+//                     </div>
+//                   </div>
+//                 )}
+//               </div>
+//             </div>
+
+//             <div className="px-3 py-4 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+//               {isLoading ? (
+//                 <WishlistSkeleton count={8} />
+//               ) : isError ? (
+//                 <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-6 text-center">
+//                   <p className="text-[13px] font-extrabold text-rose-700">
+//                     Could not load wishlist.
+//                   </p>
+//                   <button
+//                     type="button"
+//                     onClick={() => refetchWishlist()}
+//                     className="mt-3 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-rose-700"
+//                   >
+//                     Retry
+//                   </button>
+//                 </div>
+//               ) : totalCount === 0 ? (
+//                 <>
+//                   <WishlistEmptyState
+//                     isFiltered={activeWishlistItems.length > 0}
+//                     onBrowse={() => navigate("/shop")}
+//                     onClearFilters={resetFilters}
+//                   />
+
+//                   <WishlistSaveForLater
+//                     items={savedForLaterItems}
+//                     backendRoute={globalBackendRoute}
+//                     loading={isMutating}
+//                     onMoveToWishlist={(id) => toggleSaveForLater(id)}
+//                     onRemove={(id) => removeItem(id)}
+//                   />
+//                 </>
+//               ) : (
+//                 <>
+//                   <div className="rounded-[28px]   p-3 shadow-[0_12px_35px_rgba(15,23,42,0.05)] sm:p-4 lg:p-5">
+//                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+//                       {currentProducts.map((item, index) => {
+//                         const isSelected = selectedSet.has(String(item._id));
+
+//                         return (
+//                           <motion.div
+//                             key={item._id}
+//                             initial={cardMotion.initial}
+//                             animate={cardMotion.animate}
+//                             whileHover={cardMotion.whileHover}
+//                             transition={{
+//                               ...cardMotion.transition,
+//                               delay: index * 0.03,
+//                             }}
+//                             className="group overflow-hidden rounded-[24px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-sm"
+//                           >
+//                             <div className="relative flex h-full flex-col sm:flex-row items-center justify-center">
+//                               <motion.button
+//                                 type="button"
+//                                 whileTap={{ scale: 0.92 }}
+//                                 onClick={(e) => {
+//                                   e.stopPropagation();
+//                                   toggleSelectOne(String(item._id));
+//                                 }}
+//                                 className={`absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm transition ${
+//                                   isSelected
+//                                     ? "border-slate-900 bg-slate-900 text-white"
+//                                     : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700"
+//                                 }`}
+//                               >
+//                                 {isSelected ? "✓" : ""}
+//                               </motion.button>
+
+//                               <div className="flex items-center justify-center min-w-[160px] h-[200px] p-3">
+//                                 {item.product_image ? (
+//                                   <motion.img
+//                                     src={getImageUrl(item.product_image)}
+//                                     alt={item.product_name}
+//                                     className="h-full w-full object-contain"
+//                                     whileHover={{ scale: 1.04 }}
+//                                     transition={{ duration: 0.25 }}
+//                                   />
+//                                 ) : (
+//                                   <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-slate-400">
+//                                     No image
+//                                   </div>
+//                                 )}
+//                               </div>
+
+//                               <div className="flex min-h-[190px] flex-1 flex-col p-4">
+//                                 <div className="flex-1">
+//                                   <p className="line-clamp-2 text-[14px] font-extrabold leading-snug text-slate-900">
+//                                     {item.product_name}
+//                                   </p>
+
+//                                   <div className="mt-2 flex flex-wrap items-center gap-2">
+//                                     {item.brand && (
+//                                       <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+//                                         {item.brand}
+//                                       </span>
+//                                     )}
+
+//                                     {item.category_name && (
+//                                       <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[10px] font-bold text-orange-700">
+//                                         {item.category_name}
+//                                       </span>
+//                                     )}
+//                                   </div>
+
+//                                   <div className="mt-3 flex items-end gap-2">
+//                                     <span className="text-[18px] font-extrabold text-slate-900">
+//                                       ₹{item.selling_price}
+//                                     </span>
+
+//                                     {item.display_price &&
+//                                       String(item.display_price) !==
+//                                         String(item.selling_price) && (
+//                                         <span className="text-[12px] font-semibold text-slate-400 line-through">
+//                                           ₹{item.display_price}
+//                                         </span>
+//                                       )}
+//                                   </div>
+
+//                                   {item.description && (
+//                                     <p className="mt-3 line-clamp-2 text-[11.5px] font-medium leading-relaxed text-slate-500">
+//                                       {item.description}
+//                                     </p>
+//                                   )}
+//                                 </div>
+
+//                                 <div className="mt-4 flex flex-wrap gap-2">
+//                                   <motion.button
+//                                     type="button"
+//                                     whileTap={{ scale: 0.96 }}
+//                                     onClick={() =>
+//                                       handleSingleMoveToCart(item._id)
+//                                     }
+//                                     className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-slate-800"
+//                                   >
+//                                     <FiShoppingCart className="text-[13px]" />
+//                                     Move to cart
+//                                   </motion.button>
+
+//                                   <motion.button
+//                                     type="button"
+//                                     whileTap={{ scale: 0.96 }}
+//                                     onClick={() => handleCheckoutNow(item)}
+//                                     className="inline-flex items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-orange-600"
+//                                   >
+//                                     <FiEye className="text-[13px]" />
+//                                     Buy now
+//                                   </motion.button>
+
+//                                   <motion.button
+//                                     type="button"
+//                                     whileTap={{ scale: 0.96 }}
+//                                     onClick={() => toggleSaveForLater(item._id)}
+//                                     className="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-50"
+//                                   >
+//                                     <FiHeart className="text-[13px]" />
+//                                     Save
+//                                   </motion.button>
+
+//                                   <motion.button
+//                                     type="button"
+//                                     whileTap={{ scale: 0.96 }}
+//                                     onClick={() => handleSingleRemove(item._id)}
+//                                     className="inline-flex items-center justify-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3.5 py-2 text-[11px] font-extrabold text-rose-700 transition hover:bg-rose-100"
+//                                   >
+//                                     <FiTrash2 className="text-[13px]" />
+//                                     Remove
+//                                   </motion.button>
+//                                 </div>
+
+//                                 <div className="mt-3 flex items-center justify-between gap-3">
+//                                   <button
+//                                     type="button"
+//                                     onClick={() => handleOpenProduct(item._id)}
+//                                     className="text-[10px] font-bold text-slate-500 transition hover:text-slate-800"
+//                                   >
+//                                     View product
+//                                   </button>
+
+//                                   <span className="text-[9px] font-semibold text-slate-400">
+//                                     ID: {String(item._id).slice(-6)}
+//                                   </span>
+//                                 </div>
+//                               </div>
+//                             </div>
+//                           </motion.div>
+//                         );
+//                       })}
+//                     </div>
+//                   </div>
+
+//                   {totalCount > productsPerPage && (
+//                     <div className="mt-5">
+//                       <WishlistPagination
+//                         productsPerPage={productsPerPage}
+//                         totalProducts={totalCount}
+//                         currentPage={currentPage}
+//                         paginate={setCurrentPage}
+//                       />
+//                     </div>
+//                   )}
+
+//                   <WishlistSaveForLater
+//                     items={savedForLaterItems}
+//                     backendRoute={globalBackendRoute}
+//                     loading={isMutating}
+//                     onMoveToWishlist={(id) => toggleSaveForLater(id)}
+//                     onRemove={(id) => removeItem(id)}
+//                   />
+
+//                   <div className="mt-6 flex justify-center sm:hidden">
+//                     <button
+//                       type="button"
+//                       onClick={() => navigate("/shop")}
+//                       className="rounded-full border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
+//                     >
+//                       Continue shopping
+//                     </button>
+//                   </div>
+//                 </>
+//               )}
+//             </div>
+//           </div>
+//         </motion.div>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default Wishlist;
+
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import globalBackendRoute from "../../config/Config";
-import { AuthContext } from "../../components/auth_components/AuthManager";
 import { motion } from "framer-motion";
 import { BsViewList } from "react-icons/bs";
 import { RiArrowLeftSLine } from "react-icons/ri";
-import { FiTruck, FiRefreshCw, FiSliders } from "react-icons/fi";
-import { ChevronLeft, ChevronRight as ChevronRightIcon } from "lucide-react";
+import { FiShoppingCart, FiTrash2, FiHeart, FiEye } from "react-icons/fi";
+import { AuthContext } from "../../components/auth_components/AuthManager";
+import { CartContext } from "../../components/cart_components/CartContext";
+import globalBackendRoute from "../../config/Config";
 
-// --------------------------- helpers (match Shop) ---------------------------
-function resolveImage(item) {
-  if (!item?.product_image) return "https://via.placeholder.com/600x600";
-  const file = String(item.product_image).replace(/\\/g, "/").split("/").pop();
-  return `${globalBackendRoute}/uploads/products/${file}`;
-}
+import useWishlistAnalytics from "../../hooks/wishlist/useWishlistAnalytics";
+import useWishlistData from "../../hooks/wishlist/useWishlistData";
+import useWishlistFilters from "../../hooks/wishlist/useWishlistFilters";
+import useWishlistSelection from "../../hooks/wishlist/useWishlistSelection";
 
-function money(v) {
-  if (v === null || v === undefined || v === "") return null;
-  const n = Number(v);
-  if (Number.isNaN(n)) return String(v);
-  return n.toLocaleString("en-IN");
-}
+import WishlistToolbar from "../../components/wishlist_components/WishlistToolbar";
+import WishlistPagination from "../../components/wishlist_components/WishlistPagination";
+import WishlistSkeleton from "../../components/wishlist_components/WishlistSkeleton";
+import WishlistEmptyState from "../../components/wishlist_components/WishlistEmptyState";
+import WishlistSaveForLater from "../../components/wishlist_components/WishlistSaveForLater";
 
-function safeUpper(v) {
-  if (v === null || v === undefined) return "";
-  if (typeof v === "string") return v.trim().toUpperCase();
-  if (typeof v === "number" || typeof v === "boolean")
-    return String(v).trim().toUpperCase();
-  if (typeof v === "object") {
-    if (typeof v.name === "string") return v.name.trim().toUpperCase();
-    if (typeof v.title === "string") return v.title.trim().toUpperCase();
-  }
-  return "";
-}
+const cardMotion = {
+  initial: { opacity: 0, y: 10, scale: 0.985 },
+  animate: { opacity: 1, y: 0, scale: 1 },
+  whileHover: { y: -3, scale: 1.01 },
+  transition: { duration: 0.22, ease: "easeOut" },
+};
 
-// ===============================================================
-// ✅ WISHLIST (Shop-like layout: 3 views + pagination + count)
-// ===============================================================
 const Wishlist = () => {
+  const navigate = useNavigate();
+  const { isLoggedIn } = useContext(AuthContext);
+  const { addToCart, fetchServerCart } = useContext(CartContext);
+
+  const analytics = useWishlistAnalytics();
+
   const {
     wishlistItems,
-    removeFromWishlist,
+    isLoading,
+    isFetching,
+    isError,
+    refetchWishlist,
+    removeItem,
     toggleSaveForLater,
-    moveToCartFromWishlist,
-    fetchWishlist,
-  } = useContext(WishlistContext);
+    moveSingleToCart,
+    bulkMoveToCart,
+    bulkCheckout,
+    bulkSaveForLater,
+    saveAllForLater,
+    bulkRemove,
+    clearWishlist,
+    isMutating,
+  } = useWishlistData({
+    enabled: isLoggedIn,
+    onCartRefresh: fetchServerCart,
+    analytics,
+  });
 
-  const { addToCart, fetchServerCart } = useContext(CartContext);
-  const { isLoggedIn } = useContext(AuthContext);
-  const navigate = useNavigate();
+  const activeWishlistItems = useMemo(
+    () => wishlistItems.filter((item) => !item.savedForLater),
+    [wishlistItems],
+  );
+
+  const savedForLaterItems = useMemo(
+    () => wishlistItems.filter((item) => item.savedForLater),
+    [wishlistItems],
+  );
+
+  const {
+    searchTerm,
+    setSearchTerm,
+    sortBy,
+    setSortBy,
+    filterBy,
+    setFilterBy,
+    density,
+    setDensity,
+    filteredSortedItems,
+  } = useWishlistFilters(activeWishlistItems);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const [viewMode, setViewMode] = useState("grid");
-
-  // ============================================================
-  // ✅ FULL ROWS FIX (same as Shop)
-  // ============================================================
-  const [columns, setColumns] = useState(6);
+  const [columns, setColumns] = useState(3);
 
   useEffect(() => {
     const computeCols = () => {
       const w = window.innerWidth;
-
-      if (viewMode === "list") return 1;
-
-      if (viewMode === "card") {
-        if (w >= 1280) return 4;
-        if (w >= 1024) return 3;
-        if (w >= 640) return 2;
-        return 1;
-      }
-
-      if (w >= 1536) return 6;
-      if (w >= 1280) return 6;
-      if (w >= 1024) return 5;
-      if (w >= 768) return 4;
-      if (w >= 640) return 3;
-      return 2;
+      if (w >= 1536) return 3;
+      if (w >= 1280) return 3;
+      if (w >= 1024) return 2;
+      if (w >= 640) return 2;
+      return 1;
     };
 
     const update = () => setColumns(computeCols());
@@ -103,930 +718,528 @@ const Wishlist = () => {
 
     window.addEventListener("resize", update);
     return () => window.removeEventListener("resize", update);
-  }, [viewMode]);
+  }, []);
 
-  const rowsPerPage = viewMode === "grid" ? 2 : viewMode === "card" ? 2 : 14;
-  const productsPerPage =
-    viewMode === "list" ? 7 : Math.max(1, columns) * Math.max(1, rowsPerPage);
+  const rowsPerPage = density === "tight" ? 2 : density === "compact" ? 2 : 2;
+  const productsPerPage = Math.max(1, columns) * Math.max(1, rowsPerPage);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [productsPerPage, viewMode, columns]);
-
-  // ============================================================
-  // ✅ Fetch logic unchanged
-  // ============================================================
-  useEffect(() => {
-    if (isLoggedIn && wishlistItems.length === 0) {
-      fetchWishlist();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoggedIn]);
-
-  useEffect(() => {
-    if (isLoggedIn) fetchWishlist();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleCheckoutNow = (item) => {
-    addToCart(item);
-    navigate("/checkout");
-  };
-
-  // ============================================================
-  // ✅ Pagination slice + count line (same style as Shop)
-  // ============================================================
-  const totalCount = wishlistItems.length;
+  }, [productsPerPage, columns, searchTerm, sortBy, filterBy, density]);
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
 
-  const currentProducts = wishlistItems.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct,
+  const currentProducts = useMemo(
+    () => filteredSortedItems.slice(indexOfFirstProduct, indexOfLastProduct),
+    [filteredSortedItems, indexOfFirstProduct, indexOfLastProduct],
   );
+
+  const {
+    selectedIds,
+    selectedSet,
+    selectedCount,
+    toggleSelectOne,
+    selectAllVisible,
+    deselectAllVisible,
+    replaceSelection,
+    clearSelection,
+    removeFromSelection,
+  } = useWishlistSelection(currentProducts);
+
+  const filteredIds = useMemo(
+    () => filteredSortedItems.map((item) => String(item._id)),
+    [filteredSortedItems],
+  );
+
+  const totalCount = filteredSortedItems.length;
+  const totalWishlistCount = activeWishlistItems.length;
+  const totalSavedForLaterCount = savedForLaterItems.length;
+  const overallWishlistCount = wishlistItems.length;
 
   const pageStart = totalCount === 0 ? 0 : indexOfFirstProduct + 1;
   const pageEnd = Math.min(indexOfLastProduct, totalCount);
-  const showingNow = currentProducts.length;
   const totalPages = Math.max(1, Math.ceil(totalCount / productsPerPage));
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const handleCheckoutNow = (item) => {
+    addToCart(item);
+    analytics.track("wishlist_buy_now_single", { productId: item?._id });
+    navigate("/checkout");
+  };
 
-  const viewButtons = useMemo(
-    () => [
-      { id: "grid", Icon: FaTh, label: "Grid" },
-      { id: "card", Icon: FaIdBadge, label: "Cards" },
-      { id: "list", Icon: FaThList, label: "List" },
-    ],
-    [],
-  );
+  const handleOpenProduct = (id) => {
+    analytics.track("wishlist_open_product", { productId: id });
+    navigate(`/single-product/${id}`);
+  };
 
-  const onChangeView = useCallback((mode) => setViewMode(mode), []);
+  const handleSelectFiltered = () => {
+    replaceSelection(filteredIds);
+  };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSortBy("latest");
+    setFilterBy("all");
+  };
+
+  const handleSingleMoveToCart = (id) =>
+    moveSingleToCart(id).then(() => removeFromSelection(id));
+
+  const handleSingleRemove = (id) =>
+    removeItem(id).then(() => removeFromSelection(id));
+
+  const handleBulkMoveToCart = () =>
+    bulkMoveToCart(selectedIds).then(() => clearSelection());
+
+  const handleBulkCheckout = () =>
+    bulkCheckout(selectedIds).then(() => {
+      clearSelection();
+      navigate("/checkout");
+    });
+
+  const handleBulkSaveForLater = () =>
+    bulkSaveForLater({
+      productIds: selectedIds,
+      savedForLater: true,
+    }).then(() => clearSelection());
+
+  const handleBulkRemove = () =>
+    bulkRemove(selectedIds).then(() => clearSelection());
+
+  const getImageUrl = (img) => {
+    if (!img) return "";
+    if (String(img).startsWith("http")) return img;
+    return `${globalBackendRoute}/${img}`;
+  };
+
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-[60vh] w-full bg-slate-50 px-3 py-8 sm:px-5 sm:py-10">
+        <div className="mx-auto max-w-3xl rounded-[24px] border border-slate-200 bg-white p-5 text-center shadow-[0_12px_40px_rgba(15,23,42,0.06)] sm:rounded-[28px] sm:p-7">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-50 text-orange-500">
+            <FiHeart className="text-[22px]" />
+          </div>
+
+          <h2 className="mt-4 text-[18px] font-extrabold tracking-tight text-slate-900 sm:text-[20px]">
+            Please sign in to view your wishlist
+          </h2>
+
+          <p className="mt-2 text-[12px] font-medium text-slate-500 sm:text-[13px]">
+            Your wishlist is saved to your account.
+          </p>
+
+          <button
+            type="button"
+            onClick={() => navigate("/login")}
+            className="mt-5 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-2.5 text-[12px] font-extrabold text-white shadow-sm transition hover:scale-[1.01]"
+          >
+            Go to Login
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="wl-font w-full wl-scope">
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        .wl-font{
-          font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
-        }
-        .btnOrange{
-          border-radius: 9999px;
-          background-image: linear-gradient(to right, rgb(249,115,22), rgb(251,191,36));
-          padding: 0.6rem 1.1rem;
-          color: white;
-          font-weight: 800;
-          font-size: 12px;
-          box-shadow: 0 18px 30px -18px rgba(249,115,22,0.45);
-          transition: opacity .15s ease, transform .15s ease, filter .15s ease;
-          will-change: transform;
-        }
-        .btnOrange:hover{ opacity: .95; }
-        .btnOrange:active{ transform: scale(.99); }
+    <div
+      className="min-h-screen"
+      aria-busy={isLoading || isFetching || isMutating}
+    >
+      <div className="mx-auto w-full max-w-[1560px] px-2 py-3 sm:px-4 sm:py-4 lg:px-6 xl:px-8">
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.22 }}
+        >
+          <div className="overflow-hidden rounded-[22px] border border-slate-200/80 bg-white shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur sm:rounded-[26px] lg:rounded-[30px]">
+            <div className="border-b border-slate-200 bg-[linear-gradient(135deg,#ffffff_0%,#fff7ed_45%,#fff1f2_100%)] px-3 py-3 sm:px-4 sm:py-4 lg:px-6">
+              <div className="flex flex-col gap-4 sm:gap-5 xl:flex-row xl:items-end xl:justify-between">
+                <div className="min-w-0">
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-slate-600 transition hover:text-slate-900"
+                  >
+                    <RiArrowLeftSLine className="text-[15px]" />
+                    Back
+                  </button>
 
-        .btnGhost{
-          border-radius: 9999px;
-          padding: 0.6rem 1.0rem;
-          font-weight: 800;
-          font-size: 12px;
-          color: rgb(30,41,59);
-          background: rgba(241,245,249,.8);
-          transition: background .15s ease, transform .15s ease;
-        }
-        .btnGhost:hover{ background: rgba(226,232,240,.95); }
-        .btnGhost:active{ transform: scale(.99); }
+                  <div className="mt-3 flex flex-wrap items-center gap-2.5 sm:gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl border border-orange-100 bg-white shadow-sm sm:h-11 sm:w-11">
+                      <BsViewList className="text-[17px] text-orange-500 sm:text-[18px]" />
+                    </div>
 
-        .priceSelling{ color: rgb(15,23,42); font-weight: 900; }
-        .priceMrp{ color: rgb(239,68,68); font-weight: 800; text-decoration: line-through; }
+                    <div className="min-w-0">
+                      <h1 className="text-[20px] font-extrabold tracking-tight text-slate-900 sm:text-[24px] xl:text-[30px]">
+                        My Wishlist
+                      </h1>
+                    </div>
 
-        .paginationWrap button.activePage{
-          background-image: linear-gradient(to right, rgb(249,115,22), rgb(251,191,36)) !important;
-          color: #fff !important;
-          border: none !important;
-          box-shadow: 0 18px 30px -18px rgba(249,115,22,0.40) !important;
-          border-radius: 9999px !important;
-        }
-
-        /* ✅ ONLY LAPTOP/TABLET (640px to 1023px): make primary buttons smaller */
-        @media (min-width: 640px) and (max-width: 1023px){
-          .laptopCartBtn{
-            padding: 0.5rem 0.9rem !important;
-            font-size: 11px !important;
-          }
-          .laptopCartBtn svg{
-            width: 14px !important;
-            height: 14px !important;
-          }
-        }
-      `}</style>
-
-      {/* FULL WIDTH background + CONTENT WRAPPER gutters (same as Shop) */}
-      <div className="w-full">
-        <div className="w-full px-3 sm:px-6 lg:px-10 2xl:px-16 py-4 sm:py-6">
-          <motion.div
-            className="w-full max-w-[1700px] mx-auto"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28 }}
-          >
-            {/* Header (Shop-style) */}
-            <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-              <div className="min-w-0">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="inline-flex items-center gap-2 text-[12px] font-extrabold text-slate-600 hover:text-slate-900 transition"
-                >
-                  <RiArrowLeftSLine className="text-[16px]" />
-                  Back
-                </button>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <BsViewList className="text-orange-500 text-[18px] sm:text-[20px]" />
-                  <h1 className="text-[20px] sm:text-[24px] 2xl:text-[26px] font-extrabold tracking-tight text-slate-900">
-                    My Wishlist
-                  </h1>
-
-                  <span className="hidden sm:inline text-[12px] font-semibold text-slate-500">
-                    ({totalCount} items)
-                  </span>
-                </div>
-
-                <div className="mt-1 text-[11px] sm:text-[12px] text-slate-500 font-medium">
-                  {totalCount === 0 ? (
-                    <span className="font-semibold text-slate-700">
-                      Your wishlist is empty
+                    <span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-bold text-slate-700 shadow-sm sm:text-[11px]">
+                      {overallWishlistCount} total
                     </span>
-                  ) : (
-                    <>
-                      Showing{" "}
-                      <span className="font-semibold text-slate-700">
-                        {pageStart}-{pageEnd}
-                      </span>{" "}
-                      of{" "}
-                      <span className="font-semibold text-slate-700">
-                        {totalCount}
-                      </span>{" "}
-                      items
-                      <span className="hidden sm:inline">
-                        {" "}
-                        • On this page:{" "}
-                        <span className="font-semibold text-slate-700">
-                          {showingNow}
-                        </span>{" "}
-                        • Page{" "}
-                        <span className="font-semibold text-slate-700">
-                          {currentPage}
-                        </span>
-                        /
-                        <span className="font-semibold text-slate-700">
-                          {totalPages}
-                        </span>
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm sm:text-[11px]">
+                      Active{" "}
+                      <span className="font-extrabold text-slate-900">
+                        {totalWishlistCount}
                       </span>
-                    </>
-                  )}
-                </div>
+                    </div>
 
-                <p className="mt-1 text-[12px] font-semibold text-slate-500">
-                  Save items, move to cart, or buy instantly.
-                </p>
-              </div>
+                    <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm sm:text-[11px]">
+                      Saved for later{" "}
+                      <span className="font-extrabold text-slate-900">
+                        {totalSavedForLaterCount}
+                      </span>
+                    </div>
 
-              {/* Right side: View toggle + continue shopping */}
-              <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end w-full lg:w-auto">
-                <button
-                  type="button"
-                  onClick={() => navigate("/shop")}
-                  className="hidden sm:inline-flex btnGhost w-full sm:w-auto justify-center"
-                >
-                  Continue shopping
-                </button>
+                    {totalCount > 0 && (
+                      <>
+                        <div className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-semibold text-slate-600 shadow-sm sm:text-[11px]">
+                          Showing{" "}
+                          <span className="font-extrabold text-slate-900">
+                            {pageStart}-{pageEnd}
+                          </span>{" "}
+                          of{" "}
+                          <span className="font-extrabold text-slate-900">
+                            {totalCount}
+                          </span>
+                        </div>
 
-                <div className="inline-flex items-center gap-2 w-full lg:w-auto">
-                  <span className="hidden sm:inline-flex items-center gap-2 text-[12px] font-semibold text-slate-600">
-                    <FiSliders />
-                    View
-                  </span>
-
-                  <div className="inline-flex w-full lg:w-auto items-center gap-1 rounded-2xl bg-slate-50 px-1.5 py-1.5 border border-slate-200">
-                    {viewButtons.map(({ id, Icon, label }) => {
-                      const active = viewMode === id;
-                      return (
-                        <button
-                          key={id}
-                          type="button"
-                          onClick={() => onChangeView(id)}
-                          className={[
-                            "inline-flex flex-1 lg:flex-none items-center justify-center gap-2 rounded-xl",
-                            "px-3 py-2 text-[11px] sm:text-[12px] font-bold transition",
-                            active
-                              ? "bg-white text-slate-900"
-                              : "text-slate-600 hover:text-slate-900",
-                          ].join(" ")}
-                          title={label}
-                        >
-                          <Icon
-                            className={
-                              active ? "text-orange-600" : "text-slate-500"
-                            }
-                          />
-                          <span className="sm:hidden">{label}</span>
-                          <span className="hidden sm:inline">{label}</span>
-                        </button>
-                      );
-                    })}
+                        <div className="hidden rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[11px] font-semibold text-slate-600 shadow-sm sm:block">
+                          Page{" "}
+                          <span className="font-extrabold text-slate-900">
+                            {currentPage}
+                          </span>
+                          /
+                          <span className="font-extrabold text-slate-900">
+                            {totalPages}
+                          </span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Empty state (Shop-like spacing) */}
-            {totalCount === 0 ? (
-              <motion.div
-                className="text-center text-slate-500 mt-12 sm:mt-16"
-                initial={{ opacity: 0, scale: 0.96 }}
-                animate={{ opacity: 1, scale: 1 }}
-              >
-                <div className="inline-flex items-center gap-2 text-[12px] font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-orange-500" />
-                  Your wishlist is empty.
-                </div>
-
-                <div className="mt-6 flex items-center justify-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
-                    className="btnOrange"
                     onClick={() => navigate("/shop")}
-                  >
-                    Browse products
-                  </button>
-                  <button
-                    type="button"
-                    className="btnGhost sm:hidden"
-                    onClick={() => navigate("/shop")}
+                    className="w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50 sm:w-auto"
                   >
                     Continue shopping
                   </button>
                 </div>
-              </motion.div>
-            ) : (
-              <>
-                {/* Products (3 views) */}
-                <div className="mt-6">
-                  <motion.div
-                    key={viewMode}
-                    initial={{ opacity: 0, scale: 0.99 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.16 }}
+              </div>
+
+              <div className="mt-4 rounded-[20px] bg-white p-2.5 shadow-sm sm:rounded-[24px] sm:p-4">
+                <WishlistToolbar
+                  searchTerm={searchTerm}
+                  setSearchTerm={setSearchTerm}
+                  sortBy={sortBy}
+                  setSortBy={setSortBy}
+                  filterBy={filterBy}
+                  setFilterBy={setFilterBy}
+                  density={density}
+                  setDensity={setDensity}
+                  bulkLoading={isMutating}
+                  hasItems={filteredSortedItems.length > 0}
+                  onSaveAll={() => saveAllForLater(true)}
+                  onClearAll={() => clearWishlist()}
+                  onSelectPage={selectAllVisible}
+                  onDeselectPage={deselectAllVisible}
+                  onSelectFiltered={handleSelectFiltered}
+                  onClearSelection={clearSelection}
+                  showSelectionTools={selectedCount > 0}
+                />
+
+                {selectedCount > 0 && (
+                  <div className="mt-3 flex justify-start">
+                    <div className="flex w-full flex-col gap-2 rounded-2xl border border-orange-100 bg-orange-50/80 px-3 py-3 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:gap-2 sm:px-3 sm:py-2.5">
+                      <span className="w-fit rounded-full bg-white px-3 py-1 text-[11px] font-extrabold text-slate-800">
+                        {selectedCount} selected
+                      </span>
+
+                      <button
+                        type="button"
+                        disabled={isMutating}
+                        onClick={handleBulkMoveToCart}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-orange-600 disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiShoppingCart className="text-[13px]" />
+                        Move to cart
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isMutating}
+                        onClick={handleBulkCheckout}
+                        className="w-full rounded-full bg-slate-900 px-3.5 py-2 text-[11px] font-extrabold text-white transition hover:bg-slate-800 disabled:opacity-60 sm:w-auto"
+                      >
+                        Buy now
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isMutating}
+                        onClick={handleBulkSaveForLater}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-extrabold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiHeart className="text-[13px]" />
+                        Save for later
+                      </button>
+
+                      <button
+                        type="button"
+                        disabled={isMutating}
+                        onClick={handleBulkRemove}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-full border border-rose-200 bg-white px-3.5 py-2 text-[11px] font-extrabold text-rose-700 transition hover:bg-rose-50 disabled:opacity-60 sm:w-auto"
+                      >
+                        <FiTrash2 className="text-[13px]" />
+                        Remove
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={clearSelection}
+                        className="rounded-full px-2 py-2 text-left text-[11px] font-bold text-slate-500 transition hover:text-slate-700 sm:ml-auto sm:text-center"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="px-2.5 py-3 sm:px-5 sm:py-5 lg:px-6 lg:py-6">
+              {isLoading ? (
+                <WishlistSkeleton count={8} />
+              ) : isError ? (
+                <div className="rounded-[24px] border border-rose-100 bg-rose-50 p-6 text-center">
+                  <p className="text-[13px] font-extrabold text-rose-700">
+                    Could not load wishlist.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => refetchWishlist()}
+                    className="mt-3 rounded-full border border-rose-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-rose-700"
                   >
-                    {viewMode === "grid" && (
-                      <WishlistGridUI
-                        items={currentProducts}
-                        onOpen={(id) => navigate(`/single-product/${id}`)}
-                        onMoveToCart={async (id) => {
-                          await moveToCartFromWishlist(id);
-                          fetchServerCart();
-                        }}
-                        onBuyNow={handleCheckoutNow}
-                        onToggleSaveForLater={toggleSaveForLater}
-                        onRemove={removeFromWishlist}
-                      />
-                    )}
+                    Retry
+                  </button>
+                </div>
+              ) : totalCount === 0 ? (
+                <>
+                  <WishlistEmptyState
+                    isFiltered={activeWishlistItems.length > 0}
+                    onBrowse={() => navigate("/shop")}
+                    onClearFilters={resetFilters}
+                  />
 
-                    {viewMode === "card" && (
-                      <WishlistCardUI
-                        items={currentProducts}
-                        onOpen={(id) => navigate(`/single-product/${id}`)}
-                        onMoveToCart={async (id) => {
-                          await moveToCartFromWishlist(id);
-                          fetchServerCart();
-                        }}
-                        onBuyNow={handleCheckoutNow}
-                        onToggleSaveForLater={toggleSaveForLater}
-                        onRemove={removeFromWishlist}
-                      />
-                    )}
+                  <WishlistSaveForLater
+                    items={savedForLaterItems}
+                    backendRoute={globalBackendRoute}
+                    loading={isMutating}
+                    onMoveToWishlist={(id) => toggleSaveForLater(id)}
+                    onRemove={(id) => removeItem(id)}
+                  />
+                </>
+              ) : (
+                <>
+                  <div className="rounded-[22px] p-1.5 shadow-[0_12px_35px_rgba(15,23,42,0.05)] sm:rounded-[28px] sm:p-4 lg:p-5">
+                    <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                      {currentProducts.map((item, index) => {
+                        const isSelected = selectedSet.has(String(item._id));
 
-                    {viewMode === "list" && (
-                      <WishlistListUI
-                        items={currentProducts}
-                        onOpen={(id) => navigate(`/single-product/${id}`)}
-                        onMoveToCart={async (id) => {
-                          await moveToCartFromWishlist(id);
-                          fetchServerCart();
-                        }}
-                        onBuyNow={handleCheckoutNow}
-                        onToggleSaveForLater={toggleSaveForLater}
-                        onRemove={removeFromWishlist}
-                      />
-                    )}
-                  </motion.div>
+                        return (
+                          <motion.div
+                            key={item._id}
+                            initial={cardMotion.initial}
+                            animate={cardMotion.animate}
+                            whileHover={cardMotion.whileHover}
+                            transition={{
+                              ...cardMotion.transition,
+                              delay: index * 0.03,
+                            }}
+                            className="group overflow-hidden rounded-[20px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] shadow-sm sm:rounded-[24px]"
+                          >
+                            <div className="relative flex h-full flex-col md:flex-col lg:flex-col xl:flex-row">
+                              <motion.button
+                                type="button"
+                                whileTap={{ scale: 0.92 }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSelectOne(String(item._id));
+                                }}
+                                className={`absolute left-3 top-3 z-20 flex h-8 w-8 items-center justify-center rounded-full border text-[11px] font-extrabold shadow-sm transition ${
+                                  isSelected
+                                    ? "border-slate-900 bg-slate-900 text-white"
+                                    : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700"
+                                }`}
+                              >
+                                {isSelected ? "✓" : ""}
+                              </motion.button>
 
-                  {/* Pagination (same rule as Shop) */}
+                              <div className="flex h-[180px] w-full items-center justify-center border-b border-slate-100 bg-white/60 p-4 sm:h-[210px] md:h-[220px] xl:min-w-[160px] xl:w-[190px] xl:border-b-0 xl:border-r xl:p-3">
+                                {item.product_image ? (
+                                  <motion.img
+                                    src={getImageUrl(item.product_image)}
+                                    alt={item.product_name}
+                                    className="h-full w-full object-contain"
+                                    whileHover={{ scale: 1.04 }}
+                                    transition={{ duration: 0.25 }}
+                                  />
+                                ) : (
+                                  <div className="flex h-full w-full items-center justify-center text-[11px] font-bold text-slate-400">
+                                    No image
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex min-h-[190px] flex-1 flex-col p-3.5 sm:p-4">
+                                <div className="flex-1">
+                                  <p className="line-clamp-2 pr-6 text-[13px] font-extrabold leading-snug text-slate-900 sm:text-[14px]">
+                                    {item.product_name}
+                                  </p>
+
+                                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                                    {item.brand && (
+                                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold text-slate-600 sm:text-[10px]">
+                                        {item.brand}
+                                      </span>
+                                    )}
+
+                                    {item.category_name && (
+                                      <span className="rounded-full bg-orange-50 px-2.5 py-1 text-[9px] font-bold text-orange-700 sm:text-[10px]">
+                                        {item.category_name}
+                                      </span>
+                                    )}
+                                  </div>
+
+                                  <div className="mt-3 flex flex-wrap items-end gap-2">
+                                    <span className="text-[17px] font-extrabold text-slate-900 sm:text-[18px]">
+                                      ₹{item.selling_price}
+                                    </span>
+
+                                    {item.display_price &&
+                                      String(item.display_price) !==
+                                        String(item.selling_price) && (
+                                        <span className="text-[11px] font-semibold text-slate-400 line-through sm:text-[12px]">
+                                          ₹{item.display_price}
+                                        </span>
+                                      )}
+                                  </div>
+
+                                  {item.description && (
+                                    <p className="mt-3 line-clamp-2 text-[11px] font-medium leading-relaxed text-slate-500 sm:text-[11.5px]">
+                                      {item.description}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap">
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() =>
+                                      handleSingleMoveToCart(item._id)
+                                    }
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3 py-2.5 text-[10px] font-extrabold text-white transition hover:bg-slate-800 sm:px-3.5 sm:py-2 sm:text-[11px]"
+                                  >
+                                    <FiShoppingCart className="text-[12px] sm:text-[13px]" />
+                                    Move to cart
+                                  </motion.button>
+
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => handleCheckoutNow(item)}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-full bg-orange-500 px-3 py-2.5 text-[10px] font-extrabold text-white transition hover:bg-orange-600 sm:px-3.5 sm:py-2 sm:text-[11px]"
+                                  >
+                                    <FiEye className="text-[12px] sm:text-[13px]" />
+                                    Buy now
+                                  </motion.button>
+
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => toggleSaveForLater(item._id)}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-2.5 text-[10px] font-extrabold text-slate-700 transition hover:bg-slate-50 sm:px-3.5 sm:py-2 sm:text-[11px]"
+                                  >
+                                    <FiHeart className="text-[12px] sm:text-[13px]" />
+                                    Save
+                                  </motion.button>
+
+                                  <motion.button
+                                    type="button"
+                                    whileTap={{ scale: 0.96 }}
+                                    onClick={() => handleSingleRemove(item._id)}
+                                    className="inline-flex items-center justify-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-2.5 text-[10px] font-extrabold text-rose-700 transition hover:bg-rose-100 sm:px-3.5 sm:py-2 sm:text-[11px]"
+                                  >
+                                    <FiTrash2 className="text-[12px] sm:text-[13px]" />
+                                    Remove
+                                  </motion.button>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-between gap-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleOpenProduct(item._id)}
+                                    className="text-[10px] font-bold text-slate-500 transition hover:text-slate-800"
+                                  >
+                                    View product
+                                  </button>
+
+                                  <span className="text-[9px] font-semibold text-slate-400">
+                                    ID: {String(item._id).slice(-6)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
                   {totalCount > productsPerPage && (
-                    <div className="mt-8 paginationWrap">
-                      <Pagination
+                    <div className="mt-5">
+                      <WishlistPagination
                         productsPerPage={productsPerPage}
                         totalProducts={totalCount}
                         currentPage={currentPage}
-                        paginate={paginate}
+                        paginate={setCurrentPage}
                       />
                     </div>
                   )}
 
-                  {/* Mobile continue shopping button (kept) */}
-                  <div className="mt-10 sm:hidden flex justify-center">
+                  <WishlistSaveForLater
+                    items={savedForLaterItems}
+                    backendRoute={globalBackendRoute}
+                    loading={isMutating}
+                    onMoveToWishlist={(id) => toggleSaveForLater(id)}
+                    onRemove={(id) => removeItem(id)}
+                  />
+
+                  <div className="mt-6 flex justify-center sm:hidden">
                     <button
                       type="button"
                       onClick={() => navigate("/shop")}
-                      className="btnGhost"
+                      className="w-full rounded-full border border-slate-200 bg-white px-4 py-2.5 text-[11px] font-extrabold text-slate-700 shadow-sm transition hover:bg-slate-50"
                     >
                       Continue shopping
                     </button>
                   </div>
-                </div>
-              </>
-            )}
-          </motion.div>
-        </div>
+                </>
+              )}
+            </div>
+          </div>
+        </motion.div>
       </div>
     </div>
   );
 };
 
 export default Wishlist;
-
-// ===============================================================
-// ✅ PAGINATION (ONLY 3 NUMBER BUTTONS + LEFT/RIGHT INDICATORS)
-// ===============================================================
-function Pagination({ productsPerPage, totalProducts, currentPage, paginate }) {
-  const totalPages = Math.ceil(totalProducts / productsPerPage);
-  if (totalPages <= 1) return null;
-
-  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
-
-  let center = clamp(currentPage, 1, totalPages);
-  let start = center - 1;
-  let end = center + 1;
-
-  if (start < 1) {
-    start = 1;
-    end = Math.min(3, totalPages);
-  }
-  if (end > totalPages) {
-    end = totalPages;
-    start = Math.max(1, totalPages - 2);
-  }
-
-  const pages = [];
-  for (let p = start; p <= end; p++) pages.push(p);
-
-  const canPrev = currentPage > 1;
-  const canNext = currentPage < totalPages;
-
-  return (
-    <div className="flex justify-center mt-6">
-      <nav className="inline-flex items-center gap-2 justify-center">
-        <button
-          type="button"
-          onClick={() => canPrev && paginate(currentPage - 1)}
-          disabled={!canPrev}
-          className={[
-            "h-10 w-10 rounded-full inline-flex items-center justify-center",
-            "bg-white text-slate-700 hover:bg-slate-100 transition",
-            "disabled:opacity-40 disabled:cursor-not-allowed",
-          ].join(" ")}
-          style={{ border: "1px solid rgb(226,232,240)" }}
-          aria-label="Previous page"
-          title="Previous"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </button>
-
-        {start > 1 && (
-          <button
-            type="button"
-            onClick={() => paginate(1)}
-            className="px-3 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100 transition"
-            style={{ border: "1px solid rgb(226,232,240)" }}
-            title="Go to first page"
-          >
-            1…
-          </button>
-        )}
-
-        {pages.map((number) => {
-          const active = currentPage === number;
-          return (
-            <button
-              key={number}
-              onClick={() => paginate(number)}
-              className={
-                active
-                  ? "activePage px-4 h-10 text-[12px] font-extrabold"
-                  : "px-4 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100"
-              }
-              style={
-                !active ? { border: "1px solid rgb(226,232,240)" } : undefined
-              }
-              aria-label={`Page ${number}`}
-            >
-              {number}
-            </button>
-          );
-        })}
-
-        {end < totalPages && (
-          <button
-            type="button"
-            onClick={() => paginate(totalPages)}
-            className="px-3 h-10 rounded-full text-[12px] font-extrabold bg-white text-slate-700 hover:bg-slate-100 transition"
-            style={{ border: "1px solid rgb(226,232,240)" }}
-            title="Go to last page"
-          >
-            …{totalPages}
-          </button>
-        )}
-
-        <button
-          type="button"
-          onClick={() => canNext && paginate(currentPage + 1)}
-          disabled={!canNext}
-          className={[
-            "h-10 w-10 rounded-full inline-flex items-center justify-center",
-            "bg-white text-slate-700 hover:bg-slate-100 transition",
-            "disabled:opacity-40 disabled:cursor-not-allowed",
-          ].join(" ")}
-          style={{ border: "1px solid rgb(226,232,240)" }}
-          aria-label="Next page"
-          title="Next"
-        >
-          <ChevronRightIcon className="h-5 w-5" />
-        </button>
-      </nav>
-    </div>
-  );
-}
-
-// ===============================================================
-// ✅ 3 VIEWS (Grid / Card / List) - Shop-like spacing
-// ===============================================================
-function WishlistGridUI({
-  items,
-  onOpen,
-  onMoveToCart,
-  onBuyNow,
-  onToggleSaveForLater,
-  onRemove,
-}) {
-  return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-8 sm:gap-y-10 lg:gap-y-12">
-      {items.map((item, idx) => {
-        const id = item?._id ?? `${idx}`;
-
-        const selling = money(
-          item?.selling_price ?? item?.price ?? item?.final_price,
-        );
-        const mrp = money(
-          item?.display_price ?? item?.actual_price ?? item?.mrp_price,
-        );
-
-        const stock = item?.availability_status !== false;
-        const rating = Number(item?.avg_rating ?? item?.rating ?? 4.3);
-        const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "4.3";
-
-        return (
-          <motion.div
-            key={id}
-            whileHover={{ y: -4 }}
-            transition={{ duration: 0.18 }}
-            className="group relative rounded-2xl bg-white"
-            style={{ boxShadow: "none", border: "1px solid rgb(241,245,249)" }}
-          >
-            <div
-              className="p-3 cursor-pointer"
-              onClick={() => onOpen(item._id)}
-              title="Open product"
-            >
-              <div className="rounded-2xl overflow-hidden bg-slate-50">
-                <img
-                  src={resolveImage(item)}
-                  alt={item?.product_name || "Wishlist item"}
-                  loading="lazy"
-                  className="w-full aspect-square object-cover"
-                  onError={(e) => {
-                    e.target.onerror = null;
-                    e.target.src = "https://via.placeholder.com/600x600";
-                  }}
-                />
-              </div>
-
-              <div className="mt-3 space-y-1.5">
-                <h2 className="text-[13px] font-extrabold text-slate-900 truncate">
-                  {item?.product_name || "Unnamed product"}
-                </h2>
-
-                <div className="mt-2 flex items-baseline gap-2">
-                  <span className="priceSelling text-[14px] inline-flex items-center gap-1">
-                    <FaRupeeSign /> {selling ?? "--"}
-                  </span>
-                  {mrp && mrp !== selling && (
-                    <span className="priceMrp text-[12px] inline-flex items-center gap-1">
-                      <FaRupeeSign /> {mrp}
-                    </span>
-                  )}
-                </div>
-
-                <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                  <span className="inline-flex items-center gap-1">
-                    <FaStar className="text-orange-500/90" />
-                    {ratingText}
-                  </span>
-                  <span className="hidden sm:inline-flex items-center gap-2">
-                    <span className="inline-flex items-center gap-1">
-                      <FiTruck className="text-slate-500" />
-                      Delivery
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <FiRefreshCw className="text-slate-500" />
-                      Return
-                    </span>
-                  </span>
-                </div>
-
-                {item?.savedForLater && (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold text-amber-700">
-                    <FaBookmark className="text-amber-600" />
-                    Saved for later
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="px-3 pb-4">
-              <div className="grid grid-cols-1 gap-2 mt-2">
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await onMoveToCart(item._id);
-                  }}
-                  className="btnOrange w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                  type="button"
-                  disabled={!stock}
-                  style={
-                    !stock ? { opacity: 0.6, cursor: "not-allowed" } : undefined
-                  }
-                >
-                  <FaCartPlus /> Move to Cart
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBuyNow(item);
-                  }}
-                  className="btnGhost w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                  type="button"
-                >
-                  <FaCheck /> Buy Now
-                </button>
-
-                <div className="grid grid-cols-2 gap-2 mt-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSaveForLater(item._id);
-                    }}
-                    className="btnGhost w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                    type="button"
-                  >
-                    <FaBookmark />
-                    {item?.savedForLater ? "Unsave" : "Save"}
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(item._id);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[12px] font-extrabold bg-rose-50 text-rose-700 hover:bg-rose-100 transition laptopCartBtn"
-                    type="button"
-                  >
-                    <FaTrash /> Remove
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-function WishlistCardUI({
-  items,
-  onOpen,
-  onMoveToCart,
-  onBuyNow,
-  onToggleSaveForLater,
-  onRemove,
-}) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-12">
-      {items.map((item) => {
-        const selling = money(
-          item?.selling_price ?? item?.price ?? item?.final_price,
-        );
-        const mrp = money(
-          item?.display_price ?? item?.actual_price ?? item?.mrp_price,
-        );
-
-        const stock = item?.availability_status !== false;
-        const rating = Number(item?.avg_rating ?? item?.rating ?? 4.4);
-        const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "4.4";
-
-        return (
-          <motion.div
-            key={item._id}
-            whileHover={{ y: -6, scale: 1.01 }}
-            transition={{ duration: 0.2 }}
-            className="relative group rounded-2xl bg-white overflow-hidden"
-            style={{
-              boxShadow: "none",
-              border: "1px solid rgba(241,245,249,1)",
-            }}
-          >
-            <div
-              className="w-full h-52 sm:h-56 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer"
-              onClick={() => onOpen(item._id)}
-              title="Open product"
-            >
-              <img
-                src={resolveImage(item)}
-                alt={item?.product_name || "Wishlist item"}
-                loading="lazy"
-                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/600x600";
-                }}
-              />
-            </div>
-
-            <div className="p-4 space-y-2">
-              <div onClick={() => onOpen(item._id)} className="cursor-pointer">
-                <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-900 truncate">
-                  {item?.product_name || "Unnamed product"}
-                </h3>
-
-                <p className="text-[12px] text-slate-500 font-semibold truncate">
-                  {safeUpper(item?.brand) ||
-                    safeUpper(item?.category_name) ||
-                    "POPULAR"}{" "}
-                  • FAST DELIVERY • EASY RETURNS
-                </p>
-
-                <div className="flex items-center justify-between pt-1">
-                  <div className="flex items-center gap-2">
-                    <span className="priceSelling text-[15px] inline-flex items-center gap-1">
-                      <FaRupeeSign /> {selling ?? "--"}
-                    </span>
-                    {mrp && mrp !== selling && (
-                      <span className="priceMrp text-[12px] inline-flex items-center gap-1">
-                        <FaRupeeSign /> {mrp}
-                      </span>
-                    )}
-                  </div>
-
-                  <span className="inline-flex items-center gap-1 text-[12px] font-extrabold text-slate-600">
-                    <FaStar className="text-orange-500/90" />
-                    {ratingText}
-                  </span>
-                </div>
-
-                {item?.savedForLater && (
-                  <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold text-amber-700">
-                    <FaBookmark className="text-amber-600" />
-                    Saved for later
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 gap-2 pt-2">
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await onMoveToCart(item._id);
-                  }}
-                  className="btnOrange w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                  type="button"
-                  disabled={!stock}
-                  style={
-                    !stock ? { opacity: 0.6, cursor: "not-allowed" } : undefined
-                  }
-                >
-                  <FaCartPlus /> Move to Cart
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBuyNow(item);
-                  }}
-                  className="btnGhost w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                  type="button"
-                >
-                  <FaCheck /> Buy Now
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSaveForLater(item._id);
-                    }}
-                    className="btnGhost w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                    type="button"
-                  >
-                    <FaBookmark />
-                    {item?.savedForLater ? "Unsave" : "Save"}
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(item._id);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[12px] font-extrabold bg-rose-50 text-rose-700 hover:bg-rose-100 transition laptopCartBtn"
-                    type="button"
-                  >
-                    <FaTrash /> Remove
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-function WishlistListUI({
-  items,
-  onOpen,
-  onMoveToCart,
-  onBuyNow,
-  onToggleSaveForLater,
-  onRemove,
-}) {
-  return (
-    <div className="space-y-10 sm:space-y-12">
-      {items.map((item) => {
-        const selling = money(
-          item?.selling_price ?? item?.price ?? item?.final_price,
-        );
-        const mrp = money(
-          item?.display_price ?? item?.actual_price ?? item?.mrp_price,
-        );
-
-        const stock = item?.availability_status !== false;
-        const rating = Number(item?.avg_rating ?? item?.rating ?? 4.2);
-        const ratingText = Number.isFinite(rating) ? rating.toFixed(1) : "4.2";
-
-        return (
-          <motion.div
-            key={item._id}
-            whileHover={{ y: -2 }}
-            transition={{ duration: 0.16 }}
-            className="flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"
-            style={{ boxShadow: "none", border: "1px solid rgb(241,245,249)" }}
-          >
-            <div
-              onClick={() => onOpen(item._id)}
-              className="w-full md:w-44 h-52 md:h-44 bg-slate-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer"
-              title="Open product"
-            >
-              <img
-                src={resolveImage(item)}
-                alt={item?.product_name || "Wishlist item"}
-                className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
-                loading="lazy"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = "https://via.placeholder.com/600x600";
-                }}
-              />
-            </div>
-
-            <div
-              onClick={() => onOpen(item._id)}
-              className="flex flex-col justify-center md:ml-6 mt-4 md:mt-0 w-full cursor-pointer px-3 md:px-0 pb-3 md:pb-0"
-              title="Open product"
-            >
-              <h2 className="text-[16px] sm:text-[18px] font-extrabold text-slate-900 truncate">
-                {item?.product_name || "Unnamed product"}
-              </h2>
-
-              <p className="text-slate-500 text-[12px] mt-1 line-clamp-2">
-                {(item?.description || "").slice(0, 120)}
-                {(item?.description || "").length > 120 ? "..." : ""}
-              </p>
-
-              <p className="mt-2 text-[11px] font-semibold text-slate-500">
-                {safeUpper(item?.brand) ||
-                  safeUpper(item?.category_name) ||
-                  "BRANDED"}{" "}
-                • FAST DELIVERY • EASY RETURNS
-              </p>
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-4">
-                  <span className="priceSelling text-[15px] font-extrabold flex items-center gap-1">
-                    <FaRupeeSign /> {selling ?? "--"}
-                  </span>
-                  {mrp && mrp !== selling && (
-                    <span className="priceMrp text-[12px] font-extrabold flex items-center gap-1">
-                      <FaRupeeSign /> {mrp}
-                    </span>
-                  )}
-                </div>
-
-                <span className="inline-flex items-center gap-1 text-[12px] font-extrabold text-slate-600">
-                  <FaStar className="text-orange-500/90" />
-                  {ratingText}
-                </span>
-              </div>
-
-              {item?.savedForLater && (
-                <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-[11px] font-extrabold text-amber-700 w-fit">
-                  <FaBookmark className="text-amber-600" />
-                  Saved for later
-                </div>
-              )}
-            </div>
-
-            <div className="flex-shrink-0 md:ml-6 px-3 pb-4 md:pb-0">
-              <div className="grid grid-cols-1 gap-2">
-                <button
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    await onMoveToCart(item._id);
-                  }}
-                  disabled={!stock}
-                  className={[
-                    "btnOrange w-full md:w-auto inline-flex items-center justify-center gap-2 laptopCartBtn",
-                    !stock ? "opacity-60 cursor-not-allowed" : "",
-                  ].join(" ")}
-                  type="button"
-                >
-                  <FaCartPlus />
-                  Move to Cart
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onBuyNow(item);
-                  }}
-                  className="btnGhost w-full md:w-auto inline-flex items-center justify-center gap-2 laptopCartBtn"
-                  type="button"
-                >
-                  <FaCheck /> Buy Now
-                </button>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSaveForLater(item._id);
-                    }}
-                    className="btnGhost w-full inline-flex items-center justify-center gap-2 laptopCartBtn"
-                    type="button"
-                  >
-                    <FaBookmark />
-                    {item?.savedForLater ? "Unsave" : "Save"}
-                  </button>
-
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRemove(item._id);
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-full px-4 py-3 text-[12px] font-extrabold bg-rose-50 text-rose-700 hover:bg-rose-100 transition laptopCartBtn"
-                    type="button"
-                  >
-                    <FaTrash /> Remove
-                  </button>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}

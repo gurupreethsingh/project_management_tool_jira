@@ -1,146 +1,249 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import axios from "axios";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+} from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
+import axios from "axios";
 import globalBackendRoute from "../../config/Config";
 import { AuthContext } from "../auth_components/AuthManager";
+import {
+  fetchWishlistApi,
+  removeWishlistItemApi,
+  toggleSaveForLaterApi,
+  moveWishlistItemToCartApi,
+} from "../../api/wishlistApi";
 
 export const WishlistContext = createContext();
 
-export const WishlistProvider = ({ children }) => {
-  const { isLoggedIn } = useContext(AuthContext);
-  const [wishlistItems, setWishlistItems] = useState([]);
-  const [wishlistLoading, setWishlistLoading] = useState(false);
+function getStoredToken() {
+  return (
+    localStorage.getItem("token") ||
+    localStorage.getItem("authToken") ||
+    localStorage.getItem("userToken") ||
+    ""
+  );
+}
 
-  // Fetch wishlist
-  const fetchWishlist = async () => {
-    if (!isLoggedIn) return;
-    try {
-      setWishlistLoading(true);
-      const token = localStorage.getItem("token");
-      const res = await axios.get(
-        `${globalBackendRoute}/api/wishlist/get-wishlist`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
+function getAuthConfig() {
+  const token = getStoredToken();
+
+  return {
+    headers: token
+      ? {
+          Authorization: `Bearer ${token}`,
         }
-      );
-      setWishlistItems(res.data.items);
+      : {},
+  };
+}
+
+export const WishlistProvider = ({ children }) => {
+  const { isLoggedIn, user } = useContext(AuthContext);
+  const queryClient = useQueryClient();
+
+  const wishlistQueryKey = useMemo(
+    () => ["wishlist-items", user?._id || user?.id || "guest"],
+    [user?._id, user?.id],
+  );
+
+  const {
+    data: wishlistItems = [],
+    isLoading: wishlistLoading,
+    refetch,
+  } = useQuery({
+    queryKey: wishlistQueryKey,
+    queryFn: fetchWishlistApi,
+    enabled: Boolean(isLoggedIn && getStoredToken()),
+    initialData: [],
+    staleTime: 0,
+    refetchOnWindowFocus: false,
+    refetchOnMount: "always",
+  });
+
+  const clearWishlist = useCallback(() => {
+    queryClient.removeQueries({ queryKey: ["wishlist-items"] });
+    queryClient.setQueryData(["wishlist-items", "guest"], []);
+  }, [queryClient]);
+
+  const fetchWishlist = useCallback(async () => {
+    if (!isLoggedIn || !getStoredToken()) {
+      clearWishlist();
+      return [];
+    }
+
+    try {
+      const result = await refetch();
+      return Array.isArray(result?.data) ? result.data : [];
     } catch (err) {
-      if (err.response?.status === 403) {
+      if (err?.response?.status === 401 || err?.response?.status === 403) {
         console.warn(
-          "Unauthorized access to wishlist. Possibly invalid token."
+          "Unauthorized access to wishlist. Possibly invalid or expired token.",
         );
       } else {
         console.error("Wishlist fetch error:", err);
       }
-    } finally {
-      setWishlistLoading(false);
+      return [];
     }
-  };
+  }, [isLoggedIn, refetch, clearWishlist]);
 
   useEffect(() => {
-    if (isLoggedIn) fetchWishlist();
-  }, [isLoggedIn]);
+    if (!isLoggedIn || !getStoredToken()) {
+      clearWishlist();
+      return;
+    }
 
-  // Local state update helpers
-  const addItemToLocalWishlist = (product) => {
-    setWishlistItems((prev) => [...prev, product]);
-  };
+    queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+  }, [isLoggedIn, wishlistQueryKey, queryClient, clearWishlist]);
 
-  const removeItemFromLocalWishlist = (productId) => {
-    setWishlistItems((prev) =>
-      prev.filter((item) => (item._id || item.product?._id) !== productId)
-    );
-  };
+  const addItemToLocalWishlist = useCallback(
+    (product) => {
+      queryClient.setQueryData(wishlistQueryKey, (prev = []) => {
+        const id = String(product?._id || product?.product?._id || "");
+        if (!id) return prev;
 
-  // Add to wishlist
-  const addToWishlist = async (productId) => {
-    try {
-      const token = localStorage.getItem("token"); // 🔥 MISSING earlier
-      const res = await axios.post(
-        `${globalBackendRoute}/api/wishlist/add-to-wishlist`,
-        { productId },
-        {
-          headers: { Authorization: `Bearer ${token}` },
+        const exists = prev.some(
+          (item) => String(item?._id || item?.product?._id || "") === id,
+        );
+
+        if (exists) return prev;
+        return [...prev, product];
+      });
+    },
+    [queryClient, wishlistQueryKey],
+  );
+
+  const removeItemFromLocalWishlist = useCallback(
+    (productId) => {
+      const normalizedId = String(productId);
+
+      queryClient.setQueryData(wishlistQueryKey, (prev = []) =>
+        prev.filter(
+          (item) =>
+            String(item?._id || item?.product?._id || "") !== normalizedId,
+        ),
+      );
+    },
+    [queryClient, wishlistQueryKey],
+  );
+
+  const addToWishlist = useCallback(
+    async (productId) => {
+      try {
+        await axios.post(
+          `${globalBackendRoute}/api/wishlist/add-to-wishlist`,
+          { productId },
+          getAuthConfig(),
+        );
+
+        toast.success("Added to wishlist");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      } catch (error) {
+        if (error?.response?.status === 409) {
+          toast.info("Item already in wishlist");
+        } else if (error?.response?.status === 401) {
+          toast.error("Please login to use wishlist");
+        } else {
+          toast.error("Failed to add to wishlist");
         }
-      );
 
-      await fetchWishlist(); // Refresh the wishlist
-    } catch (error) {
-      if (error.response?.status === 409) {
-        toast.info("Item already in wishlist");
-      } else if (error.response?.status === 401) {
-        toast.error("Please login to use wishlist");
-      } else {
-        toast.error("Failed to add to wishlist");
+        console.error("Add to wishlist error:", error);
       }
-      console.error("Add to wishlist error:", error);
-    }
-  };
+    },
+    [queryClient, wishlistQueryKey],
+  );
 
-  // Remove from wishlist
-  const removeFromWishlist = async (productId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.delete(
-        `${globalBackendRoute}/api/wishlist/remove-from-wishlist/${productId}`,
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      removeItemFromLocalWishlist(productId);
-    } catch (err) {
-      if (err.response?.status === 403) {
-        console.warn("Unauthorized remove from wishlist attempt.");
-      } else {
-        console.error("Remove wishlist error:", err);
+  const removeFromWishlist = useCallback(
+    async (productId) => {
+      try {
+        removeItemFromLocalWishlist(productId);
+        await removeWishlistItemApi(productId);
+        toast.success("Removed from wishlist");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      } catch (err) {
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+
+        if (err?.response?.status === 403) {
+          console.warn("Unauthorized remove from wishlist attempt.");
+        } else {
+          console.error("Remove wishlist error:", err);
+          toast.error("Could not remove from wishlist");
+        }
       }
-    }
-  };
+    },
+    [queryClient, wishlistQueryKey, removeItemFromLocalWishlist],
+  );
 
-  // Toggle Save for Later
-  const toggleSaveForLater = async (productId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.patch(
-        `${globalBackendRoute}/api/wishlist/toggle-save-for-later/${productId}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      fetchWishlist();
-    } catch (err) {
-      console.error("Toggle save error:", err);
-    }
-  };
+  const toggleSaveForLater = useCallback(
+    async (productId) => {
+      try {
+        queryClient.setQueryData(wishlistQueryKey, (prev = []) =>
+          prev.map((item) =>
+            String(item?._id || item?.product?._id || "") === String(productId)
+              ? { ...item, savedForLater: !item.savedForLater }
+              : item,
+          ),
+        );
 
-  // Move to Cart
-  const moveToCartFromWishlist = async (productId) => {
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(
-        `${globalBackendRoute}/api/wishlist/move-to-cart`,
-        { productId },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      toast.success("Moved to cart");
-      removeItemFromLocalWishlist(productId);
-    } catch (err) {
-      console.error("Move to cart error:", err);
-      toast.error("Something went wrong");
-    }
-  };
+        await toggleSaveForLaterApi(productId);
+        toast.success("Wishlist updated");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      } catch (err) {
+        console.error("Toggle save error:", err);
+        toast.error("Could not update save for later");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      }
+    },
+    [queryClient, wishlistQueryKey],
+  );
+
+  const moveToCartFromWishlist = useCallback(
+    async (productId) => {
+      try {
+        removeItemFromLocalWishlist(productId);
+        await moveWishlistItemToCartApi(productId);
+        toast.success("Moved to cart");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      } catch (err) {
+        console.error("Move to cart error:", err);
+        toast.error("Something went wrong");
+        await queryClient.invalidateQueries({ queryKey: wishlistQueryKey });
+      }
+    },
+    [queryClient, wishlistQueryKey, removeItemFromLocalWishlist],
+  );
+
+  const value = useMemo(
+    () => ({
+      wishlistItems,
+      wishlistLoading,
+      addToWishlist,
+      removeFromWishlist,
+      toggleSaveForLater,
+      moveToCartFromWishlist,
+      fetchWishlist,
+      clearWishlist,
+      addItemToLocalWishlist,
+      removeItemFromLocalWishlist,
+    }),
+    [
+      wishlistItems,
+      wishlistLoading,
+      addToWishlist,
+      removeFromWishlist,
+      toggleSaveForLater,
+      moveToCartFromWishlist,
+      fetchWishlist,
+      clearWishlist,
+      addItemToLocalWishlist,
+      removeItemFromLocalWishlist,
+    ],
+  );
 
   return (
-    <WishlistContext.Provider
-      value={{
-        wishlistItems,
-        wishlistLoading,
-        addToWishlist,
-        removeFromWishlist,
-        toggleSaveForLater,
-        moveToCartFromWishlist,
-        fetchWishlist,
-        addItemToLocalWishlist,
-        removeItemFromLocalWishlist,
-      }}
-    >
+    <WishlistContext.Provider value={value}>
       {children}
     </WishlistContext.Provider>
   );

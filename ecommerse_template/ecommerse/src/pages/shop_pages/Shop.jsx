@@ -1,13 +1,3 @@
-// ✅ file: src/pages/shop_pages/Shop.jsx
-// ✅ CHANGES (as you asked):
-// 1) ✅ Desktop view + Mobile view untouched (same UI/logic)
-// 2) ✅ Laptop view (sm/md range) ONLY: "Add to cart" button smaller (grid/card/list)
-// 3) ✅ Pagination: show ONLY 3 number buttons + left/right indicators (all views)
-
-// ⚠️ NOTE:
-// - "Laptop view" treated as: sm & md range = 640px to 1023px
-// - Desktop (>=1024) and Mobile (<640) remain visually same except pagination rule applies everywhere.
-
 import React, {
   useState,
   useEffect,
@@ -99,7 +89,7 @@ function getSubcategoryIdFromProduct(p) {
 }
 function getCategoryNameFromProduct(p) {
   return safeUpper(
-    p?.category?.category_name || p?.category?.name || p?.category_name
+    p?.category?.category_name || p?.category?.name || p?.category_name,
   );
 }
 function getSubcategoryNameFromProduct(p) {
@@ -196,7 +186,7 @@ export default function Shop() {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          `${globalBackendRoute}/api/all-added-products`
+          `${globalBackendRoute}/api/all-added-products`,
         );
         const products = res.data || [];
         const active = products.filter((p) => p?.isDeleted !== true);
@@ -239,7 +229,7 @@ export default function Shop() {
     }
 
     const wishlistIds = wishlistItems.map(
-      (item) => item._id || item.product?._id
+      (item) => item._id || item.product?._id,
     );
 
     try {
@@ -254,7 +244,7 @@ export default function Shop() {
       setAnimatedMsgProductName(
         wishlistIds.includes(productId)
           ? `${productName} removed from wishlist`
-          : `${productName} added to wishlist`
+          : `${productName} added to wishlist`,
       );
       setShowAnimatedMsg(true);
       setTimeout(() => setShowAnimatedMsg(false), 1600);
@@ -275,7 +265,7 @@ export default function Shop() {
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
   const currentProducts = filteredProducts.slice(
     indexOfFirstProduct,
-    indexOfLastProduct
+    indexOfLastProduct,
   );
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -291,7 +281,7 @@ export default function Shop() {
       { id: "card", Icon: FaIdBadge, label: "Cards" },
       { id: "list", Icon: FaThList, label: "List" },
     ],
-    []
+    [],
   );
 
   const onChangeView = useCallback((mode) => setViewMode(mode), []);
@@ -677,11 +667,11 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
           categoryId: String(c.categoryId),
           categoryName: String(c.categoryName || "").toUpperCase(),
           subcategories: Array.from(c.subMap.values()).sort((a, b) =>
-            String(a.name).localeCompare(String(b.name))
+            String(a.name).localeCompare(String(b.name)),
           ),
         }))
         .sort((a, b) =>
-          String(a.categoryName).localeCompare(String(b.categoryName))
+          String(a.categoryName).localeCompare(String(b.categoryName)),
         );
 
       setCategoriesTree(tree);
@@ -776,11 +766,11 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
     if (selectedCategory) {
       const selectedCatId = String(selectedCategory);
       const catNode = categoriesTree.find(
-        (c) => String(c.categoryId) === selectedCatId
+        (c) => String(c.categoryId) === selectedCatId,
       );
 
       const subIdsUnderCat = new Set(
-        (catNode?.subcategories || []).map((s) => String(s.id))
+        (catNode?.subcategories || []).map((s) => String(s.id)),
       );
 
       filtered = filtered.filter((p) => {
@@ -795,13 +785,13 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
     if (selectedSubCategory) {
       const selectedSubId = String(selectedSubCategory);
       filtered = filtered.filter(
-        (p) => String(getSubcategoryIdFromProduct(p)) === selectedSubId
+        (p) => String(getSubcategoryIdFromProduct(p)) === selectedSubId,
       );
     }
 
     if (selectedBrands.length > 0) {
       filtered = filtered.filter((p) =>
-        selectedBrands.includes(String(p?.brand || "").toUpperCase())
+        selectedBrands.includes(String(p?.brand || "").toUpperCase()),
       );
     }
 
@@ -1229,15 +1219,17 @@ function ProductsGridUI({
             style={{ boxShadow: "none", border: "none" }}
           >
             <div
-              className="relative rounded-2xl overflow-hidden cursor-pointer"
+              className="relative rounded-2xl overflow-hidden cursor-pointer bg-gradient-to-br from-orange-50 via-white to-amber-50 p-3"
               onClick={() => onOpen(p?._id)}
             >
-              <img
-                src={resolveImage(p)}
-                alt={p?.product_name || "Product"}
-                loading="lazy"
-                className="w-full aspect-square object-cover"
-              />
+              <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl">
+                <img
+                  src={resolveImage(p)}
+                  alt={p?.product_name || "Product"}
+                  loading="lazy"
+                  className="h-full w-full object-contain"
+                />
+              </div>
 
               <button
                 type="button"
@@ -1299,7 +1291,7 @@ function ProductsGridUI({
                 onClick={() => onAddToCart(p)}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn", // ✅ laptop-only sizing via media query
+                  "laptopCartBtn",
                   "mt-3 w-full inline-flex items-center justify-center gap-2",
                   "rounded-full px-4 sm:px-5 py-2.5 text-white font-extrabold text-[11.5px] sm:text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
@@ -1334,10 +1326,10 @@ function ProductsCardUI({
           : false;
 
         const selling = money(
-          product?.selling_price ?? product?.price ?? product?.final_price
+          product?.selling_price ?? product?.price ?? product?.final_price,
         );
         const mrp = money(
-          product?.display_price ?? product?.actual_price ?? product?.mrp_price
+          product?.display_price ?? product?.actual_price ?? product?.mrp_price,
         );
 
         const brand = safeUpper(product?.brand);
@@ -1379,14 +1371,14 @@ function ProductsCardUI({
             </div>
 
             <div
-              className="w-full h-52 sm:h-56 bg-slate-50 flex items-center justify-center overflow-hidden cursor-pointer"
+              className="w-full h-52 sm:h-56 bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center overflow-hidden cursor-pointer p-4"
               onClick={() => onOpen(product._id)}
             >
               <img
                 src={resolveImage(product)}
                 alt={product.product_name}
                 loading="lazy"
-                className="object-cover w-full h-full group-hover:scale-110 transition-transform duration-500"
+                className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
               />
             </div>
 
@@ -1432,7 +1424,7 @@ function ProductsCardUI({
                 }}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn", // ✅ laptop-only sizing via media query
+                  "laptopCartBtn",
                   "w-full mt-3 py-2.5 text-center rounded-full font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
                   stock
@@ -1471,10 +1463,10 @@ function ProductsListUI({
           ? wishlist.includes(product._id)
           : false;
         const selling = money(
-          product?.selling_price ?? product?.price ?? product?.final_price
+          product?.selling_price ?? product?.price ?? product?.final_price,
         );
         const mrp = money(
-          product?.display_price ?? product?.actual_price ?? product?.mrp_price
+          product?.display_price ?? product?.actual_price ?? product?.mrp_price,
         );
         const stock = !!product?.availability_status;
 
@@ -1510,12 +1502,12 @@ function ProductsListUI({
 
             <div
               onClick={() => onOpen(product._id)}
-              className="w-full md:w-44 h-52 md:h-44 bg-slate-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer"
+              className="w-full md:w-44 h-52 md:h-44 bg-gradient-to-br from-orange-50 via-white to-amber-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer p-4"
             >
               <img
                 src={resolveImage(product)}
                 alt={product.product_name}
-                className="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
               />
             </div>
@@ -1567,7 +1559,7 @@ function ProductsListUI({
                 }}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn", // ✅ laptop-only sizing via media query
+                  "laptopCartBtn",
                   "w-full md:w-auto inline-flex items-center justify-center gap-2",
                   "rounded-full px-5 py-2.5 text-white font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",

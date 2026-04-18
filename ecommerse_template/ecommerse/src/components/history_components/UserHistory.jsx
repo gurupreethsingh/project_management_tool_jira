@@ -119,31 +119,31 @@ const UserHistory = ({
 
   return (
     <section className={`w-full px-4 ${className}`}>
-      <div className="rounded-2xl bg-white overflow-hidden">
-        <div className="px-3 sm:px-4 py-3 border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white">
+      <div className="overflow-hidden rounded-2xl bg-white">
+        <div className="border-b border-orange-100 bg-gradient-to-r from-orange-50/70 to-white px-3 py-3 sm:px-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <div className="h-8 w-8 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-orange-100 text-orange-600">
                   <FaHistory className="h-3.5 w-3.5" />
                 </div>
 
                 <div className="min-w-0">
-                  <h3 className="text-[14px] sm:text-[15px] font-extrabold text-gray-900 truncate">
+                  <h3 className="truncate text-[14px] font-extrabold text-gray-900 sm:text-[15px]">
                     {title}
                   </h3>
-                  <p className="text-[10px] sm:text-[11px] text-gray-500">
+                  <p className="text-[10px] text-gray-500 sm:text-[11px]">
                     Your recently viewed products
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
+            <div className="flex shrink-0 items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => handleScroll("left")}
-                className="h-8 w-8 rounded-full border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 transition flex items-center justify-center"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 transition hover:bg-orange-50"
                 aria-label="Scroll left"
               >
                 <FaChevronLeft className="h-3 w-3" />
@@ -152,7 +152,7 @@ const UserHistory = ({
               <button
                 type="button"
                 onClick={() => handleScroll("right")}
-                className="h-8 w-8 rounded-full border border-orange-200 bg-white text-orange-600 hover:bg-orange-50 transition flex items-center justify-center"
+                className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-200 bg-white text-orange-600 transition hover:bg-orange-50"
                 aria-label="Scroll right"
               >
                 <FaChevronRight className="h-3 w-3" />
@@ -167,14 +167,14 @@ const UserHistory = ({
               {Array.from({ length: 5 }).map((_, index) => (
                 <div
                   key={index}
-                  className="shrink-0 rounded-xl border border-orange-100 bg-white overflow-hidden animate-pulse"
+                  className="overflow-hidden rounded-xl border border-orange-100 bg-white animate-pulse shrink-0"
                   style={{ width: `${cardWidth}px` }}
                 >
                   <div className="aspect-square bg-orange-50" />
                   <div className="p-2.5">
-                    <div className="h-3.5 bg-orange-50 rounded mb-2" />
-                    <div className="h-3 bg-orange-50 rounded w-2/3 mb-2" />
-                    <div className="h-3 bg-orange-50 rounded w-1/2" />
+                    <div className="mb-2 h-3.5 rounded bg-orange-50" />
+                    <div className="mb-2 h-3 w-2/3 rounded bg-orange-50" />
+                    <div className="h-3 w-1/2 rounded bg-orange-50" />
                   </div>
                 </div>
               ))}
@@ -182,7 +182,7 @@ const UserHistory = ({
           ) : (
             <div
               ref={sliderRef}
-              className="flex gap-3 overflow-x-auto scroll-smooth hide-scrollbar"
+              className="hide-scrollbar flex gap-3 overflow-x-auto scroll-smooth"
             >
               {visibleItems.map((item) => {
                 const product = item.product;
@@ -191,42 +191,42 @@ const UserHistory = ({
                 return (
                   <div
                     key={`${item._id}-${productId}`}
-                    className="shrink-0 rounded-xl border border-orange-100 bg-white shadow-sm hover:shadow-md transition-transform duration-300 hover:-translate-y-1 cursor-pointer overflow-hidden"
+                    className="shrink-0 overflow-hidden rounded-xl border  bg-white shadow-md transition-transform duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer"
                     style={{ width: `${cardWidth}px` }}
                     onClick={() => navigate(`/single-product/${productId}`)}
                     title={product?.product_name}
                   >
-                    <div className="relative">
+                    <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-white via-white to-amber-50 p-3 sm:p-4">
                       <img
                         src={resolveProductImage(product)}
                         alt={product?.product_name}
-                        className="w-full aspect-square object-cover"
+                        className="h-full w-full object-contain"
                         loading="lazy"
                       />
                     </div>
 
                     <div className="p-2.5">
-                      <h4 className="text-[11px] sm:text-[12px] font-extrabold text-gray-900 truncate">
+                      <h4 className="truncate text-[11px] font-extrabold text-gray-900 sm:text-[12px]">
                         {product?.product_name}
                       </h4>
 
-                      <div className="mt-1 text-[9.5px] sm:text-[10px] text-gray-500 truncate">
+                      <div className="mt-1 truncate text-[9.5px] text-gray-500 sm:text-[10px]">
                         {String(product?.brand || "No Brand").toUpperCase()}
                       </div>
 
                       <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <p className="text-orange-600 font-black text-[12px] sm:text-[13px] truncate">
+                        <p className="truncate text-[12px] font-black text-orange-600 sm:text-[13px]">
                           {formatCurrency(getMainPrice(product))}
                         </p>
 
                         {getDisplayPrice(product) > 0 && (
-                          <p className="text-gray-400 line-through text-[10px] sm:text-[11px] truncate">
+                          <p className="truncate text-[10px] text-gray-400 line-through sm:text-[11px]">
                             {formatCurrency(getDisplayPrice(product))}
                           </p>
                         )}
                       </div>
 
-                      <div className="mt-1.5 text-[9px] sm:text-[10px] text-gray-400 truncate">
+                      <div className="mt-1.5 truncate text-[9px] text-gray-400 sm:text-[10px]">
                         Viewed: {new Date(item.viewedAt).toLocaleDateString()}
                       </div>
                     </div>
