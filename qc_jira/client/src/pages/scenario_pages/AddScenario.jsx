@@ -214,34 +214,94 @@
 //     [toPascalCase],
 //   );
 
+//   const getScenarioModules = useCallback((scenario) => {
+//     if (Array.isArray(scenario?.modules) && scenario.modules.length) {
+//       return scenario.modules
+//         .filter(Boolean)
+//         .map((m) =>
+//           typeof m === "object"
+//             ? { _id: m._id, name: m.name }
+//             : { _id: m, name: "" },
+//         )
+//         .filter((m) => m && m._id);
+//     }
+
+//     if (scenario?.module?._id || scenario?.module?.name) {
+//       return [{ _id: scenario.module._id, name: scenario.module.name }];
+//     }
+
+//     return [];
+//   }, []);
+
+//   const buildModuleCountMapFromScenarios = useCallback(
+//     (scenarioList) => {
+//       const counts = new Map();
+
+//       for (const scenario of Array.isArray(scenarioList) ? scenarioList : []) {
+//         const mods = getScenarioModules(scenario);
+//         const seen = new Set();
+
+//         for (const mod of mods) {
+//           const id = String(mod?._id || "").trim();
+//           if (!id || seen.has(id)) continue;
+
+//           seen.add(id);
+//           counts.set(id, (counts.get(id) || 0) + 1);
+//         }
+//       }
+
+//       return counts;
+//     },
+//     [getScenarioModules],
+//   );
+
 //   const loadModules = useCallback(async () => {
 //     if (!projectId) return;
 
 //     try {
 //       setLoadingMods(true);
 
-//       const res = await fetch(
-//         `${globalBackendRoute}/api/single-projects/${projectId}/modules-with-counts`,
-//         { headers: authHeaders },
-//       );
+//       const [modulesRes, scenariosRes] = await Promise.all([
+//         fetch(
+//           `${globalBackendRoute}/api/single-projects/${projectId}/modules-with-counts`,
+//           { headers: authHeaders },
+//         ),
+//         fetch(
+//           `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`,
+//           { headers: authHeaders },
+//         ),
+//       ]);
 
-//       const data = await res.json().catch(() => []);
-//       const list = Array.isArray(data) ? data : [];
+//       const modulesData = await modulesRes.json().catch(() => []);
+//       const scenariosData = await scenariosRes.json().catch(() => []);
 
-//       setModules(
-//         list.filter(
+//       const moduleList = Array.isArray(modulesData) ? modulesData : [];
+//       const scenarioList = Array.isArray(scenariosData) ? scenariosData : [];
+
+//       const accurateCountMap = buildModuleCountMapFromScenarios(scenarioList);
+
+//       const normalizedModules = moduleList
+//         .filter(
 //           (m) =>
 //             String(m?.name || "")
 //               .trim()
 //               .toLowerCase() !== "unassigned",
-//         ),
-//       );
+//         )
+//         .map((m) => {
+//           const id = String(m?._id || "");
+//           return {
+//             ...m,
+//             count: accurateCountMap.get(id) || 0,
+//           };
+//         });
+
+//       setModules(normalizedModules);
 //     } catch {
 //       setModules([]);
 //     } finally {
 //       setLoadingMods(false);
 //     }
-//   }, [projectId, authHeaders]);
+//   }, [projectId, authHeaders, buildModuleCountMapFromScenarios]);
 
 //   useEffect(() => {
 //     loadModules();
@@ -994,7 +1054,7 @@
 //   );
 // }
 
-// fully working code, the scenario count fixed code,
+// AddScenario.jsx
 
 import React, {
   useCallback,
@@ -1007,6 +1067,18 @@ import { useNavigate, useParams } from "react-router-dom";
 import { MdOutlineAdminPanelSettings } from "react-icons/md";
 import { FaFileAlt, FaTrashAlt } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
+
+const TEST_LEVEL_OPTIONS = ["Component", "Integration", "System", "Acceptance"];
+
+const TEST_TYPE_OPTIONS = [
+  "Functional",
+  "GUI",
+  "API",
+  "Regression",
+  "Usability",
+  "Security",
+  "Performance",
+];
 
 function decodeJwtPayload(token = "") {
   try {
@@ -1041,6 +1113,9 @@ export default function AddScenario() {
   const [mode, setMode] = useState("existing");
   const [selectedModuleIds, setSelectedModuleIds] = useState([]);
   const [newModuleNamesCSV, setNewModuleNamesCSV] = useState("");
+
+  const [testLevel, setTestLevel] = useState("System");
+  const [selectedTestTypes, setSelectedTestTypes] = useState(["Functional"]);
 
   const [modules, setModules] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
@@ -1437,6 +1512,21 @@ export default function AddScenario() {
     );
   };
 
+  const toggleTestType = (type) => {
+    setSelectedTestTypes((prev) =>
+      prev.includes(type)
+        ? prev.filter((item) => item !== type)
+        : [...prev, type],
+    );
+
+    setErrors((prev) => {
+      const cp = { ...prev };
+      delete cp.testTypes;
+      delete cp.submit;
+      return cp;
+    });
+  };
+
   const selectAllModules = () => {
     setSelectedModuleIds(filteredModules.map((m) => m._id));
   };
@@ -1448,6 +1538,14 @@ export default function AddScenario() {
 
     const check = validateScenarioText(scenarioText);
     if (!check.ok) e.scenario_text = check.msg;
+
+    if (!TEST_LEVEL_OPTIONS.includes(testLevel)) {
+      e.testLevel = "Please select a valid test level.";
+    }
+
+    if (!selectedTestTypes.length) {
+      e.testTypes = "Select at least one test type.";
+    }
 
     if (mode === "existing") {
       if (!selectedModuleIds.length) e.modules = "Select at least one module.";
@@ -1478,6 +1576,8 @@ export default function AddScenario() {
     newModuleNamesCSV,
     scenarioText,
     selectedModuleIds,
+    selectedTestTypes,
+    testLevel,
     validateScenarioText,
     validateModuleName,
   ]);
@@ -1609,7 +1709,11 @@ export default function AddScenario() {
     setSuccessMessage("");
 
     try {
-      const payload = { scenario_text: check.cleaned };
+      const payload = {
+        scenario_text: check.cleaned,
+        testLevel,
+        testTypes: selectedTestTypes,
+      };
 
       if (mode === "existing") {
         payload.moduleIds = selectedModuleIds;
@@ -1637,6 +1741,8 @@ export default function AddScenario() {
         setDupWarning("");
         lastDupKeyRef.current = "";
         setModuleSearch("");
+        setTestLevel("System");
+        setSelectedTestTypes(["Functional"]);
         await loadModules();
         alert("Scenario added successfully.");
         navigate(`/single-project/${projectId}/view-all-scenarios`);
@@ -1648,7 +1754,7 @@ export default function AddScenario() {
           submit:
             data?.error ||
             data?.message ||
-            "Invalid input. Please check scenario/module values.",
+            "Invalid input. Please check scenario/module/classification values.",
         });
         return;
       }
@@ -1700,7 +1806,8 @@ export default function AddScenario() {
             Add Scenario
           </h2>
           <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
-            Create a new scenario and link it to existing or new modules.
+            Create a new scenario, classify it, and link it to existing or new
+            modules.
           </p>
         </div>
 
@@ -1787,6 +1894,74 @@ export default function AddScenario() {
                 Note: Leading/trailing spaces are removed automatically.
                 Scenario must include at least one letter (A–Z).
               </p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-900">
+                  Test Level
+                </label>
+                <select
+                  value={testLevel}
+                  onChange={(e) => {
+                    setTestLevel(e.target.value);
+                    setErrors((prev) => {
+                      const cp = { ...prev };
+                      delete cp.testLevel;
+                      delete cp.submit;
+                      return cp;
+                    });
+                  }}
+                  className="mt-2 block w-full rounded-lg border border-slate-200 bg-white py-2.5 px-3 text-sm text-slate-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-200"
+                >
+                  {TEST_LEVEL_OPTIONS.map((level) => (
+                    <option key={level} value={level}>
+                      {level}
+                    </option>
+                  ))}
+                </select>
+                {errors.testLevel && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.testLevel}
+                  </p>
+                )}
+                <p className="mt-1 text-[10px] text-slate-500">
+                  Example: Integration, System, Acceptance.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-900">
+                  Test Type(s)
+                </label>
+
+                <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {TEST_TYPE_OPTIONS.map((type) => (
+                    <label
+                      key={type}
+                      className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800"
+                    >
+                      <input
+                        type="checkbox"
+                        className="accent-indigo-600"
+                        checked={selectedTestTypes.includes(type)}
+                        onChange={() => toggleTestType(type)}
+                      />
+                      <span>{type}</span>
+                    </label>
+                  ))}
+                </div>
+
+                {errors.testTypes && (
+                  <p className="mt-1 text-xs text-red-600">
+                    {errors.testTypes}
+                  </p>
+                )}
+
+                <p className="mt-1 text-[10px] text-slate-500">
+                  You can select multiple types for the same scenario.
+                </p>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-4 items-center">

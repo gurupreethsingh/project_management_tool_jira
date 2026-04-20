@@ -166,6 +166,7 @@ const PageTitle = ({ title, children }) => {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+
     if (token) {
       try {
         const payloadPart = token.split(".")[1];
@@ -173,16 +174,17 @@ const PageTitle = ({ title, children }) => {
         const payload = JSON.parse(atob(base64));
 
         const expired = !payload.exp || Date.now() >= payload.exp * 1000;
+
         if (expired) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          window.location.href = "/login?reason=token_expired";
+          window.location.href = "/";
           return;
         }
       } catch (e) {
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        window.location.href = "/login?reason=invalid_token";
+        window.location.href = "/";
         return;
       }
     }
@@ -202,7 +204,7 @@ const PageTitle = ({ title, children }) => {
         ) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");
-          window.location.href = "/login?reason=token_expired";
+          window.location.href = "/";
         }
 
         return Promise.reject(error);
@@ -687,7 +689,6 @@ function App() {
           }
         />
 
-        {/* add test case */}
         <Route
           path="/single-project/:projectId/scenario/:scenarioId/add-test-case"
           element={
@@ -708,7 +709,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* all test cases for a project */}
         <Route
           path="/single-project/:projectId/all-test-cases"
           element={
@@ -729,7 +729,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* get test case by id */}
         <Route
           path="/get-test-case/:id"
           element={
@@ -750,7 +749,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* test case detail (update) */}
         <Route
           path="/test-case-detail/:id"
           element={
@@ -771,7 +769,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* test case dashboard */}
         <Route
           path="/test-case-dashboard"
           element={
@@ -792,7 +789,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* traceability matrix */}
         <Route
           path="/single-project/:projectId/traceability-matrix"
           element={
@@ -814,7 +810,6 @@ function App() {
           }
         />
 
-        {/* assign task */}
         <Route
           path="/projects/:projectId/assign-task"
           element={
@@ -833,7 +828,6 @@ function App() {
             </PrivateRoute>
           }
         />
-        {/* view all tasks in project */}
         <Route
           path="/single-project/:projectId/view-all-tasks"
           element={
@@ -855,7 +849,6 @@ function App() {
           }
         />
 
-        {/* defects */}
         <Route
           path="/single-project/:projectId/add-defect"
           element={
@@ -973,7 +966,6 @@ function App() {
           }
         />
 
-        {/* assigned projects & tasks */}
         <Route
           path="/user-assigned-projects/:userId"
           element={
@@ -1033,7 +1025,6 @@ function App() {
           }
         />
 
-        {/* PM & Dev Lead Dashboards */}
         <Route
           path="/project-manager-dashboard"
           element={
@@ -1064,7 +1055,6 @@ function App() {
           }
         />
 
-        {/* requirements */}
         <Route
           path="/create-requirement/:projectId"
           element={
@@ -1137,7 +1127,6 @@ function App() {
           }
         />
 
-        {/* events */}
         <Route
           path="/create-event"
           element={
@@ -1204,7 +1193,6 @@ function App() {
           }
         />
 
-        {/* attendance */}
         <Route
           path="/create-attendance"
           element={
@@ -1252,7 +1240,6 @@ function App() {
           }
         />
 
-        {/* notifications */}
         <Route
           path="/create-notification"
           element={
@@ -1296,7 +1283,6 @@ function App() {
           }
         />
 
-        {/* contact/messages */}
         <Route
           path="/all-messages"
           element={
@@ -1338,7 +1324,6 @@ function App() {
           }
         />
 
-        {/* to do task module routes  */}
         <Route
           path="/create-todo-list"
           element={
@@ -1361,7 +1346,6 @@ function App() {
           }
         />
 
-        {/* selenium operation pages  */}
         <Route
           path="/text-operations"
           element={
@@ -1452,8 +1436,6 @@ function App() {
           }
         />
 
-        {/* test execution pages.  */}
-
         <Route
           path="/single-project/:projectId/add-test-execution"
           element={
@@ -1495,8 +1477,6 @@ function App() {
             </PrivateRoute>
           }
         />
-
-        {/* job pages  */}
 
         <Route
           path="/create-job"
@@ -1542,8 +1522,6 @@ function App() {
           }
         />
 
-        {/* internship pages  */}
-
         <Route
           path="/create-internship"
           element={
@@ -1588,8 +1566,6 @@ function App() {
           }
         />
 
-        {/* careers path s  */}
-
         <Route
           path="/careers"
           element={
@@ -1621,7 +1597,6 @@ function App() {
           }
         />
 
-        {/* 404s */}
         <Route
           path="/page-not-found"
           element={

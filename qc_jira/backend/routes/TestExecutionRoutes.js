@@ -76,11 +76,9 @@ router.post(
   testExecutionCtrl.bulkLinkDefect,
 );
 
-// Bulk soft delete
-router.post(
-  "/test-executions/bulk-delete",
-  userCtrl.authenticateToken,
-  testExecutionCtrl.bulkDelete,
-);
+// IMPORTANT:
+// Removed bulk-delete route because bulkDelete does not exist
+// in the new TestExecutionController.
+// If you want bulk delete also, I can give you that controller function too.
 
 module.exports = router;

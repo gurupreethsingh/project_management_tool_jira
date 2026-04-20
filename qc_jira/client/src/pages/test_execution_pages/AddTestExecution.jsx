@@ -7,7 +7,6 @@ import React, {
   useMemo,
   useRef,
   useState,
-  memo,
 } from "react";
 import axios from "axios";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -15,16 +14,19 @@ import { motion } from "framer-motion";
 import globalBackendRoute from "../../config/Config";
 import {
   FaArrowLeft,
+  FaCheckCircle,
   FaClipboardList,
-  FaCodeBranch,
   FaDesktop,
   FaFilter,
   FaInfoCircle,
   FaLayerGroup,
+  FaMobileAlt,
   FaPlus,
   FaProjectDiagram,
   FaSave,
   FaSearch,
+  FaServer,
+  FaTabletAlt,
   FaTasks,
   FaTimes,
   FaTrashAlt,
@@ -34,7 +36,7 @@ import {
 const EXECUTION_STATUS = ["Not Run", "Pass", "Fail", "Blocked", "Skipped"];
 const EXECUTION_TYPES = ["Manual", "Automation", "Both"];
 const ENVIRONMENTS = ["QA", "UAT", "Staging", "Production", "Dev"];
-const DEVICES = ["Desktop", "Mobile", "Tablet", "API"];
+const RUN_TYPES = ["Desktop", "Mobile", "Tablet", "API"];
 
 const INITIAL_TOAST = Object.freeze({
   open: false,
@@ -48,22 +50,14 @@ const EMPTY_ATTACHMENT = Object.freeze({
   file_type: "",
 });
 
-const EMPTY_STEP = Object.freeze({
-  step_number: 1,
-  action_description: "",
-  input_data: "",
-  expected_result: "",
-  actual_result: "",
-  status: "Not Run",
-  remark: "",
-});
-
-// ✅ stronger visible field styling
 const INPUT_CLASS =
   "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-800 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
 
 const READONLY_INPUT_CLASS =
   "mt-2 w-full rounded-2xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none cursor-not-allowed";
+
+const TEXTAREA_CLASS =
+  "mt-2 w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 shadow-sm outline-none transition-all duration-200 placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 min-h-[96px] resize-y";
 
 function safeTrim(value = "") {
   return String(value || "").trim();
@@ -73,6 +67,10 @@ function normalizeText(value) {
   return String(value ?? "")
     .replace(/\s+/g, " ")
     .trim();
+}
+
+function normalizeArray(value) {
+  return Array.isArray(value) ? value : [];
 }
 
 function getAuthToken() {
@@ -224,60 +222,15 @@ function normalizeTestCase(item, projectId = "", scenarioId = "") {
   };
 }
 
-function normalizeStepStatusForExecution(value = "") {
-  const raw = safeTrim(value).toLowerCase();
-  if (raw === "pass") return "Pass";
-  if (raw === "fail") return "Fail";
-  if (raw === "blocked") return "Blocked";
-  if (raw === "skipped") return "Skipped";
-  return "Not Run";
-}
+function deriveExecutionStatusFromRuns(runs = []) {
+  if (!Array.isArray(runs) || runs.length === 0) return "Not Run";
 
-function normalizeStepsFromTestCase(testCase) {
-  return Array.isArray(testCase?.testing_steps)
-    ? testCase.testing_steps.map((step, idx) => ({
-        step_number: Number(step?.step_number || step?.stepNumber || idx + 1),
-        action_description: safeTrim(
-          step?.action_description || step?.action || step?.step_action,
-        ),
-        input_data: safeTrim(step?.input_data || step?.input || ""),
-        expected_result: safeTrim(
-          step?.expected_result || step?.expected || "",
-        ),
-        actual_result: safeTrim(step?.actual_result || ""),
-        status: normalizeStepStatusForExecution(step?.status),
-        remark: safeTrim(step?.remark || step?.remarks || ""),
-      }))
-    : [];
-}
-
-function normalizeStepsFromPrefill(prefillSteps) {
-  return Array.isArray(prefillSteps)
-    ? prefillSteps.map((step, idx) => ({
-        step_number: Number(step?.step_number || idx + 1),
-        action_description: safeTrim(step?.action_description || ""),
-        input_data: safeTrim(step?.input_data || ""),
-        expected_result: safeTrim(step?.expected_result || ""),
-        actual_result: safeTrim(step?.actual_result || ""),
-        status: normalizeStepStatusForExecution(step?.status),
-        remark: safeTrim(step?.remark || ""),
-      }))
-    : [];
-}
-
-function deriveExecutionStatusFromSteps(steps = []) {
-  if (!steps.length) return "Not Run";
-
-  const statuses = steps.map((step) => safeTrim(step?.status));
+  const statuses = runs.map((run) => safeTrim(run?.execution_status));
 
   if (statuses.includes("Fail")) return "Fail";
   if (statuses.includes("Blocked")) return "Blocked";
-
-  const allSkipped = statuses.every((s) => s === "Skipped");
-  if (allSkipped) return "Skipped";
-
-  const allPassed = statuses.every((s) => s === "Pass");
-  if (allPassed) return "Pass";
+  if (statuses.every((s) => s === "Skipped")) return "Skipped";
+  if (statuses.every((s) => s === "Pass")) return "Pass";
 
   return "Not Run";
 }
@@ -297,7 +250,52 @@ async function requestFirstSuccess(urls = [], config = {}) {
   throw lastError;
 }
 
-const Toast = memo(function Toast({ toast, onClose }) {
+function makeEmptyRun(index = 0, runType = "Desktop", environment = "QA") {
+  return {
+    run_number: index + 1,
+    run_label: `Run ${index + 1}`,
+    run_type: runType,
+    environment,
+    browser: "",
+    browser_version: "",
+    operating_system: "",
+    operating_system_version: "",
+    device_name: "",
+    device_brand: "",
+    screen_resolution: "",
+    client_tool: "",
+    app_version: "",
+    is_mobile: runType === "Mobile",
+    is_real_device: false,
+    execution_status: "Not Run",
+    expected_result_snapshot: "",
+    actual_result: "",
+    remarks: "",
+    linked_bug_ids: [],
+    attachments: [],
+    executed_steps: [],
+  };
+}
+
+function getRunIcon(runType) {
+  if (runType === "Mobile") return <FaMobileAlt className="text-emerald-600" />;
+  if (runType === "Tablet") return <FaTabletAlt className="text-violet-600" />;
+  if (runType === "API") return <FaServer className="text-amber-600" />;
+  return <FaDesktop className="text-sky-600" />;
+}
+
+function getStatusBadgeClass(status) {
+  if (status === "Pass")
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (status === "Fail") return "border-rose-200 bg-rose-50 text-rose-700";
+  if (status === "Blocked")
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  if (status === "Skipped")
+    return "border-slate-200 bg-slate-100 text-slate-700";
+  return "border-indigo-200 bg-indigo-50 text-indigo-700";
+}
+
+function Toast({ toast, onClose }) {
   if (!toast.open) return null;
 
   const isSuccess = toast.type === "success";
@@ -343,13 +341,15 @@ const Toast = memo(function Toast({ toast, onClose }) {
       </div>
     </div>
   );
-});
+}
 
-const StatCard = memo(function StatCard({ icon, label, value }) {
+function StatCard({ icon, label, value }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3">
+    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
       <div className="flex items-start gap-2.5">
-        <span className="form-icon-badge shrink-0">{icon}</span>
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100">
+          {icon}
+        </span>
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
             {label}
@@ -361,25 +361,30 @@ const StatCard = memo(function StatCard({ icon, label, value }) {
       </div>
     </div>
   );
-});
+}
 
-const SectionTitle = memo(function SectionTitle({ icon, title, hint }) {
+function SectionTitle({ icon, title, hint, action = null }) {
   return (
-    <div className="flex items-start gap-3 mb-3">
-      <span className="form-icon-badge shrink-0">{icon}</span>
-      <div>
-        <div className="text-sm sm:text-base font-semibold text-slate-900">
-          {title}
+    <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex items-start gap-3">
+        <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 shrink-0">
+          {icon}
+        </span>
+        <div>
+          <div className="text-sm sm:text-base font-semibold text-slate-900">
+            {title}
+          </div>
+          {hint ? (
+            <div className="text-xs text-slate-500 mt-0.5">{hint}</div>
+          ) : null}
         </div>
-        {hint ? (
-          <div className="text-xs text-slate-500 mt-0.5">{hint}</div>
-        ) : null}
       </div>
+      {action}
     </div>
   );
-});
+}
 
-function AddTestExecution() {
+export default function AddTestExecution() {
   const navigate = useNavigate();
   const location = useLocation();
   const { projectId } = useParams();
@@ -401,21 +406,17 @@ function AddTestExecution() {
   const API = useMemo(
     () => ({
       createExecution: `${globalBackendRoute}/api/test-executions`,
-
       projectUrls: [
         `${globalBackendRoute}/api/single-project/${projectId}`,
         `${globalBackendRoute}/api/single-projects/${projectId}`,
         `${globalBackendRoute}/api/projects/${projectId}`,
       ],
-
-      // ✅ reordered to avoid noisy 404 first
       modulesUrls: [
         `${globalBackendRoute}/api/single-project/${projectId}/view-all-modules`,
         `${globalBackendRoute}/api/single-projects/${projectId}/view-all-modules`,
         `${globalBackendRoute}/api/modules/project/${projectId}`,
         `${globalBackendRoute}/api/projects/${projectId}/modules`,
       ],
-
       scenariosUrls: [
         `${globalBackendRoute}/api/single-project/${projectId}/view-all-scenarios`,
         `${globalBackendRoute}/api/single-projects/${projectId}/view-all-scenarios`,
@@ -423,7 +424,6 @@ function AddTestExecution() {
         `${globalBackendRoute}/api/single-projects/${projectId}/all-scenarios`,
         `${globalBackendRoute}/api/projects/${projectId}/scenarios`,
       ],
-
       testCasesUrls: [
         `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
         `${globalBackendRoute}/api/single-projects/${projectId}/all-test-cases`,
@@ -458,25 +458,14 @@ function AddTestExecution() {
   const [form, setForm] = useState({
     build_name_or_number: "",
     execution_type: "Manual",
-    execution_status: "Not Run",
     environment: "QA",
-    browser: "",
-    browser_version: "",
-    operating_system: "",
-    device_type: "Desktop",
-    device_name: "",
     assigned_to: "",
     assigned_to_name: "",
     reviewed_by: "",
     reviewed_by_name: "",
-    expected_result_snapshot: "",
-    actual_result: "",
     execution_notes: "",
     remarks: "",
-    linked_defect_ids: [],
-    linked_bug_ids: [],
-    attachments: [],
-    executed_steps: [],
+    execution_runs: [],
   });
 
   useEffect(() => {
@@ -491,10 +480,9 @@ function AddTestExecution() {
 
   const filteredModules = useMemo(() => {
     let rows = selectedProjectId
-      ? modules.filter((m) => {
-          if (!m.project) return true;
-          return String(m.project) === String(selectedProjectId);
-        })
+      ? modules.filter(
+          (m) => !m.project || String(m.project) === String(selectedProjectId),
+        )
       : modules;
 
     if (safeTrim(moduleSearch)) {
@@ -517,10 +505,9 @@ function AddTestExecution() {
     let rows = scenarios;
 
     if (selectedProjectId) {
-      rows = rows.filter((s) => {
-        if (!s.project) return true;
-        return String(s.project) === String(selectedProjectId);
-      });
+      rows = rows.filter(
+        (s) => !s.project || String(s.project) === String(selectedProjectId),
+      );
     }
 
     if (selectedModuleId) {
@@ -558,17 +545,18 @@ function AddTestExecution() {
     let rows = testCases;
 
     if (selectedProjectId) {
-      rows = rows.filter((tc) => {
-        if (!tc.project_id) return true;
-        return String(tc.project_id) === String(selectedProjectId);
-      });
+      rows = rows.filter(
+        (tc) =>
+          !tc.project_id || String(tc.project_id) === String(selectedProjectId),
+      );
     }
 
     if (selectedScenarioId) {
-      rows = rows.filter((tc) => {
-        if (!tc.scenario_id) return true;
-        return String(tc.scenario_id) === String(selectedScenarioId);
-      });
+      rows = rows.filter(
+        (tc) =>
+          !tc.scenario_id ||
+          String(tc.scenario_id) === String(selectedScenarioId),
+      );
     }
 
     if (safeTrim(testCaseSearch)) {
@@ -593,6 +581,11 @@ function AddTestExecution() {
     [filteredTestCases, testCases, selectedTestCaseId],
   );
 
+  const overallStatus = useMemo(
+    () => deriveExecutionStatusFromRuns(form.execution_runs),
+    [form.execution_runs],
+  );
+
   const stats = useMemo(
     () => ({
       project: selectedProject?.name || executionPrefill?.project_name || "—",
@@ -605,6 +598,8 @@ function AddTestExecution() {
         selectedTestCase?.test_case_number ||
         executionPrefill?.test_case_number ||
         "—",
+      runs: form.execution_runs.length || 0,
+      overallStatus,
     }),
     [
       selectedProject,
@@ -612,6 +607,8 @@ function AddTestExecution() {
       selectedScenario,
       selectedTestCase,
       executionPrefill,
+      form.execution_runs.length,
+      overallStatus,
     ],
   );
 
@@ -660,11 +657,9 @@ function AddTestExecution() {
       const modulesPayload = extractList(modulesRes?.data).map((item) =>
         normalizeModule(item, projectId),
       );
-
       const scenariosPayload = extractList(scenariosRes?.data).map(
         normalizeScenario,
       );
-
       const testCasesPayload = extractList(testCasesRes?.data).map((item) =>
         normalizeTestCase(item, projectId),
       );
@@ -694,27 +689,27 @@ function AddTestExecution() {
     setSelectedModuleId("");
     setSelectedScenarioId("");
     setSelectedTestCaseId("");
+    setForm((prev) => ({ ...prev, execution_runs: [] }));
   }, [selectedProjectId, isPrefilledFromTestCase]);
 
   useEffect(() => {
     if (isPrefilledFromTestCase) return;
     setSelectedScenarioId("");
     setSelectedTestCaseId("");
+    setForm((prev) => ({ ...prev, execution_runs: [] }));
   }, [selectedModuleId, isPrefilledFromTestCase]);
 
   useEffect(() => {
     if (isPrefilledFromTestCase) return;
     setSelectedTestCaseId("");
+    setForm((prev) => ({ ...prev, execution_runs: [] }));
   }, [selectedScenarioId, isPrefilledFromTestCase]);
 
-  // ✅ prefill from test case detail page navigation state
   useEffect(() => {
     if (!executionPrefill) return;
 
     const incomingProjectId = executionPrefill.project_id || projectId || "";
-    if (incomingProjectId) {
-      setSelectedProjectId(String(incomingProjectId));
-    }
+    if (incomingProjectId) setSelectedProjectId(String(incomingProjectId));
 
     setForm((prev) => ({
       ...prev,
@@ -724,24 +719,13 @@ function AddTestExecution() {
         "",
       execution_type:
         executionPrefill.test_execution_type || prev.execution_type || "Manual",
-      expected_result_snapshot:
-        executionPrefill.expected_result_snapshot ||
-        prev.expected_result_snapshot ||
-        "",
       execution_notes:
         executionPrefill.brief_description || prev.execution_notes || "",
-      // auto assign current user by default
       assigned_to: prev.assigned_to || currentUser?.id || "",
       assigned_to_name: prev.assigned_to_name || currentUser?.name || "",
-      executed_steps:
-        Array.isArray(executionPrefill.executed_steps) &&
-        executionPrefill.executed_steps.length
-          ? normalizeStepsFromPrefill(executionPrefill.executed_steps)
-          : prev.executed_steps,
     }));
   }, [executionPrefill, projectId, currentUser]);
 
-  // ✅ auto-select linked dropdowns after master data loads
   useEffect(() => {
     if (!executionPrefill) return;
 
@@ -755,9 +739,7 @@ function AddTestExecution() {
       const matchedScenario = scenarios.find(
         (s) => String(s._id) === wantedScenarioId,
       );
-      if (matchedScenario) {
-        setSelectedScenarioId(String(matchedScenario._id));
-      }
+      if (matchedScenario) setSelectedScenarioId(String(matchedScenario._id));
     }
 
     if (wantedModuleName && modules.length > 0) {
@@ -767,152 +749,207 @@ function AddTestExecution() {
             .trim()
             .toLowerCase() === wantedModuleName,
       );
-      if (matchedModule) {
-        setSelectedModuleId(String(matchedModule._id));
-      }
+      if (matchedModule) setSelectedModuleId(String(matchedModule._id));
     }
 
     if (wantedTestCaseId && testCases.length > 0) {
       const matchedTestCase = testCases.find(
         (tc) => String(tc._id) === wantedTestCaseId,
       );
-      if (matchedTestCase) {
-        setSelectedTestCaseId(String(matchedTestCase._id));
-      }
+      if (matchedTestCase) setSelectedTestCaseId(String(matchedTestCase._id));
     }
   }, [executionPrefill, modules, scenarios, testCases]);
 
-  // ✅ when user picks a test case manually, pull steps + build + exec type
   useEffect(() => {
-    if (!selectedTestCase) {
-      if (!isPrefilledFromTestCase) {
-        setForm((prev) => ({
-          ...prev,
-          expected_result_snapshot: "",
-          executed_steps: [],
-        }));
-      }
-      return;
-    }
+    if (!selectedTestCase) return;
 
-    const steps = normalizeStepsFromTestCase(selectedTestCase);
-
-    setForm((prev) => ({
-      ...prev,
-      build_name_or_number:
-        prev.build_name_or_number ||
-        selectedTestCase.build_name_or_number ||
-        "",
-      execution_type:
-        selectedTestCase.test_execution_type || prev.execution_type || "Manual",
-      expected_result_snapshot:
-        prev.expected_result_snapshot ||
-        steps
-          .map((s) => safeTrim(s.expected_result))
-          .filter(Boolean)
-          .join(" | "),
-      executed_steps:
-        prev.executed_steps && prev.executed_steps.length
-          ? prev.executed_steps
-          : steps,
-    }));
-  }, [selectedTestCase, isPrefilledFromTestCase]);
-
-  // ✅ auto derive overall execution status from step results
-  useEffect(() => {
-    const derivedStatus = deriveExecutionStatusFromSteps(form.executed_steps);
     setForm((prev) => {
-      if (prev.execution_status === derivedStatus) return prev;
-      return { ...prev, execution_status: derivedStatus };
+      if (
+        Array.isArray(prev.execution_runs) &&
+        prev.execution_runs.length > 0
+      ) {
+        return {
+          ...prev,
+          build_name_or_number:
+            prev.build_name_or_number ||
+            selectedTestCase.build_name_or_number ||
+            "",
+          execution_type:
+            selectedTestCase.test_execution_type ||
+            prev.execution_type ||
+            "Manual",
+        };
+      }
+
+      return {
+        ...prev,
+        build_name_or_number:
+          prev.build_name_or_number ||
+          selectedTestCase.build_name_or_number ||
+          "",
+        execution_type:
+          selectedTestCase.test_execution_type ||
+          prev.execution_type ||
+          "Manual",
+        execution_runs: [makeEmptyRun(0, "Desktop", prev.environment || "QA")],
+      };
     });
-  }, [form.executed_steps]);
+  }, [selectedTestCase]);
 
   const updateField = useCallback((field, value) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   }, []);
 
-  const updateStepField = useCallback((index, field, value) => {
-    setForm((prev) => {
-      const nextSteps = [...prev.executed_steps];
-      nextSteps[index] = { ...nextSteps[index], [field]: value };
-      return { ...prev, executed_steps: nextSteps };
-    });
-  }, []);
-
-  const addStep = useCallback(() => {
-    if (isPrefilledFromTestCase) return;
-
+  const addRun = useCallback((runType = "Desktop") => {
     setForm((prev) => ({
       ...prev,
-      executed_steps: [
-        ...prev.executed_steps,
-        {
-          ...EMPTY_STEP,
-          step_number: prev.executed_steps.length + 1,
-        },
+      execution_runs: [
+        ...prev.execution_runs,
+        makeEmptyRun(
+          prev.execution_runs.length,
+          runType,
+          prev.environment || "QA",
+        ),
       ],
     }));
-  }, [isPrefilledFromTestCase]);
+  }, []);
 
-  const removeStep = useCallback(
-    (index) => {
-      if (isPrefilledFromTestCase) return;
+  const removeRun = useCallback((runIndex) => {
+    setForm((prev) => ({
+      ...prev,
+      execution_runs: prev.execution_runs
+        .filter((_, index) => index !== runIndex)
+        .map((run, index) => ({
+          ...run,
+          run_number: index + 1,
+          run_label: `Run ${index + 1}`,
+        })),
+    }));
+  }, []);
 
-      setForm((prev) => ({
-        ...prev,
-        executed_steps: prev.executed_steps
-          .filter((_, i) => i !== index)
-          .map((step, idx) => ({
-            ...step,
-            step_number: idx + 1,
-          })),
-      }));
+  const updateRunField = useCallback((runIndex, field, value) => {
+    setForm((prev) => {
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      nextRuns[runIndex] = { ...current, [field]: value };
+
+      if (field === "run_type") {
+        nextRuns[runIndex].is_mobile = value === "Mobile";
+      }
+
+      return { ...prev, execution_runs: nextRuns };
+    });
+  }, []);
+
+  const addRunBugId = useCallback((runIndex) => {
+    setForm((prev) => {
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      nextRuns[runIndex] = {
+        ...current,
+        linked_bug_ids: [...normalizeArray(current.linked_bug_ids), ""],
+      };
+
+      return { ...prev, execution_runs: nextRuns };
+    });
+  }, []);
+
+  const updateRunBugId = useCallback((runIndex, bugIndex, value) => {
+    setForm((prev) => {
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      const nextBugIds = [...normalizeArray(current.linked_bug_ids)];
+      nextBugIds[bugIndex] = value;
+
+      nextRuns[runIndex] = {
+        ...current,
+        linked_bug_ids: nextBugIds,
+      };
+
+      return { ...prev, execution_runs: nextRuns };
+    });
+  }, []);
+
+  const removeRunBugId = useCallback((runIndex, bugIndex) => {
+    setForm((prev) => {
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      nextRuns[runIndex] = {
+        ...current,
+        linked_bug_ids: normalizeArray(current.linked_bug_ids).filter(
+          (_, i) => i !== bugIndex,
+        ),
+      };
+
+      return { ...prev, execution_runs: nextRuns };
+    });
+  }, []);
+
+  const addRunAttachment = useCallback((runIndex) => {
+    setForm((prev) => {
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      nextRuns[runIndex] = {
+        ...current,
+        attachments: [
+          ...normalizeArray(current.attachments),
+          { ...EMPTY_ATTACHMENT },
+        ],
+      };
+
+      return { ...prev, execution_runs: nextRuns };
+    });
+  }, []);
+
+  const updateRunAttachment = useCallback(
+    (runIndex, attachmentIndex, field, value) => {
+      setForm((prev) => {
+        const nextRuns = [...prev.execution_runs];
+        const current = nextRuns[runIndex];
+        if (!current) return prev;
+
+        const nextAttachments = [...normalizeArray(current.attachments)];
+        nextAttachments[attachmentIndex] = {
+          ...nextAttachments[attachmentIndex],
+          [field]: value,
+        };
+
+        nextRuns[runIndex] = {
+          ...current,
+          attachments: nextAttachments,
+        };
+
+        return { ...prev, execution_runs: nextRuns };
+      });
     },
-    [isPrefilledFromTestCase],
+    [],
   );
 
-  const addAttachment = useCallback(() => {
-    setForm((prev) => ({
-      ...prev,
-      attachments: [...prev.attachments, { ...EMPTY_ATTACHMENT }],
-    }));
-  }, []);
-
-  const updateAttachment = useCallback((index, field, value) => {
+  const removeRunAttachment = useCallback((runIndex, attachmentIndex) => {
     setForm((prev) => {
-      const next = [...prev.attachments];
-      next[index] = { ...next[index], [field]: value };
-      return { ...prev, attachments: next };
+      const nextRuns = [...prev.execution_runs];
+      const current = nextRuns[runIndex];
+      if (!current) return prev;
+
+      nextRuns[runIndex] = {
+        ...current,
+        attachments: normalizeArray(current.attachments).filter(
+          (_, i) => i !== attachmentIndex,
+        ),
+      };
+
+      return { ...prev, execution_runs: nextRuns };
     });
-  }, []);
-
-  const removeAttachment = useCallback((index) => {
-    setForm((prev) => ({
-      ...prev,
-      attachments: prev.attachments.filter((_, i) => i !== index),
-    }));
-  }, []);
-
-  const addLinkedBugId = useCallback(() => {
-    setForm((prev) => ({
-      ...prev,
-      linked_bug_ids: [...prev.linked_bug_ids, ""],
-    }));
-  }, []);
-
-  const updateBugId = useCallback((index, value) => {
-    setForm((prev) => {
-      const next = [...prev.linked_bug_ids];
-      next[index] = value;
-      return { ...prev, linked_bug_ids: next };
-    });
-  }, []);
-
-  const removeBugId = useCallback((index) => {
-    setForm((prev) => ({
-      ...prev,
-      linked_bug_ids: prev.linked_bug_ids.filter((_, i) => i !== index),
-    }));
   }, []);
 
   const validateForm = useCallback(() => {
@@ -934,10 +971,19 @@ function AddTestExecution() {
       return false;
     }
 
+    if (
+      !Array.isArray(form.execution_runs) ||
+      form.execution_runs.length === 0
+    ) {
+      showToast("error", "Please add at least one execution run.");
+      return false;
+    }
+
     return true;
   }, [
     currentUser?.id,
     currentUser?.name,
+    form.execution_runs,
     selectedModuleId,
     selectedProjectId,
     selectedScenarioId,
@@ -948,67 +994,86 @@ function AddTestExecution() {
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault();
-
       if (!validateForm()) return;
 
       try {
         setSaving(true);
 
-        const payload = {
-          project_id: selectedProjectId,
-          module_id: selectedModuleId,
-          scenario_id: selectedScenarioId,
-          test_case_id: selectedTestCaseId,
-
-          build_name_or_number: normalizeText(form.build_name_or_number),
-          execution_type: form.execution_type,
-          execution_status: deriveExecutionStatusFromSteps(form.executed_steps),
-          environment: normalizeText(form.environment) || "QA",
-          browser: normalizeText(form.browser),
-          browser_version: normalizeText(form.browser_version),
-          operating_system: normalizeText(form.operating_system),
-          device_type: normalizeText(form.device_type) || "Desktop",
-          device_name: normalizeText(form.device_name),
-
-          assigned_to: normalizeText(form.assigned_to) || null,
-          assigned_to_name: normalizeText(form.assigned_to_name),
-
-          executed_by: currentUser.id,
-          executed_by_name: currentUser.name,
-
-          reviewed_by: normalizeText(form.reviewed_by) || null,
-          reviewed_by_name: normalizeText(form.reviewed_by_name),
-
-          expected_result_snapshot: normalizeText(
-            form.expected_result_snapshot,
-          ),
-          actual_result: normalizeText(form.actual_result),
-          execution_notes: normalizeText(form.execution_notes),
-          remarks: normalizeText(form.remarks),
-
-          executed_steps: form.executed_steps.map((step, idx) => ({
-            step_number: Number(step.step_number || idx + 1),
-            action_description: normalizeText(step.action_description),
-            input_data: normalizeText(step.input_data),
-            expected_result: normalizeText(step.expected_result),
-            actual_result: normalizeText(step.actual_result),
-            status: EXECUTION_STATUS.includes(step.status)
-              ? step.status
-              : "Not Run",
-            remark: normalizeText(step.remark),
-          })),
-
-          linked_bug_ids: form.linked_bug_ids
+        const normalizedRuns = form.execution_runs.map((run, runIndex) => ({
+          run_number: Number(run.run_number || runIndex + 1),
+          run_label: normalizeText(run.run_label) || `Run ${runIndex + 1}`,
+          run_type: normalizeText(run.run_type) || "Desktop",
+          environment: normalizeText(run.environment) || "QA",
+          browser: normalizeText(run.browser),
+          browser_version: normalizeText(run.browser_version),
+          operating_system: normalizeText(run.operating_system),
+          operating_system_version: normalizeText(run.operating_system_version),
+          device_name: normalizeText(run.device_name),
+          device_brand: normalizeText(run.device_brand),
+          screen_resolution: normalizeText(run.screen_resolution),
+          client_tool: normalizeText(run.client_tool),
+          app_version: normalizeText(run.app_version),
+          is_mobile: Boolean(run.is_mobile),
+          is_real_device: Boolean(run.is_real_device),
+          execution_status: EXECUTION_STATUS.includes(run.execution_status)
+            ? run.execution_status
+            : "Not Run",
+          expected_result_snapshot: normalizeText(run.expected_result_snapshot),
+          actual_result: normalizeText(run.actual_result),
+          remarks: normalizeText(run.remarks),
+          linked_bug_ids: normalizeArray(run.linked_bug_ids)
             .map((id) => normalizeText(id))
             .filter(Boolean),
-
-          attachments: form.attachments
+          attachments: normalizeArray(run.attachments)
             .map((att) => ({
               file_name: normalizeText(att.file_name),
               file_url: normalizeText(att.file_url),
               file_type: normalizeText(att.file_type),
             }))
             .filter((att) => att.file_name || att.file_url || att.file_type),
+          executed_steps: [],
+        }));
+
+        const payload = {
+          project_id: selectedProjectId,
+          module_id: selectedModuleId,
+          scenario_id: selectedScenarioId,
+          test_case_id: selectedTestCaseId,
+          build_name_or_number: normalizeText(form.build_name_or_number),
+          execution_type: form.execution_type,
+          execution_status: deriveExecutionStatusFromRuns(normalizedRuns),
+          environment: normalizeText(form.environment) || "QA",
+          browser: normalizeText(normalizedRuns[0]?.browser || ""),
+          browser_version: normalizeText(
+            normalizedRuns[0]?.browser_version || "",
+          ),
+          operating_system: normalizeText(
+            normalizedRuns[0]?.operating_system || "",
+          ),
+          device_type: normalizeText(normalizedRuns[0]?.run_type || "Desktop"),
+          device_name: normalizeText(normalizedRuns[0]?.device_name || ""),
+          assigned_to: normalizeText(form.assigned_to) || null,
+          assigned_to_name: normalizeText(form.assigned_to_name),
+          executed_by: currentUser.id,
+          executed_by_name: currentUser.name,
+          reviewed_by: normalizeText(form.reviewed_by) || null,
+          reviewed_by_name: normalizeText(form.reviewed_by_name),
+          expected_result_snapshot: normalizeText(
+            normalizedRuns[0]?.expected_result_snapshot || "",
+          ),
+          actual_result: normalizeText(normalizedRuns[0]?.actual_result || ""),
+          execution_notes: normalizeText(form.execution_notes),
+          remarks: normalizeText(form.remarks),
+          executed_steps: [],
+          execution_runs: normalizedRuns,
+          linked_bug_ids: [
+            ...new Set(
+              normalizedRuns.flatMap((run) =>
+                normalizeArray(run.linked_bug_ids),
+              ),
+            ),
+          ],
+          attachments: [],
         };
 
         const res = await axios.post(API.createExecution, payload, {
@@ -1058,24 +1123,24 @@ function AddTestExecution() {
   );
 
   const prefilledBadgeText = isPrefilledFromTestCase
-    ? "Prefilled from Test Case · TestRail/JIRA execution flow"
+    ? "Prefilled from Test Case"
     : "";
 
   return (
-    <div className="service-page-wrap min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50">
       <Toast toast={toast} onClose={closeToast} />
 
-      <main className="service-main-wrap">
-        <div className="mx-auto container px-4 sm:px-6 lg:px-10 py-6 sm:py-8 lg:py-10">
+      <main>
+        <div className="mx-auto max-w-[1550px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <motion.section
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
           >
-            <div className="glass-card rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 lg:p-6">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div>
-                  <div className="flex items-center gap-3">
+            <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
+              <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                <div className="max-w-4xl">
+                  <div className="flex flex-wrap items-center gap-3">
                     <button
                       type="button"
                       onClick={() => navigate(-1)}
@@ -1085,22 +1150,28 @@ function AddTestExecution() {
                       Back
                     </button>
 
-                    <p className="service-badge-heading text-base font-semibold text-slate-900 sm:text-lg">
-                      Create test execution
-                    </p>
+                    <span className="inline-flex items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 sm:text-sm">
+                      <FaClipboardList className="mr-2" />
+                      Simple Test Execution Report
+                    </span>
+
+                    {isPrefilledFromTestCase ? (
+                      <span className="inline-flex items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 sm:text-sm">
+                        <FaCheckCircle className="mr-2" />
+                        {prefilledBadgeText}
+                      </span>
+                    ) : null}
                   </div>
 
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                    Link execution with module, scenario, and test case for this
-                    project. Then capture environment, browser, step results,
-                    execution notes, linked bugs, and attachments.
-                  </p>
+                  <h1 className="mt-4 text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
+                    Clean execution entry for real users
+                  </h1>
 
-                  {isPrefilledFromTestCase && (
-                    <div className="mt-3 inline-flex items-center rounded-2xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 sm:text-sm">
-                      {prefilledBadgeText}
-                    </div>
-                  )}
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[15px]">
+                    Pick the test case once. Then just add simple runs for
+                    browser, OS, mobile, tablet, or API. No step entry here.
+                    Steps stay only inside the test case.
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -1123,7 +1194,7 @@ function AddTestExecution() {
                 </div>
               </div>
 
-              <div className="mt-5 grid grid-cols-2 gap-3 xl:grid-cols-4">
+              <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
                 <StatCard
                   icon={<FaProjectDiagram className="text-indigo-600" />}
                   label="Project"
@@ -1135,7 +1206,7 @@ function AddTestExecution() {
                   value={stats.module}
                 />
                 <StatCard
-                  icon={<FaCodeBranch className="text-amber-600" />}
+                  icon={<FaFilter className="text-amber-600" />}
                   label="Scenario"
                   value={stats.scenario}
                 />
@@ -1144,25 +1215,30 @@ function AddTestExecution() {
                   label="Test Case"
                   value={stats.testCase}
                 />
+                <StatCard
+                  icon={<FaDesktop className="text-violet-600" />}
+                  label="Runs"
+                  value={String(stats.runs)}
+                />
+                <StatCard
+                  icon={<FaUser className="text-rose-600" />}
+                  label="Overall Status"
+                  value={stats.overallStatus}
+                />
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <form onSubmit={handleSubmit} className="mt-6 space-y-6">
+                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                   <SectionTitle
                     icon={<FaProjectDiagram className="text-indigo-600" />}
-                    title="Link execution"
-                    hint="This page is already tied to one project. Select the module, scenario, and test case."
+                    title="Select the test case"
+                    hint="Choose the correct module, scenario, and test case. The step details stay inside the test case."
                   />
 
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaProjectDiagram className="text-[11px]" />
-                          </span>
-                          <span>Project</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Project
                       </label>
                       <input
                         value={
@@ -1172,18 +1248,13 @@ function AddTestExecution() {
                         }
                         readOnly
                         className={READONLY_INPUT_CLASS}
-                        placeholder="Project auto-selected from route"
+                        placeholder="Project from route"
                       />
                     </div>
 
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaFilter className="text-[11px]" />
-                          </span>
-                          <span>Search Modules</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Search Modules
                       </label>
                       <input
                         value={moduleSearch}
@@ -1199,13 +1270,8 @@ function AddTestExecution() {
                     </div>
 
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaFilter className="text-[11px]" />
-                          </span>
-                          <span>Search Scenarios</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Search Scenarios
                       </label>
                       <input
                         value={scenarioSearch}
@@ -1221,13 +1287,8 @@ function AddTestExecution() {
                     </div>
 
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaFilter className="text-[11px]" />
-                          </span>
-                          <span>Search Test Cases</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Search Test Cases
                       </label>
                       <input
                         value={testCaseSearch}
@@ -1243,13 +1304,8 @@ function AddTestExecution() {
                     </div>
 
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaLayerGroup className="text-[11px]" />
-                          </span>
-                          <span>Module</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Module
                       </label>
                       <select
                         value={selectedModuleId}
@@ -1274,13 +1330,8 @@ function AddTestExecution() {
                     </div>
 
                     <div>
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaCodeBranch className="text-[11px]" />
-                          </span>
-                          <span>Scenario</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Scenario
                       </label>
                       <select
                         value={selectedScenarioId}
@@ -1302,13 +1353,8 @@ function AddTestExecution() {
                     </div>
 
                     <div className="md:col-span-2">
-                      <label className="form-label text-sm font-medium text-slate-700">
-                        <span className="inline-flex items-center gap-2">
-                          <span className="form-icon-badge">
-                            <FaClipboardList className="text-[11px]" />
-                          </span>
-                          <span>Test Case</span>
-                        </span>
+                      <label className="text-sm font-medium text-slate-700">
+                        Test Case
                       </label>
                       <select
                         value={selectedTestCaseId}
@@ -1331,407 +1377,834 @@ function AddTestExecution() {
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaDesktop className="text-sky-600" />}
-                    title="Execution environment"
-                    hint="Capture browser, environment, operating system, device, and execution type."
-                  />
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <input
-                      placeholder="Build Name / Number"
-                      value={form.build_name_or_number}
-                      onChange={(e) =>
-                        updateField("build_name_or_number", e.target.value)
-                      }
-                      className={INPUT_CLASS}
+                <div className="grid gap-6 xl:grid-cols-[1.05fr_1.95fr]">
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <SectionTitle
+                      icon={<FaInfoCircle className="text-sky-600" />}
+                      title="Execution summary"
+                      hint="General details shared across the execution report"
                     />
 
-                    <select
-                      value={form.execution_type}
-                      onChange={(e) =>
-                        updateField("execution_type", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    >
-                      {EXECUTION_TYPES.map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={form.execution_status}
-                      onChange={(e) =>
-                        updateField("execution_status", e.target.value)
-                      }
-                      className={
-                        isPrefilledFromTestCase
-                          ? READONLY_INPUT_CLASS
-                          : INPUT_CLASS
-                      }
-                      disabled={isPrefilledFromTestCase}
-                      title={
-                        isPrefilledFromTestCase
-                          ? "Overall status is auto-calculated from step statuses"
-                          : ""
-                      }
-                    >
-                      {EXECUTION_STATUS.map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
-                    </select>
-
-                    <select
-                      value={form.environment}
-                      onChange={(e) =>
-                        updateField("environment", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    >
-                      {ENVIRONMENTS.map((t) => (
-                        <option key={t}>{t}</option>
-                      ))}
-                    </select>
-
-                    <input
-                      placeholder="Browser"
-                      value={form.browser}
-                      onChange={(e) => updateField("browser", e.target.value)}
-                      className={INPUT_CLASS}
-                    />
-
-                    <input
-                      placeholder="Browser Version"
-                      value={form.browser_version}
-                      onChange={(e) =>
-                        updateField("browser_version", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-
-                    <input
-                      placeholder="Operating System"
-                      value={form.operating_system}
-                      onChange={(e) =>
-                        updateField("operating_system", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-
-                    <select
-                      value={form.device_type}
-                      onChange={(e) =>
-                        updateField("device_type", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    >
-                      {DEVICES.map((d) => (
-                        <option key={d}>{d}</option>
-                      ))}
-                    </select>
-
-                    <input
-                      placeholder="Device Name"
-                      value={form.device_name}
-                      onChange={(e) =>
-                        updateField("device_name", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaUser className="text-violet-600" />}
-                    title="Ownership"
-                    hint="Execution owner, assignee, and reviewer details."
-                  />
-
-                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <input
-                      value={currentUser?.name || ""}
-                      readOnly
-                      className={READONLY_INPUT_CLASS}
-                      placeholder="Executed by"
-                    />
-
-                    <input
-                      placeholder="Assigned To ID"
-                      value={form.assigned_to}
-                      onChange={(e) =>
-                        updateField("assigned_to", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-
-                    <input
-                      placeholder="Assigned To Name"
-                      value={form.assigned_to_name}
-                      onChange={(e) =>
-                        updateField("assigned_to_name", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-
-                    <input
-                      placeholder="Reviewed By ID"
-                      value={form.reviewed_by}
-                      onChange={(e) =>
-                        updateField("reviewed_by", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-
-                    <input
-                      placeholder="Reviewed By Name"
-                      value={form.reviewed_by_name}
-                      onChange={(e) =>
-                        updateField("reviewed_by_name", e.target.value)
-                      }
-                      className={INPUT_CLASS}
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaClipboardList className="text-emerald-600" />}
-                    title="Execution result"
-                    hint="Expected, actual, notes, and overall remarks."
-                  />
-
-                  <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-                    <textarea
-                      placeholder="Expected Result Snapshot"
-                      value={form.expected_result_snapshot}
-                      onChange={(e) =>
-                        updateField("expected_result_snapshot", e.target.value)
-                      }
-                      className={
-                        isPrefilledFromTestCase
-                          ? `${READONLY_INPUT_CLASS} min-h-[110px]`
-                          : `${INPUT_CLASS} min-h-[110px]`
-                      }
-                      readOnly={isPrefilledFromTestCase}
-                    />
-
-                    <textarea
-                      placeholder="Actual Result"
-                      value={form.actual_result}
-                      onChange={(e) =>
-                        updateField("actual_result", e.target.value)
-                      }
-                      className={`${INPUT_CLASS} min-h-[110px]`}
-                    />
-
-                    <textarea
-                      placeholder="Execution Notes"
-                      value={form.execution_notes}
-                      onChange={(e) =>
-                        updateField("execution_notes", e.target.value)
-                      }
-                      className={`${INPUT_CLASS} min-h-[110px]`}
-                    />
-
-                    <textarea
-                      placeholder="Remarks"
-                      value={form.remarks}
-                      onChange={(e) => updateField("remarks", e.target.value)}
-                      className={`${INPUT_CLASS} min-h-[110px]`}
-                    />
-                  </div>
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaTasks className="text-amber-600" />}
-                    title="Execution steps"
-                    hint="Auto-populated from the selected test case. Steps are locked like TestRail."
-                  />
-
-                  <div className="space-y-4">
-                    {form.executed_steps.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-600">
-                        No steps available yet.
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Build Name / Number
+                        </label>
+                        <input
+                          value={form.build_name_or_number}
+                          onChange={(e) =>
+                            updateField("build_name_or_number", e.target.value)
+                          }
+                          className={INPUT_CLASS}
+                          placeholder="e.g. v2.4.11"
+                        />
                       </div>
-                    ) : (
-                      form.executed_steps.map((step, idx) => (
-                        <div
-                          key={`step-${idx}`}
-                          className="rounded-2xl border border-slate-200 p-4 bg-slate-50"
+
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Execution Type
+                        </label>
+                        <select
+                          value={form.execution_type}
+                          onChange={(e) =>
+                            updateField("execution_type", e.target.value)
+                          }
+                          className={INPUT_CLASS}
                         >
-                          <div className="text-sm font-semibold text-slate-800 mb-2">
-                            Step {idx + 1}
-                          </div>
+                          {EXECUTION_TYPES.map((item) => (
+                            <option key={item} value={item}>
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                            <input
-                              value={step.step_number}
-                              readOnly
-                              className={READONLY_INPUT_CLASS}
-                            />
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Default Environment
+                        </label>
+                        <select
+                          value={form.environment}
+                          onChange={(e) =>
+                            updateField("environment", e.target.value)
+                          }
+                          className={INPUT_CLASS}
+                        >
+                          {ENVIRONMENTS.map((item) => (
+                            <option key={item} value={item}>
+                              {item}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
 
-                            <select
-                              value={step.status}
-                              onChange={(e) =>
-                                updateStepField(idx, "status", e.target.value)
-                              }
-                              className={INPUT_CLASS}
-                            >
-                              {EXECUTION_STATUS.map((s) => (
-                                <option key={s}>{s}</option>
-                              ))}
-                            </select>
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Executed By
+                        </label>
+                        <input
+                          value={currentUser?.name || ""}
+                          readOnly
+                          className={READONLY_INPUT_CLASS}
+                        />
+                      </div>
 
-                            <textarea
-                              value={step.action_description}
-                              readOnly
-                              className={`${READONLY_INPUT_CLASS} min-h-[80px]`}
-                            />
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Assigned To ID
+                        </label>
+                        <input
+                          value={form.assigned_to}
+                          onChange={(e) =>
+                            updateField("assigned_to", e.target.value)
+                          }
+                          className={INPUT_CLASS}
+                          placeholder="Optional"
+                        />
+                      </div>
 
-                            <textarea
-                              value={step.input_data}
-                              readOnly
-                              className={`${READONLY_INPUT_CLASS} min-h-[80px]`}
-                            />
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Assigned To Name
+                        </label>
+                        <input
+                          value={form.assigned_to_name}
+                          onChange={(e) =>
+                            updateField("assigned_to_name", e.target.value)
+                          }
+                          className={INPUT_CLASS}
+                          placeholder="Optional"
+                        />
+                      </div>
 
-                            <textarea
-                              value={step.expected_result}
-                              readOnly
-                              className={`${READONLY_INPUT_CLASS} min-h-[80px]`}
-                            />
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Reviewed By Name
+                        </label>
+                        <input
+                          value={form.reviewed_by_name}
+                          onChange={(e) =>
+                            updateField("reviewed_by_name", e.target.value)
+                          }
+                          className={INPUT_CLASS}
+                          placeholder="Optional"
+                        />
+                      </div>
 
-                            <textarea
-                              value={step.actual_result}
-                              onChange={(e) =>
-                                updateStepField(
-                                  idx,
-                                  "actual_result",
-                                  e.target.value,
-                                )
-                              }
-                              className={`${INPUT_CLASS} min-h-[80px]`}
-                              placeholder="Enter actual result"
-                            />
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Execution Notes
+                        </label>
+                        <textarea
+                          value={form.execution_notes}
+                          onChange={(e) =>
+                            updateField("execution_notes", e.target.value)
+                          }
+                          className={TEXTAREA_CLASS}
+                          placeholder="Any general notes about this execution"
+                        />
+                      </div>
 
-                            <textarea
-                              value={step.remark}
-                              onChange={(e) =>
-                                updateStepField(idx, "remark", e.target.value)
-                              }
-                              className={`${INPUT_CLASS} min-h-[80px] xl:col-span-2`}
-                              placeholder="Remark"
-                            />
-                          </div>
+                      <div>
+                        <label className="text-sm font-medium text-slate-700">
+                          Overall Remarks
+                        </label>
+                        <textarea
+                          value={form.remarks}
+                          onChange={(e) =>
+                            updateField("remarks", e.target.value)
+                          }
+                          className={TEXTAREA_CLASS}
+                          placeholder="Any final comments for the whole report"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                    <SectionTitle
+                      icon={<FaDesktop className="text-indigo-600" />}
+                      title="Execution runs"
+                      hint="One run = one browser / OS / device result. Keep it fast and simple."
+                      action={
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => addRun("Desktop")}
+                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                          >
+                            <FaDesktop className="mr-2" />
+                            Desktop
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addRun("Mobile")}
+                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                          >
+                            <FaMobileAlt className="mr-2" />
+                            Mobile
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addRun("Tablet")}
+                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                          >
+                            <FaTabletAlt className="mr-2" />
+                            Tablet
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => addRun("API")}
+                            className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                          >
+                            <FaServer className="mr-2" />
+                            API
+                          </button>
                         </div>
-                      ))
-                    )}
+                      }
+                    />
+
+                    <div className="space-y-4">
+                      {form.execution_runs.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">
+                          Select a test case to start. Then add one or more
+                          simple execution runs.
+                        </div>
+                      ) : (
+                        form.execution_runs.map((run, runIndex) => (
+                          <div
+                            key={`run-${runIndex}`}
+                            className="rounded-3xl border border-slate-200 bg-slate-50/70 p-4"
+                          >
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                              <div className="flex items-center gap-3">
+                                <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                                  {getRunIcon(run.run_type)}
+                                </span>
+                                <div>
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <h3 className="text-base font-semibold text-slate-900">
+                                      {run.run_label || `Run ${run.run_number}`}
+                                    </h3>
+                                    <span
+                                      className={[
+                                        "inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-semibold",
+                                        getStatusBadgeClass(
+                                          run.execution_status,
+                                        ),
+                                      ].join(" ")}
+                                    >
+                                      {run.execution_status}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-slate-500">
+                                    Just fill environment, browser/device,
+                                    result, and remarks.
+                                  </p>
+                                </div>
+                              </div>
+
+                              <button
+                                type="button"
+                                onClick={() => removeRun(runIndex)}
+                                disabled={form.execution_runs.length === 1}
+                                className="inline-flex items-center rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 disabled:opacity-50"
+                              >
+                                <FaTrashAlt className="mr-2" />
+                                Remove
+                              </button>
+                            </div>
+
+                            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                              <div>
+                                <label className="text-sm font-medium text-slate-700">
+                                  Run Label
+                                </label>
+                                <input
+                                  value={run.run_label}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "run_label",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={INPUT_CLASS}
+                                  placeholder={`Run ${runIndex + 1}`}
+                                />
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-medium text-slate-700">
+                                  Run Type
+                                </label>
+                                <select
+                                  value={run.run_type}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "run_type",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={INPUT_CLASS}
+                                >
+                                  {RUN_TYPES.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-medium text-slate-700">
+                                  Environment
+                                </label>
+                                <select
+                                  value={run.environment}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "environment",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={INPUT_CLASS}
+                                >
+                                  {ENVIRONMENTS.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-sm font-medium text-slate-700">
+                                  Status
+                                </label>
+                                <select
+                                  value={run.execution_status}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "execution_status",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={INPUT_CLASS}
+                                >
+                                  {EXECUTION_STATUS.map((item) => (
+                                    <option key={item} value={item}>
+                                      {item}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+
+                              {(run.run_type === "Desktop" ||
+                                run.run_type === "Mobile" ||
+                                run.run_type === "Tablet") && (
+                                <>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Browser
+                                    </label>
+                                    <input
+                                      value={run.browser}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "browser",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Chrome / Safari / Edge"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Browser Version
+                                    </label>
+                                    <input
+                                      value={run.browser_version}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "browser_version",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="e.g. 124"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Operating System
+                                    </label>
+                                    <input
+                                      value={run.operating_system}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "operating_system",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder={
+                                        run.run_type === "Desktop"
+                                          ? "Windows / macOS / Linux"
+                                          : "Android / iOS"
+                                      }
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      OS Version
+                                    </label>
+                                    <input
+                                      value={run.operating_system_version}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "operating_system_version",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="e.g. 11 / 17"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              {run.run_type === "Desktop" && (
+                                <div>
+                                  <label className="text-sm font-medium text-slate-700">
+                                    Resolution
+                                  </label>
+                                  <input
+                                    value={run.screen_resolution}
+                                    onChange={(e) =>
+                                      updateRunField(
+                                        runIndex,
+                                        "screen_resolution",
+                                        e.target.value,
+                                      )
+                                    }
+                                    className={INPUT_CLASS}
+                                    placeholder="1920x1080"
+                                  />
+                                </div>
+                              )}
+
+                              {(run.run_type === "Mobile" ||
+                                run.run_type === "Tablet") && (
+                                <>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Device Name / Model
+                                    </label>
+                                    <input
+                                      value={run.device_name}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "device_name",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="iPhone 15 / Galaxy S24 / iPad"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Device Brand
+                                    </label>
+                                    <input
+                                      value={run.device_brand}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "device_brand",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Apple / Samsung"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      App Version
+                                    </label>
+                                    <input
+                                      value={run.app_version}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "app_version",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Optional"
+                                    />
+                                  </div>
+
+                                  <div className="flex items-center gap-6 mt-9">
+                                    <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                                      <input
+                                        type="checkbox"
+                                        className="accent-indigo-600"
+                                        checked={Boolean(run.is_real_device)}
+                                        onChange={(e) =>
+                                          updateRunField(
+                                            runIndex,
+                                            "is_real_device",
+                                            e.target.checked,
+                                          )
+                                        }
+                                      />
+                                      Real Device
+                                    </label>
+                                  </div>
+                                </>
+                              )}
+
+                              {run.run_type === "API" && (
+                                <>
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Client / Tool
+                                    </label>
+                                    <input
+                                      value={run.client_tool}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "client_tool",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Postman / Swagger / REST Assured"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      OS / Host
+                                    </label>
+                                    <input
+                                      value={run.operating_system}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "operating_system",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Windows / Linux"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      OS Version
+                                    </label>
+                                    <input
+                                      value={run.operating_system_version}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "operating_system_version",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Optional"
+                                    />
+                                  </div>
+
+                                  <div>
+                                    <label className="text-sm font-medium text-slate-700">
+                                      Runner / Browser
+                                    </label>
+                                    <input
+                                      value={run.browser}
+                                      onChange={(e) =>
+                                        updateRunField(
+                                          runIndex,
+                                          "browser",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className={INPUT_CLASS}
+                                      placeholder="Optional"
+                                    />
+                                  </div>
+                                </>
+                              )}
+
+                              <div className="xl:col-span-2">
+                                <label className="text-sm font-medium text-slate-700">
+                                  Expected Snapshot
+                                </label>
+                                <textarea
+                                  value={run.expected_result_snapshot}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "expected_result_snapshot",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={TEXTAREA_CLASS}
+                                  placeholder="Short expected result on this platform"
+                                />
+                              </div>
+
+                              <div className="xl:col-span-2">
+                                <label className="text-sm font-medium text-slate-700">
+                                  Actual Result
+                                </label>
+                                <textarea
+                                  value={run.actual_result}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "actual_result",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={TEXTAREA_CLASS}
+                                  placeholder="What actually happened"
+                                />
+                              </div>
+
+                              <div className="xl:col-span-4">
+                                <label className="text-sm font-medium text-slate-700">
+                                  Run Remarks
+                                </label>
+                                <textarea
+                                  value={run.remarks}
+                                  onChange={(e) =>
+                                    updateRunField(
+                                      runIndex,
+                                      "remarks",
+                                      e.target.value,
+                                    )
+                                  }
+                                  className={TEXTAREA_CLASS}
+                                  placeholder="Notes, failure reason, blocker, observations"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="mt-5 grid gap-4 xl:grid-cols-2">
+                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <SectionTitle
+                                  icon={
+                                    <FaInfoCircle className="text-rose-600" />
+                                  }
+                                  title="Linked Bug IDs"
+                                  hint="Optional"
+                                  action={
+                                    <button
+                                      type="button"
+                                      onClick={() => addRunBugId(runIndex)}
+                                      className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                                    >
+                                      <FaPlus className="mr-2" />
+                                      Add Bug ID
+                                    </button>
+                                  }
+                                />
+
+                                <div className="space-y-3">
+                                  {normalizeArray(run.linked_bug_ids).length ===
+                                  0 ? (
+                                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                                      No bug ids added for this run.
+                                    </div>
+                                  ) : (
+                                    normalizeArray(run.linked_bug_ids).map(
+                                      (bugId, bugIndex) => (
+                                        <div
+                                          key={`run-${runIndex}-bug-${bugIndex}`}
+                                          className="flex items-center gap-2"
+                                        >
+                                          <input
+                                            value={bugId}
+                                            onChange={(e) =>
+                                              updateRunBugId(
+                                                runIndex,
+                                                bugIndex,
+                                                e.target.value,
+                                              )
+                                            }
+                                            className={INPUT_CLASS}
+                                            placeholder="BUG-104 / DEF-22"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              removeRunBugId(runIndex, bugIndex)
+                                            }
+                                            className="inline-flex items-center rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+                                          >
+                                            <FaTrashAlt />
+                                          </button>
+                                        </div>
+                                      ),
+                                    )
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <SectionTitle
+                                  icon={
+                                    <FaInfoCircle className="text-sky-600" />
+                                  }
+                                  title="Attachments"
+                                  hint="Optional"
+                                  action={
+                                    <button
+                                      type="button"
+                                      onClick={() => addRunAttachment(runIndex)}
+                                      className="inline-flex items-center rounded-xl border border-slate-300 bg-white px-3 py-2 text-xs font-medium text-slate-700 hover:bg-slate-50 sm:text-sm"
+                                    >
+                                      <FaPlus className="mr-2" />
+                                      Add Attachment
+                                    </button>
+                                  }
+                                />
+
+                                <div className="space-y-3">
+                                  {normalizeArray(run.attachments).length ===
+                                  0 ? (
+                                    <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-sm text-slate-500">
+                                      No attachments added for this run.
+                                    </div>
+                                  ) : (
+                                    normalizeArray(run.attachments).map(
+                                      (attachment, attachmentIndex) => (
+                                        <div
+                                          key={`run-${runIndex}-attachment-${attachmentIndex}`}
+                                          className="rounded-2xl border border-slate-200 bg-slate-50 p-3"
+                                        >
+                                          <div className="grid grid-cols-1 gap-3">
+                                            <input
+                                              value={attachment.file_name}
+                                              onChange={(e) =>
+                                                updateRunAttachment(
+                                                  runIndex,
+                                                  attachmentIndex,
+                                                  "file_name",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className={INPUT_CLASS}
+                                              placeholder="File name"
+                                            />
+                                            <input
+                                              value={attachment.file_url}
+                                              onChange={(e) =>
+                                                updateRunAttachment(
+                                                  runIndex,
+                                                  attachmentIndex,
+                                                  "file_url",
+                                                  e.target.value,
+                                                )
+                                              }
+                                              className={INPUT_CLASS}
+                                              placeholder="File URL"
+                                            />
+                                            <div className="flex items-center gap-2">
+                                              <input
+                                                value={attachment.file_type}
+                                                onChange={(e) =>
+                                                  updateRunAttachment(
+                                                    runIndex,
+                                                    attachmentIndex,
+                                                    "file_type",
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                className={INPUT_CLASS}
+                                                placeholder="image/png / video/mp4 / text/plain"
+                                              />
+                                              <button
+                                                type="button"
+                                                onClick={() =>
+                                                  removeRunAttachment(
+                                                    runIndex,
+                                                    attachmentIndex,
+                                                  )
+                                                }
+                                                className="inline-flex items-center rounded-xl border border-rose-200 bg-white px-3 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50"
+                                              >
+                                                <FaTrashAlt />
+                                              </button>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      ),
+                                    )
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                 </div>
 
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaCodeBranch className="text-rose-600" />}
-                    title="Linked bug IDs"
-                    hint="Link defects (JIRA/TestRail style)."
-                  />
+                <div className="sticky bottom-4 z-20 rounded-2xl border border-slate-200 bg-white/95 backdrop-blur p-4 shadow-lg">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">
+                        Ready to save execution?
+                      </div>
+                      <div className="text-xs text-slate-500 mt-0.5">
+                        This page stores only execution runs. Test steps remain
+                        inside the test case.
+                      </div>
+                    </div>
 
-                  <div className="flex justify-end mb-3">
-                    <button
-                      type="button"
-                      onClick={addLinkedBugId}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
-                    >
-                      <FaPlus /> Add Bug ID
-                    </button>
-                  </div>
-
-                  {form.linked_bug_ids.map((bugId, idx) => (
-                    <div key={idx} className="flex gap-2 mb-2">
-                      <input
-                        value={bugId}
-                        onChange={(e) => updateBugId(idx, e.target.value)}
-                        className="input flex-1"
-                        placeholder="BUG-123 / JIRA ID"
-                      />
-                      <button
-                        onClick={() => removeBugId(idx)}
-                        className="px-3 border rounded-xl text-red-600"
+                    <div className="flex flex-wrap gap-2">
+                      <Link
+                        to={`/single-project/${projectId}/all-test-executions`}
+                        className="inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50"
                       >
-                        <FaTrashAlt />
+                        Cancel
+                      </Link>
+
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="inline-flex items-center justify-center rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 disabled:opacity-60"
+                      >
+                        <FaSave className="mr-2" />
+                        {saving ? "Saving..." : "Create Test Execution"}
                       </button>
                     </div>
-                  ))}
-                </div>
-
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                  <SectionTitle
-                    icon={<FaDesktop className="text-cyan-600" />}
-                    title="Attachments"
-                    hint="Evidence (screenshots, logs, videos)"
-                  />
-
-                  <div className="flex justify-end mb-3">
-                    <button
-                      type="button"
-                      onClick={addAttachment}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
-                    >
-                      <FaPlus /> Add Attachment
-                    </button>
                   </div>
-
-                  {form.attachments.map((att, idx) => (
-                    <div
-                      key={idx}
-                      className="grid grid-cols-1 xl:grid-cols-3 gap-3 mb-3"
-                    >
-                      <input
-                        value={att.file_name}
-                        onChange={(e) =>
-                          updateAttachment(idx, "file_name", e.target.value)
-                        }
-                        className="input"
-                        placeholder="File Name"
-                      />
-                      <input
-                        value={att.file_url}
-                        onChange={(e) =>
-                          updateAttachment(idx, "file_url", e.target.value)
-                        }
-                        className="input"
-                        placeholder="URL"
-                      />
-                      <input
-                        value={att.file_type}
-                        onChange={(e) =>
-                          updateAttachment(idx, "file_type", e.target.value)
-                        }
-                        className="input"
-                        placeholder="Type (image/log/video)"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-3">
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="bg-slate-900 text-white px-5 py-2 rounded-xl hover:bg-slate-800"
-                  >
-                    <FaSave className="inline mr-2" />
-                    {saving ? "Saving..." : "Save Execution"}
-                  </button>
-
-                  <Link
-                    to={`/single-project/${projectId}/all-test-executions`}
-                    className="border px-5 py-2 rounded-xl"
-                  >
-                    Cancel
-                  </Link>
                 </div>
               </form>
             </div>
@@ -1741,5 +2214,3 @@ function AddTestExecution() {
     </div>
   );
 }
-
-export default memo(AddTestExecution);
