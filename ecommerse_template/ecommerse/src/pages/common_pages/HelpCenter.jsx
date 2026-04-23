@@ -20,13 +20,34 @@ import {
 } from "react-icons/fa";
 
 const faqs = [
-  { q: "Where is my order?", a: "Most orders ship in 24–48 hours and arrive in 2–5 business days. Track from Orders → your order." },
-  { q: "Can I change address after ordering?", a: "If the order isn’t packed, you can edit the address from Orders. Otherwise, contact support with the correct address." },
-  { q: "What is your return policy?", a: "Returns within 14 days for eligible items. Keep original packaging/tags. Start from Orders → ‘Start a return’." },
-  { q: "Which payments do you accept?", a: "UPI, debit/credit cards, net banking, select wallets. COD is available on eligible pincodes/orders." },
-  { q: "When will I get my refund?", a: "Prepaid refunds usually reflect in 3–7 business days post quality check. COD refunds go to your selected mode." },
-  { q: "Are my payments secure?", a: "Yes. We use PCI-DSS compliant gateways and encryption. We never store full card numbers." },
-  { q: "Do you provide GST invoices?", a: "Yes. Add your GST number at checkout or in Address Book → Business. Download invoices from Orders." },
+  {
+    q: "Where is my order?",
+    a: "Most orders ship in 24–48 hours and arrive in 2–5 business days. Track from Orders → your order.",
+  },
+  {
+    q: "Can I change address after ordering?",
+    a: "If the order isn’t packed, you can edit the address from Orders. Otherwise, contact support with the correct address.",
+  },
+  {
+    q: "What is your return policy?",
+    a: "Returns within 14 days for eligible items. Keep original packaging/tags. Start from Orders → ‘Start a return’.",
+  },
+  {
+    q: "Which payments do you accept?",
+    a: "UPI, debit/credit cards, net banking, select wallets. COD is available on eligible pincodes/orders.",
+  },
+  {
+    q: "When will I get my refund?",
+    a: "Prepaid refunds usually reflect in 3–7 business days post quality check. COD refunds go to your selected mode.",
+  },
+  {
+    q: "Are my payments secure?",
+    a: "Yes. We use PCI-DSS compliant gateways and encryption. We never store full card numbers.",
+  },
+  {
+    q: "Do you provide GST invoices?",
+    a: "Yes. Add your GST number at checkout or in Address Book → Business. Download invoices from Orders.",
+  },
 ];
 
 export default function HelpCenter() {
@@ -37,7 +58,9 @@ export default function HelpCenter() {
       {/* Header (compact, no gray bg) */}
       <section>
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">Help Center</h1>
+          <h1 className="text-2xl md:text-3xl font-semibold text-slate-800">
+            Help Center
+          </h1>
           <p className="mt-1 text-slate-600 text-sm md:text-base">
             Quick answers about orders, returns, shipping, payments, and more.
           </p>
@@ -61,7 +84,7 @@ export default function HelpCenter() {
               ["#payments", "Payments"],
               ["#account", "Account"],
               ["#faqs", "FAQs"],
-              ["#contact", "Contact"],
+              ["/contact-us", "Contact"],
             ].map(([href, label]) => (
               <a
                 key={href}
@@ -78,18 +101,78 @@ export default function HelpCenter() {
       {/* Quick links grid (compact cards) */}
       <section className="max-w-5xl mx-auto px-4 py-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          <QuickCard id="orders" icon={<FaBoxOpen className="text-slate-500" />} title="Track Order" desc="Live status & ETA." />
-          <QuickCard id="returns" icon={<FaUndo className="text-slate-500" />} title="Returns & Refunds" desc="Window, steps, timelines." />
-          <QuickCard id="shipping" icon={<FaShippingFast className="text-slate-500" />} title="Shipping" desc="Speeds, fees, coverage." />
-          <QuickCard id="" icon={<FaCreditCard className="text-slate-500" />} title="Payments & COD" desc="Methods, charges, limits." />
-          <QuickCard id="" icon={<FaUserShield className="text-slate-500" />} title="Account & Security" desc="Password, 2FA, privacy." />
-          <QuickCard id="" icon={<FaExchangeAlt className="text-slate-500" />} title="Replacements" desc="Damaged/defective items." />
-          <QuickCard id="" icon={<FaMapMarkerAlt className="text-slate-500" />} title="Address Change" desc="Edit after placing order." />
-          <QuickCard id="" icon={<FaGift className="text-slate-500" />} title="Gift Cards & Offers" desc="Redeem & T&C." />
-          <QuickCard id="" icon={<FaReceipt className="text-slate-500" />} title="GST Invoice" desc="Add GST & download invoice." />
-          <QuickCard id="" icon={<FaHeadset className="text-slate-500" />} title="B2B/Wholesale" desc="Bulk & enterprise orders." />
-          <QuickCard id="" icon={<FaMobileAlt className="text-slate-500" />} title="App Troubleshooting" desc="Login, cache, updates." />
-          <QuickCard id="" icon={<FaStore className="text-slate-500" />} title="Pickup & Store" desc="Click & collect options." />
+          <QuickCard
+            id="orders"
+            icon={<FaBoxOpen className="text-slate-500" />}
+            title="Track Order"
+            desc="Live status & ETA."
+          />
+          <QuickCard
+            id="returns"
+            icon={<FaUndo className="text-slate-500" />}
+            title="Returns & Refunds"
+            desc="Window, steps, timelines."
+          />
+          <QuickCard
+            id="shipping"
+            icon={<FaShippingFast className="text-slate-500" />}
+            title="Shipping"
+            desc="Speeds, fees, coverage."
+          />
+          <QuickCard
+            id=""
+            icon={<FaCreditCard className="text-slate-500" />}
+            title="Payments & COD"
+            desc="Methods, charges, limits."
+          />
+          <QuickCard
+            id=""
+            icon={<FaUserShield className="text-slate-500" />}
+            title="Account & Security"
+            desc="Password, 2FA, privacy."
+          />
+          <QuickCard
+            id=""
+            icon={<FaExchangeAlt className="text-slate-500" />}
+            title="Replacements"
+            desc="Damaged/defective items."
+          />
+          <QuickCard
+            id=""
+            icon={<FaMapMarkerAlt className="text-slate-500" />}
+            title="Address Change"
+            desc="Edit after placing order."
+          />
+          <QuickCard
+            id=""
+            icon={<FaGift className="text-slate-500" />}
+            title="Gift Cards & Offers"
+            desc="Redeem & T&C."
+          />
+          <QuickCard
+            id=""
+            icon={<FaReceipt className="text-slate-500" />}
+            title="GST Invoice"
+            desc="Add GST & download invoice."
+          />
+          <QuickCard
+            id=""
+            icon={<FaHeadset className="text-slate-500" />}
+            title="B2B/Wholesale"
+            desc="Bulk & enterprise orders."
+          />
+          <QuickCard
+            id=""
+            icon={<FaMobileAlt className="text-slate-500" />}
+            title="App Troubleshooting"
+            desc="Login, cache, updates."
+          />
+          <QuickCard
+            id=""
+            icon={<FaStore className="text-slate-500" />}
+            title="Pickup & Store"
+            desc="Click & collect options."
+          />
         </div>
       </section>
 
@@ -108,7 +191,9 @@ export default function HelpCenter() {
                 <span className="font-medium text-slate-800">{item.q}</span>
                 <span className="text-slate-400">{open === i ? "−" : "+"}</span>
               </div>
-              {open === i && <p className="mt-1.5 text-sm text-slate-600">{item.a}</p>}
+              {open === i && (
+                <p className="mt-1.5 text-sm text-slate-600">{item.a}</p>
+              )}
             </button>
           ))}
         </div>
@@ -117,16 +202,29 @@ export default function HelpCenter() {
       {/* Contact (compact) */}
       <section id="contact" className="border-t border-slate-200">
         <div className="max-w-5xl mx-auto px-4 py-6">
-          <h3 className="text-base font-semibold text-slate-800">Need more help?</h3>
-          <p className="text-slate-600 text-sm">9:00–18:00 IST, Mon–Sat (excl. public holidays)</p>
+          <h3 className="text-base font-semibold text-slate-800">
+            Need more help?
+          </h3>
+          <p className="text-slate-600 text-sm">
+            9:00–18:00 IST, Mon–Sat (excl. public holidays)
+          </p>
           <div className="mt-3 flex flex-col sm:flex-row gap-2">
-            <a href="tel:+910000000000" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50">
+            <a
+              href="tel:+910000000000"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50"
+            >
               <FaPhoneAlt className="text-slate-500" /> Call Support
             </a>
-            <a href="mailto:support@example.com" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50">
+            <a
+              href="mailto:support@example.com"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50"
+            >
               <FaEnvelope className="text-slate-500" /> Email Support
             </a>
-            <a href="#faqs" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50">
+            <a
+              href="#faqs"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-slate-700 hover:bg-slate-50"
+            >
               <FaQuestionCircle className="text-slate-500" /> Browse FAQs
             </a>
           </div>
