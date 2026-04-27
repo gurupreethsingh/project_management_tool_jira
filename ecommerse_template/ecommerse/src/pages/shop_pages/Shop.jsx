@@ -96,6 +96,90 @@ function getSubcategoryNameFromProduct(p) {
   return safeUpper(p?.subcategory?.subcategory_name || p?.subcategory_name);
 }
 
+// ✅ Hidden automation attributes for Selenium verification.
+// These values are not visible in the UI, but Selenium can read them using getAttribute().
+function toDataValue(value) {
+  if (value === null || value === undefined) return "";
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (item === null || item === undefined) return "";
+        if (typeof item === "object")
+          return item._id || item.name || item.title || JSON.stringify(item);
+        return String(item);
+      })
+      .filter(Boolean)
+      .join("|");
+  }
+  if (typeof value === "object") {
+    if (value.$oid) return String(value.$oid);
+    if (value._id) return String(value._id);
+    if (value.name) return String(value.name);
+    if (value.title) return String(value.title);
+    return JSON.stringify(value);
+  }
+  return String(value);
+}
+
+function getProductAutomationAttrs(product, viewModeName = "", index = 0) {
+  const sellingPrice =
+    product?.selling_price ?? product?.price ?? product?.final_price ?? "";
+  const displayPrice =
+    product?.display_price ?? product?.actual_price ?? product?.mrp_price ?? "";
+  const productId = getId(product?._id);
+  const categoryId = getCategoryIdFromProduct(product);
+  const subcategoryId = getSubcategoryIdFromProduct(product);
+  const categoryName = getCategoryNameFromProduct(product);
+  const subcategoryName = getSubcategoryNameFromProduct(product);
+
+  return {
+    "data-testid": "shop-product-card",
+    "data-product-view": viewModeName,
+    "data-product-index": toDataValue(index),
+    "data-product-id": toDataValue(productId),
+    "data-product-name": toDataValue(product?.product_name),
+    "data-product-slug": toDataValue(product?.slug),
+    "data-product-image": toDataValue(product?.product_image),
+    "data-product-all-images": toDataValue(product?.all_product_images),
+    "data-product-description": toDataValue(product?.description),
+    "data-product-category-id": toDataValue(categoryId),
+    "data-product-category-name": toDataValue(categoryName),
+    "data-product-subcategory-id": toDataValue(subcategoryId),
+    "data-product-subcategory-name": toDataValue(subcategoryName),
+    "data-product-brand": toDataValue(product?.brand),
+    "data-product-barcode": toDataValue(product?.barcode),
+    "data-product-stock": toDataValue(product?.stock),
+    "data-product-total-sold": toDataValue(product?.total_products_sold),
+    "data-product-outlet-id": toDataValue(getId(product?.outlet)),
+    "data-product-color": toDataValue(product?.color),
+    "data-product-material": toDataValue(product?.material),
+    "data-product-ratings": toDataValue(product?.ratings ?? product?.rating),
+    "data-product-avg-rating": toDataValue(product?.avg_rating),
+    "data-product-total-reviews": toDataValue(product?.total_reviews),
+    "data-product-tags": toDataValue(product?.tags),
+    "data-product-section-to-appear": toDataValue(product?.section_to_appear),
+    "data-product-featured": toDataValue(product?.featured),
+    "data-product-new-arrival": toDataValue(product?.is_new_arrival),
+    "data-product-trending": toDataValue(product?.is_trending),
+    "data-product-availability-status": toDataValue(
+      product?.availability_status,
+    ),
+    "data-product-discount": toDataValue(product?.discount),
+    "data-product-min-purchase-qty": toDataValue(product?.min_purchase_qty),
+    "data-product-max-purchase-qty": toDataValue(product?.max_purchase_qty),
+    "data-product-vendor-id": toDataValue(getId(product?.vendor)),
+    "data-product-popularity-score": toDataValue(
+      product?.popularity_score ?? product?.views,
+    ),
+    "data-product-is-deleted": toDataValue(product?.isDeleted),
+    "data-product-version": toDataValue(product?.version),
+    "data-product-created-at": toDataValue(product?.createdAt),
+    "data-product-updated-at": toDataValue(product?.updatedAt),
+    "data-product-selling-price": toDataValue(sellingPrice),
+    "data-product-display-price": toDataValue(displayPrice),
+  };
+}
+
 // ===============================================================
 // ✅ MAIN SHOP
 // ===============================================================
@@ -1213,13 +1297,14 @@ function ProductsGridUI({
         return (
           <motion.div
             key={id}
+            {...getProductAutomationAttrs(p, "grid", idx)}
             whileHover={{ y: -4 }}
             transition={{ duration: 0.18 }}
             className="group relative rounded-2xl bg-white"
             style={{ boxShadow: "none", border: "none" }}
           >
             <div
-              className="relative rounded-2xl overflow-hidden cursor-pointer bg-gradient-to-br from-orange-50 via-white to-amber-50 p-3"
+              className="relative rounded-2xl overflow-hidden cursor-pointer bg-white to-amber-50 p-3"
               onClick={() => onOpen(p?._id)}
             >
               <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl">
@@ -1320,7 +1405,7 @@ function ProductsCardUI({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-12">
-      {products.map((product) => {
+      {products.map((product, idx) => {
         const inWish = Array.isArray(wishlist)
           ? wishlist.includes(product._id)
           : false;
@@ -1342,6 +1427,7 @@ function ProductsCardUI({
         return (
           <motion.div
             key={product._id}
+            {...getProductAutomationAttrs(product, "card", idx)}
             whileHover={{ y: -6, scale: 1.01 }}
             transition={{ duration: 0.2 }}
             className="relative group rounded-2xl bg-white overflow-hidden"
@@ -1458,7 +1544,7 @@ function ProductsListUI({
 }) {
   return (
     <div className="space-y-10 sm:space-y-12">
-      {products.map((product) => {
+      {products.map((product, idx) => {
         const inWish = Array.isArray(wishlist)
           ? wishlist.includes(product._id)
           : false;
@@ -1476,6 +1562,7 @@ function ProductsListUI({
         return (
           <motion.div
             key={product._id}
+            {...getProductAutomationAttrs(product, "list", idx)}
             whileHover={{ y: -2 }}
             transition={{ duration: 0.16 }}
             className="flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"

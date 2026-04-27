@@ -10,14 +10,11 @@ import {
 import { FaHeart } from "react-icons/fa";
 import { FiShoppingCart } from "react-icons/fi";
 import { MdOutlineCameraswitch } from "react-icons/md";
-import axios from "axios";
-
 import { AuthContext } from "../../components/auth_components/AuthManager";
 import { CartContext } from "../../components/cart_components/CartContext";
 import { WishlistContext } from "../../components/wishlist_components/WishlistContext";
 import CustomeLink from "../common_components/CustomeLink";
 import MiniCart from "../../pages/cart_pages/MiniCart";
-import globalBackendRoute from "../../config/Config";
 
 const GUEST_CART_KEY = "guest_cart_items";
 const GUEST_CART_EVENT = "guest-cart-updated";
@@ -59,76 +56,41 @@ export default function Header() {
 
   const navigate = useNavigate();
 
-  const syncCartCount = useCallback(async () => {
-    const token = getStoredToken();
+  const syncCartCount = useCallback(
+    (eventDetail = null) => {
+      const token = getStoredToken();
 
-    if (!token) {
-      const guestCount = getGuestCartTotalCount();
-      setGuestCartCount(guestCount);
-      setLiveCartCount(guestCount);
-      return;
-    }
-
-    try {
-      const possibleUrls = [
-        `${globalBackendRoute}/api/get-cart-items`,
-        `${globalBackendRoute}/api/cart/get-cart-items`,
-        `${globalBackendRoute}/api/cart/items`,
-      ];
-
-      let synced = false;
-
-      for (const url of possibleUrls) {
-        try {
-          const response = await axios.get(url, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-
-          const items =
-            response?.data?.items ||
-            response?.data?.cart?.items ||
-            response?.data?.cartItems ||
-            response?.data?.data?.items ||
-            response?.data ||
-            [];
-
-          if (Array.isArray(items)) {
-            const total = items.reduce((sum, item) => {
-              const qty = Number(item?.quantity || 1);
-              return sum + (qty > 0 ? qty : 1);
-            }, 0);
-
-            setLiveCartCount(total);
-            synced = true;
-            break;
-          }
-        } catch {
-          // try next
-        }
+      // Guest user: read only localStorage. Never call backend from Header.
+      if (!token) {
+        const guestCount = getGuestCartTotalCount();
+        setGuestCartCount(guestCount);
+        setLiveCartCount(guestCount);
+        return;
       }
 
-      if (!synced) {
-        if (Array.isArray(cartItems)) {
-          const total = cartItems.reduce((sum, item) => {
+      // Logged-in user: prefer CartContext.
+      const contextTotal = Array.isArray(cartItems)
+        ? cartItems.reduce((sum, item) => {
             const qty = Number(item?.quantity || 1);
             return sum + (qty > 0 ? qty : 1);
-          }, 0);
-          setLiveCartCount(total);
-        } else {
-          setLiveCartCount(0);
-        }
+          }, 0)
+        : 0;
+
+      // If Homepage/Shop dispatched a cart event before context finished updating,
+      // update the badge immediately using the event quantity.
+      if (eventDetail?.quantity && Number(eventDetail.quantity) > 0) {
+        setLiveCartCount((prev) => Math.max(prev, contextTotal) + 1);
+        return;
       }
-    } catch (error) {
-      console.error("Header cart sync error:", error);
-      setLiveCartCount(0);
-    }
-  }, [cartItems]);
+
+      setLiveCartCount(contextTotal);
+    },
+    [cartItems],
+  );
 
   useEffect(() => {
-    const handleCartUpdate = () => {
-      syncCartCount();
+    const handleCartUpdate = (event) => {
+      syncCartCount(event?.detail || null);
     };
 
     window.addEventListener(GUEST_CART_EVENT, handleCartUpdate);
