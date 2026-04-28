@@ -909,9 +909,9 @@ const SingleProduct = () => {
 
 export default SingleProduct;
 
-// till here original.
+// till here original.   with rating ,
 
-// // showing all the attributes of the single product.
+// showing all the attributes of the single product.
 // import React, {
 //   useEffect,
 //   useState,
