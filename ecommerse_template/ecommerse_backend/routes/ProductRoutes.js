@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+
 const ProductController = require("../controllers/ProductController");
 const { verifyToken } = require("../middleware/AuthMiddleware");
 
@@ -17,18 +18,22 @@ router.post(
 
 // ========== READ ==========
 router.get("/all-added-products", ProductController.getAllProducts);
+
 router.get(
   "/get-single-added-product-by-id/:id",
   ProductController.getProductById,
 );
+
 router.get(
   "/get-products-by-category/:categoryId",
   ProductController.getProductsByCategory,
 );
+
 router.get(
   "/get-products-by-subcategory/:subCategoryId",
   ProductController.getProductsBySubCategory,
 );
+
 router.get("/get-products-sorted", ProductController.getProductsSorted);
 
 // ========== PERSONALIZED ==========
@@ -43,6 +48,9 @@ router.get(
   verifyToken,
   ProductController.getPopularProductsFromHistoryBrands,
 );
+
+// ========== RATING ==========
+router.post("/products/rate/:id", verifyToken, ProductController.rateProduct);
 
 // ========== UPDATE ==========
 router.put(
@@ -70,22 +78,27 @@ router.delete("/delete-product/:id", ProductController.deleteProductById);
 
 // ========== COUNTS ==========
 router.get("/count-all-products", ProductController.countAllProducts);
+
 router.get(
   "/count-products-by-category",
   ProductController.countProductsByCategory,
 );
+
 router.get(
   "/count-products-by-subcategory",
   ProductController.countProductsBySubCategory,
 );
+
 router.get(
   "/count-products-by-vendor",
   ProductController.countProductsByVendor,
 );
+
 router.get(
   "/count-products-by-status",
   ProductController.countProductsByStatus,
 );
+
 router.get(
   "/count-products-by-section",
   ProductController.countProductsBySection,
@@ -93,5 +106,17 @@ router.get(
 
 // ========== SEARCH ==========
 router.get("/search-products", ProductController.searchProducts);
+
+// ========== PRODUCT QUESTIONS & ANSWERS ==========
+router.post(
+  "/products/:productId/questions",
+  ProductController.askProductQuestion,
+);
+
+router.post(
+  "/products/:productId/questions/:questionId/answers",
+  verifyToken,
+  ProductController.answerProductQuestion,
+);
 
 module.exports = router;

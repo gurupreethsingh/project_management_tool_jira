@@ -860,3 +860,200 @@ exports.searchProducts = async (req, res) => {
     res.status(500).json({ message: "Failed to search products" });
   }
 };
+// POST /api/products/rate/:id
+exports.rateProduct = async (req, res) => {
+  try {
+    const userId = req.user?.id || req.user?._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "You need to login in order to rate this product.",
+      });
+    }
+
+    const rating = Number(req.body.rating);
+
+    if (!rating || rating < 1 || rating > 5) {
+      return res.status(400).json({
+        message: "Please select a valid rating between 1 and 5.",
+      });
+    }
+
+    const product = await Product.findById(req.params.id);
+
+    if (!product || product.isDeleted) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
+
+    if (!Array.isArray(product.reviews)) {
+      product.reviews = [];
+    }
+
+    const existingReview = product.reviews.find((review) => {
+      if (!review?.user) return false;
+      return review.user.toString() === userId.toString();
+    });
+
+    if (existingReview) {
+      existingReview.rating = rating;
+      existingReview.updatedAt = new Date();
+    } else {
+      product.reviews.push({
+        user: userId,
+        rating,
+        createdAt: new Date(),
+      });
+    }
+
+    const validReviews = product.reviews.filter(
+      (review) => Number(review?.rating) >= 1 && Number(review?.rating) <= 5,
+    );
+
+    const totalReviews = validReviews.length;
+
+    const avgRating =
+      totalReviews > 0
+        ? validReviews.reduce((sum, review) => sum + Number(review.rating), 0) /
+          totalReviews
+        : 0;
+
+    product.avg_rating = Number(avgRating.toFixed(1));
+    product.total_reviews = totalReviews;
+    product.ratings = Number(avgRating.toFixed(1));
+
+    const savedProduct = await product.save();
+
+    return res.status(200).json({
+      message: "Rating submitted successfully.",
+      product: savedProduct,
+    });
+  } catch (error) {
+    console.error("Rating Product Error:", error);
+
+    return res.status(500).json({
+      message: "Rating failed. Please try again.",
+      error: error.message,
+    });
+  }
+};
+
+// ======================
+// ❓ Ask Product Question
+// Public route - login not required
+// POST /api/products/:productId/questions
+// ======================
+exports.askProductQuestion = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const question = String(req.body.question || "").trim();
+
+    if (!question) {
+      return res.status(400).json({
+        message: "Question is required.",
+      });
+    }
+
+    const product = await Product.findById(productId);
+
+    if (!product || product.isDeleted) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
+
+    if (!Array.isArray(product.questions)) {
+      product.questions = [];
+    }
+
+    product.questions.push({
+      question,
+      answers: [],
+      createdAt: new Date(),
+    });
+
+    product.updatedAt = Date.now();
+
+    const savedProduct = await product.save();
+
+    return res.status(201).json({
+      message: "Question submitted successfully.",
+      product: savedProduct,
+    });
+  } catch (error) {
+    console.error("Ask Product Question Error:", error);
+
+    return res.status(500).json({
+      message: "Failed to submit question.",
+      error: error.message,
+    });
+  }
+};
+
+// ======================
+// 💬 Answer Product Question
+// Protected route - login required
+// POST /api/products/:productId/questions/:questionId/answers
+// ======================
+exports.answerProductQuestion = async (req, res) => {
+  try {
+    const { productId, questionId } = req.params;
+    const userId = req.user?.id || req.user?._id;
+    const answer = String(req.body.answer || "").trim();
+
+    if (!userId) {
+      return res.status(401).json({
+        message: "Please login to answer this question.",
+      });
+    }
+
+    if (!answer) {
+      return res.status(400).json({
+        message: "Answer is required.",
+      });
+    }
+
+    const product = await Product.findById(productId);
+
+    if (!product || product.isDeleted) {
+      return res.status(404).json({
+        message: "Product not found.",
+      });
+    }
+
+    const question = product.questions.id(questionId);
+
+    if (!question) {
+      return res.status(404).json({
+        message: "Question not found.",
+      });
+    }
+
+    if (!Array.isArray(question.answers)) {
+      question.answers = [];
+    }
+
+    question.answers.push({
+      user: userId,
+      answer,
+      createdAt: new Date(),
+    });
+
+    product.updatedAt = Date.now();
+
+    const savedProduct = await product.save();
+
+    return res.status(201).json({
+      message: "Answer submitted successfully.",
+      product: savedProduct,
+    });
+  } catch (error) {
+    console.error("Answer Product Question Error:", error);
+
+    return res.status(500).json({
+      message: "Failed to submit answer.",
+      error: error.message,
+    });
+  }
+};

@@ -96,7 +96,28 @@ const productSchema = new mongoose.Schema({
     required: true,
     default: "6809f7f0ed9f36edb58306c5", // dummy vendor id
   },
-  reviews: [{ type: mongoose.Schema.Types.ObjectId, ref: "Review" }],
+  reviews: [
+    {
+      user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+      rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5,
+      },
+      createdAt: {
+        type: Date,
+        default: Date.now,
+      },
+      updatedAt: {
+        type: Date,
+      },
+    },
+  ],
   orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
   purchases: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   returns: [{ type: mongoose.Schema.Types.ObjectId, ref: "Return" }],
@@ -104,10 +125,16 @@ const productSchema = new mongoose.Schema({
   questions: [
     {
       user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-      question: String,
-      answer: String,
-      answeredBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
-      answeredAt: Date,
+      question: { type: String, required: true, trim: true },
+      createdAt: { type: Date, default: Date.now },
+
+      answers: [
+        {
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          answer: { type: String, required: true, trim: true },
+          createdAt: { type: Date, default: Date.now },
+        },
+      ],
     },
   ],
   related_products: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
@@ -151,13 +178,13 @@ productSchema.index({ vendor: 1 });
 
 productSchema.methods.isLinkedToUser = function (userId) {
   const userInWishlist = this.wishlist_users.some(
-    (user) => user.toString() === userId.toString()
+    (user) => user.toString() === userId.toString(),
   );
   const userInOrders = this.orders.some(
-    (order) => order.user && order.user.toString() === userId.toString()
+    (order) => order.user && order.user.toString() === userId.toString(),
   );
   const userInPurchases = this.purchases.some(
-    (user) => user.toString() === userId.toString()
+    (user) => user.toString() === userId.toString(),
   );
   return userInWishlist || userInOrders || userInPurchases;
 };
