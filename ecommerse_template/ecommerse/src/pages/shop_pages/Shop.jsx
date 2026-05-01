@@ -295,10 +295,10 @@ export default function Shop() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wishlistItems.length]);
 
-  const handleFilterChange = (newFilteredProducts) => {
+  const handleFilterChange = useCallback((newFilteredProducts) => {
     setFilteredProducts(newFilteredProducts);
     setCurrentPage(1);
-  };
+  }, []);
 
   const handleWishlistToggle = async (product) => {
     const productId = product._id;
@@ -347,11 +347,11 @@ export default function Shop() {
 
   const indexOfLastProduct = currentPage * productsPerPage;
   const indexOfFirstProduct = indexOfLastProduct - productsPerPage;
-  const currentProducts = filteredProducts.slice(
-    indexOfFirstProduct,
-    indexOfLastProduct,
+  const currentProducts = useMemo(
+    () => filteredProducts.slice(indexOfFirstProduct, indexOfLastProduct),
+    [filteredProducts, indexOfFirstProduct, indexOfLastProduct],
   );
-  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  const paginate = useCallback((pageNumber) => setCurrentPage(pageNumber), []);
 
   const totalCount = filteredProducts.length;
   const pageStart = totalCount === 0 ? 0 : indexOfFirstProduct + 1;
@@ -411,6 +411,25 @@ export default function Shop() {
           border-radius: 9999px !important;
         }
         .tightCaps{ letter-spacing: .06em; }
+        .brandScrollArea{
+          max-height: min(360px, calc(100vh - 360px));
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding-right: 0.35rem;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(249,115,22,.55) rgba(241,245,249,1);
+        }
+        .brandScrollArea::-webkit-scrollbar{ width: 6px; }
+        .brandScrollArea::-webkit-scrollbar-track{ background: rgba(241,245,249,1); border-radius: 9999px; }
+        .brandScrollArea::-webkit-scrollbar-thumb{ background: rgba(249,115,22,.55); border-radius: 9999px; }
+        .productCardPerf{
+          content-visibility: auto;
+          contain-intrinsic-size: 320px;
+        }
+
+        @media (max-width: 1023px){
+          .brandScrollArea{ max-height: 42vh; }
+        }
 
         /* ✅ ONLY LAPTOP/TABLET (640px to 1023px): make Add-to-cart smaller */
         @media (min-width: 640px) and (max-width: 1023px){
@@ -707,6 +726,7 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
   const [brands, setBrands] = useState([]);
   const [expandedCategories, setExpandedCategories] = useState({});
   const [expandedBrands, setExpandedBrands] = useState(false);
+  const [brandSearch, setBrandSearch] = useState("");
 
   const [selectedBrands, setSelectedBrands] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -717,6 +737,12 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
   const [tempPriceRange, setTempPriceRange] = useState([0, 1000]);
 
   const [sortOption, setSortOption] = useState("");
+
+  const visibleBrands = useMemo(() => {
+    const q = brandSearch.trim().toLowerCase();
+    if (!q) return brands;
+    return brands.filter((brand) => String(brand).toLowerCase().includes(q));
+  }, [brands, brandSearch]);
 
   useEffect(() => {
     const buildTreeFromProducts = () => {
@@ -907,6 +933,7 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
     setSelectedSubCategory(null);
     setTempPriceRange([minPrice, maxPrice]);
     setSortOption("");
+    setBrandSearch("");
     setExpandedCategories({});
     onFilterChange(allProducts.filter((p) => p?.isDeleted !== true));
   };
@@ -1037,40 +1064,64 @@ function FiltersSidebar({ allProducts, onFilterChange, initialQuery }) {
           )}
         </div>
 
-        <AnimatePresence>
+        <AnimatePresence initial={false}>
           {expandedBrands && (
             <motion.div
-              className="pl-4 mt-2 space-y-2"
+              className="mt-2"
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: "auto", opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.28 }}
+              transition={{ duration: 0.18 }}
             >
-              {brands.map((brand, idx) => (
-                <div
-                  key={idx}
-                  className={`flex items-center gap-2 uppercase transition font-extrabold cursor-pointer text-[12px] tightCaps ${
-                    selectedBrands.includes(brand)
-                      ? "text-orange-600"
-                      : "text-slate-700 hover:text-slate-900"
-                  }`}
-                  onClick={() => {
-                    let updated = [...selectedBrands];
-                    if (updated.includes(brand))
-                      updated = updated.filter((b) => b !== brand);
-                    else updated.push(brand);
-                    setSelectedBrands(updated);
-                  }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedBrands.includes(brand)}
-                    readOnly
-                    className="accent-orange-500"
-                  />
-                  <span className="truncate">{brand}</span>
-                </div>
-              ))}
+              <div className="mb-2 rounded-xl bg-slate-50 border border-slate-200 px-3 py-2">
+                <input
+                  type="text"
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  placeholder={`Search ${brands.length} brands...`}
+                  className="w-full bg-transparent outline-none text-[12px] font-bold text-slate-700 placeholder:text-slate-400"
+                />
+              </div>
+
+              <div className="brandScrollArea pl-4 space-y-2">
+                {visibleBrands.length === 0 ? (
+                  <div className="text-[11px] font-bold text-slate-400 uppercase tightCaps py-2">
+                    No brands found
+                  </div>
+                ) : (
+                  visibleBrands.map((brand, idx) => (
+                    <div
+                      key={`${brand}-${idx}`}
+                      className={`flex items-center gap-2 uppercase transition font-extrabold cursor-pointer text-[12px] tightCaps ${
+                        selectedBrands.includes(brand)
+                          ? "text-orange-600"
+                          : "text-slate-700 hover:text-slate-900"
+                      }`}
+                      onClick={() => {
+                        setSelectedBrands((prev) =>
+                          prev.includes(brand)
+                            ? prev.filter((b) => b !== brand)
+                            : [...prev, brand],
+                        );
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedBrands.includes(brand)}
+                        readOnly
+                        className="accent-orange-500 shrink-0"
+                      />
+                      <span className="truncate" title={brand}>
+                        {brand}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tightCaps">
+                Showing {visibleBrands.length} of {brands.length} brands
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -1300,7 +1351,7 @@ function ProductsGridUI({
             {...getProductAutomationAttrs(p, "grid", idx)}
             whileHover={{ y: -4 }}
             transition={{ duration: 0.18 }}
-            className="group relative rounded-2xl bg-white"
+            className="productCardPerf group relative rounded-2xl bg-white"
             style={{ boxShadow: "none", border: "none" }}
           >
             <div
@@ -1312,6 +1363,7 @@ function ProductsGridUI({
                   src={resolveImage(p)}
                   alt={p?.product_name || "Product"}
                   loading="lazy"
+                  decoding="async"
                   className="h-full w-full object-contain"
                 />
               </div>
@@ -1430,7 +1482,7 @@ function ProductsCardUI({
             {...getProductAutomationAttrs(product, "card", idx)}
             whileHover={{ y: -6, scale: 1.01 }}
             transition={{ duration: 0.2 }}
-            className="relative group rounded-2xl bg-white overflow-hidden"
+            className="productCardPerf relative group rounded-2xl bg-white overflow-hidden"
             style={{
               boxShadow: "none",
               border: "1px solid rgba(241,245,249,1)",
@@ -1464,6 +1516,7 @@ function ProductsCardUI({
                 src={resolveImage(product)}
                 alt={product.product_name}
                 loading="lazy"
+                decoding="async"
                 className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
               />
             </div>
@@ -1565,7 +1618,7 @@ function ProductsListUI({
             {...getProductAutomationAttrs(product, "list", idx)}
             whileHover={{ y: -2 }}
             transition={{ duration: 0.16 }}
-            className="flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"
+            className="productCardPerf flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"
             style={{ boxShadow: "none", border: "1px solid rgb(241,245,249)" }}
           >
             <button
@@ -1596,6 +1649,7 @@ function ProductsListUI({
                 alt={product.product_name}
                 className="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
                 loading="lazy"
+                decoding="async"
               />
             </div>
 

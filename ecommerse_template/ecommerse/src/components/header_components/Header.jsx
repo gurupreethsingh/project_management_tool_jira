@@ -19,6 +19,49 @@ import MiniCart from "../../pages/cart_pages/MiniCart";
 const GUEST_CART_KEY = "guest_cart_items";
 const GUEST_CART_EVENT = "guest-cart-updated";
 const CART_UPDATED_EVENT = "cart-updated";
+const RECENT_SEARCHES_KEY = "recent_product_searches";
+
+const STOP_WORDS = new Set([
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "but",
+  "for",
+  "with",
+  "without",
+  "of",
+  "in",
+  "on",
+  "at",
+  "to",
+  "from",
+  "by",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "this",
+  "that",
+  "these",
+  "those",
+  "show",
+  "find",
+  "search",
+  "product",
+  "products",
+  "item",
+  "items",
+  "please",
+  "me",
+  "my",
+  "i",
+  "want",
+  "need",
+  "buy",
+]);
 
 const getStoredToken = () =>
   localStorage.getItem("token") ||
@@ -41,10 +84,64 @@ const getGuestCartTotalCount = () => {
   }
 };
 
+const normalizeSearchText = (value = "") => {
+  return String(value).replace(/\s+/g, " ").trim();
+};
+
+const isOnlySymbols = (value = "") => {
+  return /^[^a-zA-Z0-9]+$/.test(value);
+};
+
+const isOnlyNumbers = (value = "") => {
+  return /^\d+(\.\d+)?$/.test(value);
+};
+
+const cleanKeywordQuery = (value = "") => {
+  const normalized = normalizeSearchText(value).toLowerCase();
+
+  const words = normalized
+    .split(" ")
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+  const usefulWords = words.filter((word) => {
+    const onlySymbolWord = /^[^a-zA-Z0-9]+$/.test(word);
+    return !STOP_WORDS.has(word) && !onlySymbolWord;
+  });
+
+  return {
+    original: normalized,
+    useful: usefulWords.join(" "),
+    tokens: usefulWords,
+  };
+};
+
+const saveRecentSearch = (searchValue) => {
+  try {
+    const cleanValue = normalizeSearchText(searchValue);
+    if (!cleanValue || isOnlySymbols(cleanValue)) return;
+
+    const existingRaw = localStorage.getItem(RECENT_SEARCHES_KEY);
+    const existing = existingRaw ? JSON.parse(existingRaw) : [];
+
+    const updated = [
+      cleanValue,
+      ...existing.filter(
+        (item) => item.toLowerCase() !== cleanValue.toLowerCase(),
+      ),
+    ].slice(0, 8);
+
+    localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+  } catch {
+    // ignore localStorage issues
+  }
+};
+
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setDropdownOpen] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+  const [searchError, setSearchError] = useState("");
   const [guestCartCount, setGuestCartCount] = useState(
     getGuestCartTotalCount(),
   );
@@ -60,7 +157,6 @@ export default function Header() {
     (eventDetail = null) => {
       const token = getStoredToken();
 
-      // Guest user: read only localStorage. Never call backend from Header.
       if (!token) {
         const guestCount = getGuestCartTotalCount();
         setGuestCartCount(guestCount);
@@ -68,7 +164,6 @@ export default function Header() {
         return;
       }
 
-      // Logged-in user: prefer CartContext.
       const contextTotal = Array.isArray(cartItems)
         ? cartItems.reduce((sum, item) => {
             const qty = Number(item?.quantity || 1);
@@ -76,8 +171,6 @@ export default function Header() {
           }, 0)
         : 0;
 
-      // If Homepage/Shop dispatched a cart event before context finished updating,
-      // update the badge immediately using the event quantity.
       if (eventDetail?.quantity && Number(eventDetail.quantity) > 0) {
         setLiveCartCount((prev) => Math.max(prev, contextTotal) + 1);
         return;
@@ -177,15 +270,74 @@ export default function Header() {
     return roleRoutes[user.role] || "/dashboard";
   }, [user?.role]);
 
+  const buildSearchUrl = (rawValue) => {
+    const normalizedInput = normalizeSearchText(rawValue);
+
+    if (!normalizedInput) {
+      return {
+        valid: false,
+        message: "Please enter a product, brand, category, or price.",
+      };
+    }
+
+    if (isOnlySymbols(normalizedInput)) {
+      return {
+        valid: false,
+        message: "Please type at least one letter or number.",
+      };
+    }
+
+    const params = new URLSearchParams();
+
+    params.set("raw", normalizedInput);
+
+    if (isOnlyNumbers(normalizedInput)) {
+      params.set("type", "price");
+      params.set("price", normalizedInput);
+      params.set("query", normalizedInput);
+      return {
+        valid: true,
+        url: `/search-products?${params.toString()}`,
+      };
+    }
+
+    const cleaned = cleanKeywordQuery(normalizedInput);
+
+    params.set("type", "text");
+    params.set("query", cleaned.useful || cleaned.original);
+    params.set("originalQuery", cleaned.original);
+
+    if (cleaned.tokens.length > 0) {
+      params.set("tokens", cleaned.tokens.join(","));
+    }
+
+    return {
+      valid: true,
+      url: `/search-products?${params.toString()}`,
+    };
+  };
+
   const handleSearch = (e) => {
     e.preventDefault();
-    if (searchInput.trim()) {
-      navigate(
-        `/search-products?query=${encodeURIComponent(searchInput.trim())}`,
-      );
-      setSearchInput("");
-      setMobileMenuOpen(false);
+
+    const result = buildSearchUrl(searchInput);
+
+    if (!result.valid) {
+      setSearchError(result.message);
+      return;
     }
+
+    saveRecentSearch(searchInput);
+    setSearchError("");
+    navigate(result.url);
+    setSearchInput("");
+    setMobileMenuOpen(false);
+    setDropdownOpen(false);
+  };
+
+  const handleSearchInputChange = (e) => {
+    setSearchInput(e.target.value);
+    if (searchError) setSearchError("");
   };
 
   const closeAllMenus = () => {
@@ -197,17 +349,41 @@ export default function Header() {
     <header className="sticky top-0 z-50 hp-font">
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        .hp-font { font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Apple Color Emoji','Segoe UI Emoji'; }
+
+        .hp-font {
+          font-family: 'Plus Jakarta Sans', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, 'Apple Color Emoji','Segoe UI Emoji';
+        }
+
         .containerFull { width: 100%; }
         .maxShell { margin: 0 auto; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        @keyframes softPulse { 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.05);} }
-        .pulse-soft { animation: softPulse 1.8s ease-in-out infinite; }
-        @keyframes floatIn { from { opacity:0; transform: translateY(8px);} to { opacity:1; transform: translateY(0);} }
-        .float-in { animation: floatIn .22s ease-out; }
 
-        .badgeDot{
+        @keyframes softPulse {
+          0%,100% { transform:scale(1); }
+          50% { transform:scale(1.05); }
+        }
+
+        .pulse-soft {
+          animation: softPulse 1.8s ease-in-out infinite;
+        }
+
+        @keyframes floatIn {
+          from {
+            opacity:0;
+            transform: translateY(8px);
+          }
+          to {
+            opacity:1;
+            transform: translateY(0);
+          }
+        }
+
+        .float-in {
+          animation: floatIn .22s ease-out;
+        }
+
+        .badgeDot {
           position:absolute;
           top:-6px;
           right:-6px;
@@ -228,7 +404,7 @@ export default function Header() {
         }
       `}</style>
 
-      <div className="containerFull bg-white/85 backdrop-blur-xl">
+      <div className="containerFull bg-white/85 backdrop-blur-xl border-b border-orange-100">
         <nav className="maxShell px-3 sm:px-6 lg:px-10 py-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 sm:gap-5 min-w-0">
             <a
@@ -269,13 +445,20 @@ export default function Header() {
             >
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500" />
+
                 <input
                   type="text"
-                  placeholder="Search products, brands, categories..."
-                  className="w-full rounded-full border border-orange-200 bg-white/95 pl-12 pr-36 py-3 text-[14px] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition"
+                  placeholder="Search Amazon-style: products, brands, categories, price..."
+                  className={`w-full rounded-full border bg-white/95 pl-12 pr-36 py-3 text-[14px] font-semibold text-gray-800 placeholder-gray-400 outline-none transition ${
+                    searchError
+                      ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                      : "border-orange-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+                  }`}
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  onChange={handleSearchInputChange}
+                  autoComplete="off"
                 />
+
                 <button
                   type="submit"
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 px-5 py-2.5 text-white font-extrabold text-[12px] shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition"
@@ -283,6 +466,12 @@ export default function Header() {
                   Search
                 </button>
               </div>
+
+              {searchError && (
+                <p className="mt-1.5 ml-5 text-[12px] font-bold text-red-500">
+                  {searchError}
+                </p>
+              )}
             </form>
           </div>
 
@@ -430,13 +619,20 @@ export default function Header() {
           <form onSubmit={handleSearch} className="w-full" role="search">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500" />
+
               <input
                 type="text"
                 placeholder="Search products..."
-                className="w-full rounded-full border border-orange-200 bg-white pl-12 pr-14 py-2.5 text-[13px] font-semibold text-gray-800 placeholder-gray-400 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition"
+                className={`w-full rounded-full border bg-white pl-12 pr-14 py-2.5 text-[13px] font-semibold text-gray-800 placeholder-gray-400 outline-none transition ${
+                  searchError
+                    ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                    : "border-orange-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+                }`}
                 value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                onChange={handleSearchInputChange}
+                autoComplete="off"
               />
+
               <button
                 type="submit"
                 className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 p-2.5 text-white shadow shadow-orange-500/25"
@@ -445,6 +641,12 @@ export default function Header() {
                 <MagnifyingGlassIcon className="w-5 h-5" />
               </button>
             </div>
+
+            {searchError && (
+              <p className="mt-1.5 ml-5 text-[12px] font-bold text-red-500">
+                {searchError}
+              </p>
+            )}
           </form>
         </div>
       </div>
@@ -470,6 +672,7 @@ export default function Header() {
                 customStyles="text-[18px] font-extrabold text-gray-900"
                 onClick={() => closeAllMenus()}
               />
+
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="rounded-2xl border border-orange-200 bg-white px-3 py-2 text-gray-800 shadow-sm shrink-0"
@@ -482,13 +685,20 @@ export default function Header() {
             <form onSubmit={handleSearch} className="mt-4">
               <div className="relative">
                 <MagnifyingGlassIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-orange-500" />
+
                 <input
                   type="text"
                   placeholder="Search products..."
-                  className="w-full rounded-full border border-orange-200 bg-white pl-12 pr-14 py-2.5 text-[13px] font-semibold text-gray-800 outline-none focus:border-orange-400 focus:ring-4 focus:ring-orange-100 transition"
+                  className={`w-full rounded-full border bg-white pl-12 pr-14 py-2.5 text-[13px] font-semibold text-gray-800 outline-none transition ${
+                    searchError
+                      ? "border-red-300 focus:border-red-400 focus:ring-4 focus:ring-red-100"
+                      : "border-orange-200 focus:border-orange-400 focus:ring-4 focus:ring-orange-100"
+                  }`}
                   value={searchInput}
-                  onChange={(e) => setSearchInput(e.target.value)}
+                  onChange={handleSearchInputChange}
+                  autoComplete="off"
                 />
+
                 <button
                   type="submit"
                   className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-full bg-gradient-to-r from-orange-500 to-amber-400 p-2.5 text-white shadow shadow-orange-500/25"
@@ -497,6 +707,12 @@ export default function Header() {
                   <MagnifyingGlassIcon className="w-5 h-5" />
                 </button>
               </div>
+
+              {searchError && (
+                <p className="mt-1.5 ml-5 text-[12px] font-bold text-red-500">
+                  {searchError}
+                </p>
+              )}
             </form>
           </div>
 
@@ -520,6 +736,7 @@ export default function Header() {
                   <FiShoppingCart className="text-orange-600" />
                   Cart
                 </span>
+
                 {cartCount > 0 && (
                   <span className="min-w-[28px] h-7 px-2 rounded-full bg-orange-500 text-white text-[12px] font-black inline-flex items-center justify-center">
                     {cartCount}
@@ -538,6 +755,7 @@ export default function Header() {
                   <FaHeart className="text-orange-500" />
                   Wishlist
                 </span>
+
                 {isLoggedIn && wishlistCount > 0 && (
                   <span className="min-w-[28px] h-7 px-2 rounded-full bg-orange-500 text-white text-[12px] font-black inline-flex items-center justify-center">
                     {wishlistCount}

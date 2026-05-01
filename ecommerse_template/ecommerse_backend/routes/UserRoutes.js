@@ -2,11 +2,16 @@ const express = require("express");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+
 const router = express.Router();
+
 const User = require("../models/UserModel.js");
+const { verifyToken } = require("../middleware/AuthMiddleware");
+
 const {
   register,
   login,
+  verifyLoggedInUser,
   getUserById,
   updateUser,
   deleteUser,
@@ -19,13 +24,12 @@ const {
   getUserCountsByRole,
 } = require("../controllers/UserController");
 
-// Set up multer storage for handling file uploads
 const storage = multer.diskStorage({
   destination: async function (req, file, cb) {
     try {
       const user = await User.findById(req.params.id);
       const role = user?.role || "others";
-      
+
       const uploadFolder = path.join("uploads", role);
 
       if (!fs.existsSync(uploadFolder)) {
@@ -37,10 +41,11 @@ const storage = multer.diskStorage({
       cb(err);
     }
   },
+
   filename: function (req, file, cb) {
     cb(
       null,
-      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`
+      `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`,
     );
   },
 });
@@ -49,16 +54,23 @@ const upload = multer({ storage });
 
 router.post("/register", register);
 router.post("/login", login);
+
+router.get("/verify-token", verifyToken, verifyLoggedInUser);
+
 router.get("/getUserById/:id", getUserById);
+router.get("/single-user/:id", getUserById);
+
 router.put("/update-profile/:id", upload.single("avatar"), updateUser);
 router.delete("/delete-user/:id", deleteUser);
+
 router.get("/getUserCounts", getUserCounts);
+router.get("/getUserCountsByRole", getUserCountsByRole);
 router.get("/all-users", getAllUsers);
-router.get("/single-user/:id", getUserById);
+
 router.put("/update-user-role/:id", updateUserRoleAndPrivileges);
+
 router.post("/forgot-password", forgotPassword);
 router.post("/verify-otp", verifyOTP);
 router.post("/reset-password", resetPassword);
-router.get("/getUserCountsByRole", getUserCountsByRole);
 
 module.exports = router;

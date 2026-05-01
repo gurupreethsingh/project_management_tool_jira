@@ -117,7 +117,7 @@ const login = async (req, res) => {
         role: user.role,
       },
       process.env.JWT_SECRET || "ecoders_jwt_secret",
-      { expiresIn: "7h" }
+      { expiresIn: "7h" },
     );
 
     res.status(200).json({
@@ -128,6 +128,50 @@ const login = async (req, res) => {
   } catch (err) {
     console.error("Login Error:", err.message);
     res.status(500).json({ message: "Server error" });
+  }
+};
+
+const verifyLoggedInUser = async (req, res) => {
+  try {
+    if (!req.user?.id && !req.user?._id) {
+      return res.status(401).json({
+        valid: false,
+        message: "Invalid or expired token. Please login again.",
+      });
+    }
+
+    const userId = req.user.id || req.user._id;
+
+    const user = await User.findById(userId).select(
+      "-password -otp -otpExpires",
+    );
+
+    if (!user) {
+      return res.status(401).json({
+        valid: false,
+        message: "User not found. Please login again.",
+      });
+    }
+
+    return res.status(200).json({
+      valid: true,
+      message: "Token is valid",
+      user: {
+        id: user._id,
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        privileges: user.privileges || [],
+        avatar: user.avatar || "",
+      },
+    });
+  } catch (error) {
+    console.error("Verify logged in user error:", error.message);
+    return res.status(500).json({
+      valid: false,
+      message: "Server error while verifying token",
+    });
   }
 };
 
@@ -270,7 +314,7 @@ const forgotPassword = async (req, res) => {
     sendEmail(
       email,
       "Password Reset OTP",
-      `Your OTP is ${otp}. It expires in 10 minutes.`
+      `Your OTP is ${otp}. It expires in 10 minutes.`,
     );
 
     res.status(200).json({ message: "OTP sent to email" });
@@ -357,4 +401,5 @@ module.exports = {
   verifyOTP,
   resetPassword,
   getUserCountsByRole,
+  verifyLoggedInUser,
 };

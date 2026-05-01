@@ -1,55 +1,56 @@
 const jwt = require("jsonwebtoken");
 
 exports.verifyToken = (req, res, next) => {
-  const authHeader = req.headers.authorization;
+  try {
+    const authHeader = req.headers.authorization;
 
-  if (authHeader && authHeader.startsWith("Bearer ")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "No token provided" });
+    }
+
     const token = authHeader.split(" ")[1];
 
-    jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-      if (err) {
-        return res.status(403).json({ message: "Invalid token" });
-      }
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "ecoders_jwt_secret",
+    );
 
-      req.user = {
-        ...decoded,
-        _id: decoded._id || decoded.id,
-        id: decoded.id || decoded._id,
-      };
+    req.user = {
+      ...decoded,
+      _id: decoded._id || decoded.id || decoded.userId,
+      id: decoded.id || decoded._id || decoded.userId,
+    };
 
-      next();
+    return next();
+  } catch (err) {
+    return res.status(401).json({
+      message: "Invalid or expired token. Please login again.",
     });
-  } else {
-    return res.status(401).json({ message: "No token provided" });
   }
 };
 
 exports.verifyTokenOptional = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
-  if (!authHeader) {
-    req.user = null;
-    return next();
-  }
-
-  const token = authHeader.split(" ")[1];
-
-  if (!token) {
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
     req.user = null;
     return next();
   }
 
   try {
+    const token = authHeader.split(" ")[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
     req.user = {
       ...decoded,
-      _id: decoded._id || decoded.id,
-      id: decoded.id || decoded._id,
+      _id: decoded._id || decoded.id || decoded.userId,
+      id: decoded.id || decoded._id || decoded.userId,
     };
-    next();
+
+    return next();
   } catch (err) {
     req.user = null;
-    next();
+    return next();
   }
 };
 
@@ -57,5 +58,6 @@ exports.isSuperAdmin = (req, res, next) => {
   if (!req.user || req.user.role !== "superadmin") {
     return res.status(403).json({ message: "Access denied. Superadmin only." });
   }
-  next();
+
+  return next();
 };
