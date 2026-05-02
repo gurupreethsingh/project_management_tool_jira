@@ -238,9 +238,8 @@ export default function Shop() {
 
       if (viewMode === "card") {
         if (w >= 1280) return 4;
-        if (w >= 1024) return 3;
-        if (w >= 640) return 2;
-        return 1;
+        if (w >= 640) return 3;
+        return 3;
       }
 
       if (w >= 1536) return 6;
@@ -248,7 +247,7 @@ export default function Shop() {
       if (w >= 1024) return 5;
       if (w >= 768) return 4;
       if (w >= 640) return 3;
-      return 2;
+      return 3;
     };
 
     const update = () => setColumns(computeCols());
@@ -427,6 +426,316 @@ export default function Shop() {
           contain-intrinsic-size: 320px;
         }
 
+        /* Grid click area only: no card border, no image background. */
+        .shopGridTapArea{ cursor: pointer; }
+        .shopGridTapArea:focus-visible{
+          outline: 3px solid rgba(249,115,22,0.28);
+          outline-offset: 3px;
+        }
+
+        /* Clean mobile/tablet grid: 2 products per row on mobile, compact buttons, stable text. */
+        @media (max-width: 767px){
+          .shopGridResponsive{
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            column-gap: 14px !important;
+            row-gap: 24px !important;
+          }
+          .shopGridImageWrap{
+            padding: 0 !important;
+            background: transparent !important;
+          }
+          .shopGridImageBox{ border-radius: 14px !important; }
+          .shopGridDetails{
+            margin-top: 9px !important;
+            padding: 0 !important;
+            background: transparent !important;
+            border: 0 !important;
+          }
+          .shopGridTitle{
+            font-size: 11.5px !important;
+            line-height: 1.05rem !important;
+            white-space: normal !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.1rem;
+          }
+          .shopGridMeta{
+            margin-top: 4px !important;
+            font-size: 9.5px !important;
+            line-height: .9rem !important;
+            white-space: nowrap !important;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+          .shopGridInfoRow{ margin-top: 6px !important; font-size: 10px !important; }
+          .shopGridInfoRow span:first-child{ padding: 3px 7px !important; }
+          .shopGridPriceRow{
+            margin-top: 6px !important;
+            gap: 5px !important;
+            flex-wrap: wrap;
+            align-items: center !important;
+          }
+          .shopGridPriceRow .priceSelling{ font-size: 12.5px !important; line-height: 1rem !important; }
+          .shopGridPriceRow .priceMrp{ font-size: 9.5px !important; line-height: .9rem !important; }
+          .shopGridCartBtn{
+            margin-top: 8px !important;
+            min-height: 34px !important;
+            padding: 8px 6px !important;
+            font-size: 9.8px !important;
+            line-height: 1 !important;
+            gap: 5px !important;
+            white-space: nowrap !important;
+          }
+          .shopGridCartBtn svg{ width: 13px !important; height: 13px !important; flex-shrink: 0; }
+          .shopGridWishBtn{ height: 30px !important; width: 30px !important; top: 6px !important; right: 6px !important; }
+        }
+
+        @media (min-width: 768px) and (max-width: 1023px){
+          .shopGridResponsive{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 24px !important; }
+          .shopGridImageWrap{ padding: 0 !important; background: transparent !important; }
+          .shopGridDetails{ margin-top: 10px !important; padding: 0 !important; background: transparent !important; border: 0 !important; }
+          .shopGridTitle{
+            font-size: 12.5px !important;
+            line-height: 1.15rem !important;
+            white-space: normal !important;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.3rem;
+          }
+          .shopGridCartBtn{ margin-top: 9px !important; padding: 8px 10px !important; font-size: 10.5px !important; }
+        }
+
+
+
+        /* ✅ FINAL MOBILE/TABLET PRODUCT CARD FIXES
+           - Grid view: 2 products per row on mobile
+           - Card view: 2 products per row on mobile
+           - List view: compact horizontal layout on mobile
+           - No card border/background redesign
+           - Buttons are compact, not bulged */
+        @media (max-width: 639px){
+          .shopProductsGrid,
+          .shopProductsCardGrid{
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+            column-gap: 13px !important;
+            row-gap: 24px !important;
+          }
+
+          .shopProductMiniCard{
+            border: none !important;
+            box-shadow: none !important;
+            background: #fff !important;
+            overflow: visible !important;
+          }
+
+          .shopProductImageArea{
+            height: auto !important;
+            aspect-ratio: 1 / 1 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+          }
+
+          .shopProductImageArea img{
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: contain !important;
+          }
+
+          .shopProductContent{
+            padding: 8px 0 0 0 !important;
+            margin: 0 !important;
+            gap: 0 !important;
+            background: transparent !important;
+            border: none !important;
+          }
+
+          .shopProductTitle{
+            font-size: 11.5px !important;
+            line-height: 15px !important;
+            min-height: 30px !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+            white-space: normal !important;
+          }
+
+          .shopProductMeta{
+            margin-top: 4px !important;
+            font-size: 9.5px !important;
+            line-height: 12px !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+          }
+
+          .shopProductDescription{
+            display: none !important;
+          }
+
+          .shopProductInfoRow{
+            margin-top: 5px !important;
+            font-size: 10px !important;
+            line-height: 12px !important;
+          }
+
+          .shopProductRatingPill{
+            padding: 2px 6px !important;
+            font-size: 10px !important;
+            line-height: 12px !important;
+          }
+
+          .shopProductPriceRow{
+            margin-top: 6px !important;
+            gap: 5px !important;
+            flex-wrap: wrap !important;
+            align-items: center !important;
+          }
+
+          .shopProductPriceRow .priceSelling{
+            font-size: 12.5px !important;
+            line-height: 16px !important;
+          }
+
+          .shopProductPriceRow .priceMrp{
+            font-size: 9.5px !important;
+            line-height: 12px !important;
+          }
+
+          .shopProductCartBtn{
+            margin-top: 8px !important;
+            min-height: 30px !important;
+            height: 30px !important;
+            padding: 6px 8px !important;
+            border-radius: 9px !important;
+            font-size: 10px !important;
+            line-height: 1 !important;
+            gap: 4px !important;
+            white-space: nowrap !important;
+            box-shadow: none !important;
+          }
+
+          .shopProductCartBtn svg{
+            width: 12px !important;
+            height: 12px !important;
+            flex-shrink: 0 !important;
+          }
+
+          .shopProductWishBtn{
+            width: 29px !important;
+            height: 29px !important;
+            top: 5px !important;
+            right: 5px !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            border: none !important;
+          }
+
+          .shopProductWishBtn svg{
+            width: 14px !important;
+            height: 14px !important;
+          }
+
+          .shopListWrapper{
+            gap: 14px !important;
+          }
+
+          .shopListCard{
+            flex-direction: row !important;
+            align-items: center !important;
+            gap: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            min-height: 112px !important;
+          }
+
+          .shopListImageArea{
+            width: 98px !important;
+            height: 98px !important;
+            min-width: 98px !important;
+            padding: 0 !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+          }
+
+          .shopListContent{
+            margin: 0 !important;
+            padding: 0 34px 0 0 !important;
+            flex: 1 !important;
+            min-width: 0 !important;
+          }
+
+          .shopListContent h2{
+            font-size: 12px !important;
+            line-height: 15px !important;
+            white-space: normal !important;
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+          }
+
+          .shopListContent p{
+            font-size: 9.5px !important;
+            line-height: 12px !important;
+            margin-top: 3px !important;
+          }
+
+          .shopListPriceAction{
+            margin-top: 5px !important;
+            gap: 6px !important;
+            align-items: center !important;
+          }
+
+          .shopListActionBox{
+            margin: 6px 0 0 0 !important;
+            padding: 0 !important;
+            width: auto !important;
+          }
+
+          .shopListActionBox .shopProductCartBtn{
+            width: auto !important;
+            min-width: 76px !important;
+            height: 28px !important;
+            padding: 5px 8px !important;
+            border-radius: 8px !important;
+            font-size: 9.5px !important;
+          }
+        }
+
+        @media (min-width: 640px) and (max-width: 1023px){
+          .shopProductsCardGrid{
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+          .shopProductMiniCard{
+            border: none !important;
+            box-shadow: none !important;
+          }
+          .shopProductImageArea{
+            background: #fff !important;
+            padding: 0 !important;
+          }
+          .shopProductContent{
+            padding: 10px 0 0 0 !important;
+          }
+          .shopProductCartBtn{
+            min-height: 34px !important;
+            height: 34px !important;
+            padding: 8px 10px !important;
+            border-radius: 10px !important;
+            font-size: 10.5px !important;
+            box-shadow: none !important;
+          }
+        }
+
         @media (max-width: 1023px){
           .brandScrollArea{ max-height: 42vh; }
         }
@@ -441,6 +750,48 @@ export default function Shop() {
             width: 14px !important;
             height: 14px !important;
           }
+        }
+
+        /* ✅ FINAL COMPACT DENSITY PASS */
+        @media (max-width: 639px){
+          .shopProductsGrid,.shopProductsCardGrid,.shopGridResponsive{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; column-gap:8px !important; row-gap:18px !important; }
+          .shopProductMiniCard,.shopGridTapArea{ border:none !important; box-shadow:none !important; background:#fff !important; border-radius:0 !important; overflow:visible !important; }
+          .shopProductImageArea,.shopGridImageWrap{ height:auto !important; aspect-ratio:1/1 !important; padding:0 !important; background:#fff !important; border:none !important; border-radius:0 !important; }
+          .shopGridImageBox{ border-radius:0 !important; }
+          .shopProductContent,.shopGridDetails{ padding:5px 0 0 0 !important; margin:0 !important; gap:0 !important; background:transparent !important; border:none !important; }
+          .shopProductTitle,.shopGridTitle{ font-size:9.5px !important; line-height:12px !important; min-height:24px !important; max-height:24px !important; display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical !important; overflow:hidden !important; white-space:normal !important; word-break:normal !important; }
+          .shopProductMeta,.shopGridMeta{ margin-top:2px !important; font-size:8px !important; line-height:10px !important; white-space:nowrap !important; overflow:hidden !important; text-overflow:ellipsis !important; }
+          .shopProductDescription{ display:none !important; }
+          .shopProductInfoRow,.shopGridInfoRow{ margin-top:3px !important; font-size:8px !important; line-height:10px !important; }
+          .shopProductRatingPill,.shopGridInfoRow span:first-child{ padding:1px 4px !important; font-size:8px !important; line-height:10px !important; border-radius:999px !important; }
+          .shopProductPriceRow,.shopGridPriceRow{ margin-top:4px !important; gap:3px !important; flex-wrap:wrap !important; align-items:center !important; }
+          .shopProductPriceRow .priceSelling,.shopGridPriceRow .priceSelling{ font-size:10px !important; line-height:12px !important; }
+          .shopProductPriceRow .priceMrp,.shopGridPriceRow .priceMrp{ font-size:8px !important; line-height:10px !important; }
+          .shopProductCartBtn,.shopGridCartBtn{ margin-top:5px !important; min-height:24px !important; height:24px !important; padding:4px 4px !important; border-radius:6px !important; font-size:8px !important; line-height:1 !important; gap:3px !important; white-space:nowrap !important; box-shadow:none !important; }
+          .shopProductCartBtn svg,.shopGridCartBtn svg{ width:9px !important; height:9px !important; flex-shrink:0 !important; }
+          .shopProductWishBtn,.shopGridWishBtn{ width:23px !important; height:23px !important; top:3px !important; right:3px !important; padding:0 !important; box-shadow:none !important; border:none !important; }
+          .shopProductWishBtn svg,.shopGridWishBtn svg{ width:11px !important; height:11px !important; }
+          .shopListWrapper{ display:flex !important; flex-direction:column !important; gap:8px !important; }
+          .shopListCard{ flex-direction:row !important; align-items:center !important; gap:7px !important; border:none !important; box-shadow:none !important; border-radius:0 !important; padding:0 !important; min-height:74px !important; }
+          .shopListImageArea{ width:68px !important; height:68px !important; min-width:68px !important; padding:0 !important; background:#fff !important; border-radius:0 !important; }
+          .shopListContent{ margin:0 !important; padding:0 4px 0 0 !important; flex:1 !important; min-width:0 !important; }
+          .shopListContent h2{ font-size:10px !important; line-height:12px !important; max-height:24px !important; white-space:normal !important; display:-webkit-box !important; -webkit-line-clamp:2 !important; -webkit-box-orient:vertical !important; overflow:hidden !important; }
+          .shopListContent p{ font-size:8px !important; line-height:10px !important; margin-top:1px !important; }
+          .shopListContent p:nth-of-type(1){ display:none !important; }
+          .shopListPriceAction{ margin-top:3px !important; gap:4px !important; align-items:center !important; }
+          .shopListPriceAction .priceSelling{ font-size:10px !important; line-height:12px !important; }
+          .shopListPriceAction .priceMrp{ font-size:8px !important; line-height:10px !important; }
+          .shopListPriceAction > span{ font-size:8px !important; }
+          .shopListActionBox{ margin:0 !important; padding:0 !important; width:auto !important; flex-shrink:0 !important; }
+          .shopListActionBox .shopProductCartBtn{ width:auto !important; min-width:54px !important; height:23px !important; min-height:23px !important; padding:4px 5px !important; border-radius:6px !important; font-size:7.8px !important; gap:2px !important; }
+        }
+        @media (min-width: 640px) and (max-width: 1199px){
+          .shopProductsCardGrid{ grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap:22px !important; }
+          .shopProductContent{ padding:10px 0 0 0 !important; }
+          .shopProductTitle{ font-size:12px !important; line-height:15px !important; }
+          .shopProductMeta,.shopProductDescription{ font-size:10px !important; line-height:13px !important; }
+          .shopProductCartBtn,.laptopCartBtn{ min-height:30px !important; height:30px !important; padding:6px 9px !important; border-radius:8px !important; font-size:9.5px !important; line-height:1 !important; gap:5px !important; box-shadow:none !important; }
+          .shopProductCartBtn svg,.laptopCartBtn svg{ width:12px !important; height:12px !important; }
         }
       `}</style>
 
@@ -1329,7 +1680,7 @@ function ProductsGridUI({
   onOpen,
 }) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-8 sm:gap-y-10 lg:gap-y-12">
+    <div className="shopProductsGrid shopGridResponsive grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-4 sm:gap-x-6 lg:gap-x-8 gap-y-8 sm:gap-y-10 lg:gap-y-12">
       {products.map((p, idx) => {
         const id = p?._id ?? `${idx}`;
         const inWish = Array.isArray(wishlist)
@@ -1351,20 +1702,27 @@ function ProductsGridUI({
             {...getProductAutomationAttrs(p, "grid", idx)}
             whileHover={{ y: -4 }}
             transition={{ duration: 0.18 }}
-            className="productCardPerf group relative rounded-2xl bg-white"
-            style={{ boxShadow: "none", border: "none" }}
+            onClick={() => onOpen(p?._id)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onOpen(p?._id);
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Open ${p?.product_name || "product"} details`}
+            className="productCardPerf shopProductMiniCard shopGridTapArea group relative rounded-2xl bg-white"
+            style={{ boxShadow: "none" }}
           >
-            <div
-              className="relative rounded-2xl overflow-hidden cursor-pointer bg-white to-amber-50 p-3"
-              onClick={() => onOpen(p?._id)}
-            >
-              <div className="flex aspect-square items-center justify-center overflow-hidden rounded-2xl">
+            <div className="shopProductImageArea shopGridImageWrap relative rounded-2xl overflow-hidden bg-white">
+              <div className="shopGridImageBox flex aspect-square items-center justify-center overflow-hidden rounded-2xl">
                 <img
                   src={resolveImage(p)}
                   alt={p?.product_name || "Product"}
                   loading="lazy"
                   decoding="async"
-                  className="h-full w-full object-contain"
+                  className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-[1.03]"
                 />
               </div>
 
@@ -1374,7 +1732,7 @@ function ProductsGridUI({
                   e.stopPropagation();
                   onToggleWishlist(p);
                 }}
-                className="absolute top-2 right-2 h-9 w-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition hover:bg-white"
+                className="shopProductWishBtn shopGridWishBtn absolute top-2 right-2 h-9 w-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center transition hover:bg-white"
                 aria-label="Toggle wishlist"
                 title="Wishlist"
                 style={{ boxShadow: "none", border: "none" }}
@@ -1387,18 +1745,18 @@ function ProductsGridUI({
               </button>
             </div>
 
-            <div className="mt-3 px-0.5 space-y-1.5">
-              <p className="text-[12px] sm:text-[13px] font-extrabold text-slate-900 leading-snug truncate">
+            <div className="shopProductContent shopGridDetails mt-3 px-0.5 space-y-1.5">
+              <p className="shopProductTitle shopGridTitle text-[12px] sm:text-[13px] font-extrabold text-slate-900 leading-snug truncate group-hover:text-orange-600 transition-colors">
                 {p?.product_name || "Unnamed product"}
               </p>
 
-              <p className="mt-1 text-[11px] font-semibold text-slate-500 truncate">
+              <p className="shopProductMeta shopGridMeta mt-1 text-[11px] font-semibold text-slate-500 truncate">
                 {brand || cat || "POPULAR PICK"} •{" "}
                 {stock ? "FAST DELIVERY" : "RESTOCKING"}
               </p>
 
-              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
-                <span className="inline-flex items-center gap-1">
+              <div className="shopProductInfoRow shopGridInfoRow mt-2 flex items-center justify-between text-[11px] text-slate-500 font-semibold">
+                <span className="shopProductRatingPill inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-1 text-slate-700">
                   <FaStar className="text-orange-500/90" />
                   {ratingText}
                 </span>
@@ -1414,7 +1772,7 @@ function ProductsGridUI({
                 </span>
               </div>
 
-              <div className="mt-2 flex items-baseline gap-2">
+              <div className="shopProductPriceRow shopGridPriceRow mt-2 flex items-baseline gap-2">
                 <span className="priceSelling text-[13px] sm:text-[14px]">
                   ₹{selling ?? "--"}
                 </span>
@@ -1425,10 +1783,13 @@ function ProductsGridUI({
 
               <button
                 type="button"
-                onClick={() => onAddToCart(p)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAddToCart(p);
+                }}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn",
+                  "laptopCartBtn shopProductCartBtn shopGridCartBtn",
                   "mt-3 w-full inline-flex items-center justify-center gap-2",
                   "rounded-full px-4 sm:px-5 py-2.5 text-white font-extrabold text-[11.5px] sm:text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
@@ -1456,7 +1817,7 @@ function ProductsCardUI({
   onOpen,
 }) {
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-5 sm:gap-x-8 gap-y-10 sm:gap-y-12">
+    <div className="shopProductsCardGrid grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-4 sm:gap-x-8 gap-y-8 sm:gap-y-12">
       {products.map((product, idx) => {
         const inWish = Array.isArray(wishlist)
           ? wishlist.includes(product._id)
@@ -1482,11 +1843,8 @@ function ProductsCardUI({
             {...getProductAutomationAttrs(product, "card", idx)}
             whileHover={{ y: -6, scale: 1.01 }}
             transition={{ duration: 0.2 }}
-            className="productCardPerf relative group rounded-2xl bg-white overflow-hidden"
-            style={{
-              boxShadow: "none",
-              border: "1px solid rgba(241,245,249,1)",
-            }}
+            className="productCardPerf shopProductMiniCard relative group rounded-2xl bg-white overflow-hidden"
+            style={{ boxShadow: "none", border: "none" }}
           >
             <div className="absolute top-3 right-3 z-20">
               <button
@@ -1494,11 +1852,8 @@ function ProductsCardUI({
                   e.stopPropagation();
                   onToggleWishlist(product);
                 }}
-                className="bg-white/90 backdrop-blur p-2 rounded-full transition"
-                style={{
-                  boxShadow: "none",
-                  border: "1px solid rgba(241,245,249,1)",
-                }}
+                className="shopProductWishBtn bg-white/90 backdrop-blur p-2 rounded-full transition"
+                style={{ boxShadow: "none", border: "none" }}
               >
                 {inWish ? (
                   <FaHeart className="w-5 h-5 text-orange-600" />
@@ -1509,7 +1864,7 @@ function ProductsCardUI({
             </div>
 
             <div
-              className="w-full h-52 sm:h-56 bg-gradient-to-br from-orange-50 via-white to-amber-50 flex items-center justify-center overflow-hidden cursor-pointer p-4"
+              className="shopProductImageArea w-full h-52 sm:h-56 bg-white flex items-center justify-center overflow-hidden cursor-pointer p-0"
               onClick={() => onOpen(product._id)}
             >
               <img
@@ -1523,22 +1878,22 @@ function ProductsCardUI({
 
             <div
               onClick={() => onOpen(product._id)}
-              className="p-4 space-y-2 cursor-pointer"
+              className="shopProductContent p-4 space-y-2 cursor-pointer"
             >
-              <h3 className="text-[14px] sm:text-[15px] font-extrabold text-slate-900 truncate">
+              <h3 className="shopProductTitle text-[14px] sm:text-[15px] font-extrabold text-slate-900 truncate">
                 {product.product_name}
               </h3>
 
-              <p className="text-[12px] text-slate-500 font-semibold truncate">
+              <p className="shopProductMeta text-[12px] text-slate-500 font-semibold truncate">
                 {brand || cat || "POPULAR"} • FAST DELIVERY • EASY RETURNS
               </p>
 
-              <p className="text-[12px] text-slate-500 line-clamp-2">
+              <p className="shopProductDescription text-[12px] text-slate-500 line-clamp-2">
                 {(product.description || "").slice(0, 90)}
                 {(product.description || "").length > 90 ? "..." : ""}
               </p>
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="shopProductPriceRow flex items-center justify-between pt-1">
                 <div className="flex items-center gap-2">
                   <span className="priceSelling text-[15px] inline-flex items-center gap-1">
                     <FaRupeeSign /> {selling ?? "--"}
@@ -1563,7 +1918,7 @@ function ProductsCardUI({
                 }}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn",
+                  "laptopCartBtn shopProductCartBtn",
                   "w-full mt-3 py-2.5 text-center rounded-full font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",
                   stock
@@ -1596,7 +1951,7 @@ function ProductsListUI({
   onOpen,
 }) {
   return (
-    <div className="space-y-10 sm:space-y-12">
+    <div className="shopListWrapper space-y-10 sm:space-y-12">
       {products.map((product, idx) => {
         const inWish = Array.isArray(wishlist)
           ? wishlist.includes(product._id)
@@ -1618,15 +1973,15 @@ function ProductsListUI({
             {...getProductAutomationAttrs(product, "list", idx)}
             whileHover={{ y: -2 }}
             transition={{ duration: 0.16 }}
-            className="productCardPerf flex flex-col md:flex-row items-stretch md:items-center bg-white rounded-2xl transition group relative"
-            style={{ boxShadow: "none", border: "1px solid rgb(241,245,249)" }}
+            className="productCardPerf shopListCard flex flex-row md:flex-row items-center bg-white rounded-2xl transition group relative"
+            style={{ boxShadow: "none", border: "none" }}
           >
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onToggleWishlist(product);
               }}
-              className="absolute top-3 right-3 bg-white/90 backdrop-blur p-2 rounded-full"
+              className="shopProductWishBtn absolute top-3 right-3 bg-white/90 backdrop-blur p-2 rounded-full"
               style={{
                 boxShadow: "none",
                 border: "1px solid rgb(241,245,249)",
@@ -1642,7 +1997,7 @@ function ProductsListUI({
 
             <div
               onClick={() => onOpen(product._id)}
-              className="w-full md:w-44 h-52 md:h-44 bg-gradient-to-br from-orange-50 via-white to-amber-50 rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer p-4"
+              className="shopListImageArea w-28 md:w-44 h-28 md:h-44 bg-white rounded-2xl overflow-hidden flex justify-center items-center cursor-pointer p-0"
             >
               <img
                 src={resolveImage(product)}
@@ -1655,7 +2010,7 @@ function ProductsListUI({
 
             <div
               onClick={() => onOpen(product._id)}
-              className="flex flex-col justify-center md:ml-6 mt-4 md:mt-0 w-full cursor-pointer px-3 md:px-0 pb-3 md:pb-0"
+              className="shopListContent flex flex-col justify-center md:ml-6 mt-0 w-full cursor-pointer px-0 md:px-0 pb-0 md:pb-0"
             >
               <h2 className="text-[16px] sm:text-[18px] font-extrabold text-slate-900 truncate">
                 {product.product_name}
@@ -1673,7 +2028,7 @@ function ProductsListUI({
                 • FAST DELIVERY • EASY RETURNS
               </p>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <div className="shopListPriceAction mt-3 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-4">
                   <span className="priceSelling text-[15px] font-extrabold flex items-center gap-1">
                     <FaRupeeSign /> {selling ?? "--"}
@@ -1692,7 +2047,7 @@ function ProductsListUI({
               </div>
             </div>
 
-            <div className="flex-shrink-0 md:ml-6 px-3 pb-4 md:pb-0">
+            <div className="shopListActionBox flex-shrink-0 md:ml-6 px-0 md:px-3 pb-0 md:pb-0">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
@@ -1700,7 +2055,7 @@ function ProductsListUI({
                 }}
                 disabled={!stock}
                 className={[
-                  "laptopCartBtn",
+                  "laptopCartBtn shopProductCartBtn",
                   "w-full md:w-auto inline-flex items-center justify-center gap-2",
                   "rounded-full px-5 py-2.5 text-white font-extrabold text-[12px]",
                   "shadow-lg shadow-orange-500/25 hover:opacity-95 active:scale-[0.99] transition",

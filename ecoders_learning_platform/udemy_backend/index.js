@@ -40,6 +40,7 @@ const ExamGenRoutes = require("./routes/ExamGenRoutes");
 const aiTutorRoutes = require("./routes/AiTutorRoutes");
 const textCodeRoutes = require("./routes/TextCodeRoutes");
 const codeSummaryRoutes = require("./routes/CodeSummaryRoutes");
+const aiRoutes = require("./routes/AiRoutes");
 
 const app = express();
 
@@ -124,14 +125,12 @@ app.use("/api/instructors", instructorRoutes);
 app.use("/api", activityRoutes);
 app.use("/api", uiGenRoutes);
 app.use("/api", simpleChatBotRoutes);
-
-// ✅ Dashboard generator route
 app.use("/api/dashboard-gen", DashboardGenRoutes);
-
 app.use("/api/roadmap-gen", roadmapGenRoutes);
 app.use("/api/exam-gen", ExamGenRoutes);
 app.use("/api/ai-tutor", aiTutorRoutes);
 app.use("/api/text-code", textCodeRoutes);
+app.use("/api/ai", aiRoutes);
 
 // ---- Mongo ----
 const DATABASE_URI = process.env.DATABASE;
