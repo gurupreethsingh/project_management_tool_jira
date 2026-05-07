@@ -11,7 +11,11 @@ import { MdOutlineAttachEmail, MdOutlineLocalPhone } from "react-icons/md";
 import { CiLocationOn } from "react-icons/ci";
 
 function Required() {
-  return <span className="text-red-600 ms-0.5" aria-hidden="true">*</span>;
+  return (
+    <span className="text-red-600 ms-0.5" aria-hidden="true">
+      *
+    </span>
+  );
 }
 
 const ContactUs = () => {
@@ -40,19 +44,21 @@ const ContactUs = () => {
       // Frontend sanity check in case someone bypasses HTML5 validation
       const { firstName, email, message_text, agreeToLicense } = formData;
       if (!firstName || !email || !message_text || !agreeToLicense) {
-        toast.error("Please fill all required fields.", { position: "top-right" });
+        toast.error("Please fill all required fields.", {
+          position: "top-right",
+        });
         return;
       }
 
       const response = await axios.post(
         `${globalBackendRoute}/api/add-contact-message`,
-        formData
+        formData,
       );
 
       if (response.status === 201) {
         toast.success(
           "Message successfully sent! You will be notified within 24 hours.",
-          { position: "top-right" }
+          { position: "top-right" },
         );
         setFormData({
           firstName: "",
@@ -66,9 +72,12 @@ const ContactUs = () => {
       }
     } catch (error) {
       console.error("Error submitting contact message:", error);
-      toast.error("There was an issue submitting your message. Please try again.", {
-        position: "top-right",
-      });
+      toast.error(
+        "There was an issue submitting your message. Please try again.",
+        {
+          position: "top-right",
+        },
+      );
     }
   };
 
@@ -199,7 +208,10 @@ const ContactUs = () => {
                 />
                 <span className="text-sm text-gray-700">
                   I agree to the{" "}
-                  <a href="/terms-of-services" className="text-blue-600 underline">
+                  <a
+                    href="/terms-of-services"
+                    className="text-blue-600 underline"
+                  >
                     Terms of Service
                   </a>{" "}
                   and{" "}
@@ -260,7 +272,8 @@ const ContactUs = () => {
             <CiLocationOn className="w-16 h-16 text-blue-600 mt-1" />
             <div className="flex items-center">
               <p className="text-md text-gray-600 ms-2">
-                <span className="font-bold text-dark">Address :</span> #193, Hesaraghatta Road, Bagalagunte, Bangalore 560073
+                <span className="font-bold text-dark">Address :</span> #193,
+                Hesaraghatta Road, Bagalagunte, Bangalore 560073
               </p>
             </div>
           </div>

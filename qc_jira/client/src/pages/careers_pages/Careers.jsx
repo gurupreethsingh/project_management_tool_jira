@@ -371,19 +371,29 @@ function normalizeOpportunity(item, type) {
 const Careers = () => {
   const navigate = useNavigate();
 
-  const token =
-    localStorage.getItem("token") ||
-    localStorage.getItem("authToken") ||
-    localStorage.getItem("userToken");
+  // IMPORTANT:
+  // Do not read/parse localStorage user directly on every render.
+  // JSON.parse creates a new object each render, and when the user is logged in
+  // the prefill useEffect below runs again and again. That makes the Careers
+  // page slow and can make header navigation look stuck until manual reload.
+  const token = useMemo(() => {
+    return (
+      localStorage.getItem("token") ||
+      localStorage.getItem("authToken") ||
+      localStorage.getItem("userToken")
+    );
+  }, []);
 
-  let user = null;
-  try {
-    user = JSON.parse(localStorage.getItem("user"));
-  } catch {
-    user = null;
-  }
+  const user = useMemo(() => {
+    try {
+      const storedUser = localStorage.getItem("user");
+      return storedUser ? JSON.parse(storedUser) : null;
+    } catch {
+      return null;
+    }
+  }, []);
 
-  const isLoggedIn = !!token;
+  const isLoggedIn = Boolean(token);
 
   const [allItems, setAllItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -403,16 +413,32 @@ const Careers = () => {
   const [formData, setFormData] = useState(initialForm);
 
   useEffect(() => {
-    if (isLoggedIn && user?.email) {
-      setFormData((prev) => ({
+    if (!isLoggedIn || !user?.email) return;
+
+    const firstName = user?.name?.split(" ")?.[0] || "";
+    const lastName = user?.name?.split(" ")?.slice(1).join(" ") || "";
+
+    setFormData((prev) => {
+      const next = {
         ...prev,
-        firstName: prev.firstName || user?.name?.split(" ")?.[0] || "",
-        lastName:
-          prev.lastName || user?.name?.split(" ")?.slice(1).join(" ") || "",
+        firstName: prev.firstName || firstName,
+        lastName: prev.lastName || lastName,
         email: prev.email || user.email || "",
-      }));
-    }
-  }, [isLoggedIn, user]);
+      };
+
+      // Avoid setting a new object when nothing actually changed.
+      // This prevents unnecessary re-renders on logged-in Careers page.
+      if (
+        next.firstName === prev.firstName &&
+        next.lastName === prev.lastName &&
+        next.email === prev.email
+      ) {
+        return prev;
+      }
+
+      return next;
+    });
+  }, [isLoggedIn, user?.email, user?.name]);
 
   const fetchOpportunities = useCallback(async () => {
     try {
@@ -700,7 +726,41 @@ const Careers = () => {
   );
 
   return (
-    <div className="service-page-wrap min-h-screen bg-slate-50">
+    <div className="careers-page-root service-page-wrap relative z-0 min-h-screen bg-slate-50">
+      <style>{`
+        .careers-page-root,
+        .careers-page-root .service-page-wrap,
+        .careers-page-root .service-main-wrap {
+          position: relative !important;
+          z-index: 0 !important;
+        }
+
+        .careers-page-root .service-hero-section,
+        .careers-page-root .service-hero-overlay-1,
+        .careers-page-root .service-hero-overlay-2,
+        .careers-page-root .service-hero-overlay-3,
+        .careers-page-root .service-hero-section::before,
+        .careers-page-root .service-hero-section::after {
+          pointer-events: none !important;
+        }
+
+        .careers-page-root .service-hero-container,
+        .careers-page-root main,
+        .careers-page-root form,
+        .careers-page-root button,
+        .careers-page-root input,
+        .careers-page-root select,
+        .careers-page-root textarea,
+        .careers-page-root a {
+          pointer-events: auto !important;
+        }
+
+        body header,
+        body [data-main-header="true"] {
+          z-index: 2147483000 !important;
+          pointer-events: auto !important;
+        }
+      `}</style>
       <CareerHero
         title={
           <>
@@ -715,7 +775,7 @@ const Careers = () => {
         statCards={stats}
       />
 
-      <main className="service-main-wrap">
+      <main className="service-main-wrap relative z-0">
         <div className="container mx-auto space-y-6 px-4 py-8 sm:space-y-8 sm:px-6 sm:py-10 lg:px-10 lg:py-12">
           <CareerSearchToolbar
             search={search}
