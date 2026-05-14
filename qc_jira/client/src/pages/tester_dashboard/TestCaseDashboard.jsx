@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
   FaThList,
@@ -12,8 +12,24 @@ import {
 } from "react-icons/fa";
 import globalBackendRoute from "../../config/Config";
 
+const getUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user")) || {};
+  } catch {
+    return {};
+  }
+};
+
 const TestCaseDashboard = () => {
   const { projectId } = useParams();
+  const navigate = useNavigate();
+
+  const user = getUser();
+  const userId = user?._id || user?.id;
+  const assignedProjectsLink = userId
+    ? `/user-assigned-projects/${userId}`
+    : "/dashboard";
+
   const [testCases, setTestCases] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [view, setView] = useState("list");
@@ -25,6 +41,7 @@ const TestCaseDashboard = () => {
     selenium: 0,
     manual: 0,
   });
+
   const [severityCounts, setSeverityCounts] = useState({
     low: 0,
     medium: 0,
@@ -33,33 +50,35 @@ const TestCaseDashboard = () => {
     major: 0,
     blocker: 0,
   });
+
   const [moduleCounts, setModuleCounts] = useState({});
 
-  // derived lists for rendering (and filtering)
-  const moduleEntries = Object.entries(moduleCounts) // [["Module A", 3], ...]
-    .filter(([name]) =>
-      String(name).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const moduleEntries = Object.entries(moduleCounts).filter(([name]) =>
+    String(name).toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
-  const severityEntries = Object.entries(severityCounts) // [["low", 1], ...]
-    .filter(([name]) =>
-      String(name).toLowerCase().includes(searchQuery.toLowerCase())
-    );
+  const severityEntries = Object.entries(severityCounts).filter(([name]) =>
+    String(name).toLowerCase().includes(searchQuery.toLowerCase()),
+  );
 
   useEffect(() => {
+    if (!projectId) return;
     fetchTestCases();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [projectId]);
 
   const fetchTestCases = async () => {
     try {
       const token = localStorage.getItem("token");
+
       const { data } = await axios.get(
-        `${globalBackendRoute}/api/all-test-cases`,
-        { headers: { Authorization: `Bearer ${token}` } }
+        `${globalBackendRoute}/api/single-project/${projectId}/all-test-cases`,
+        { headers: { Authorization: `Bearer ${token}` } },
       );
-      setTestCases(data);
-      calculateCounts(data);
+
+      const rows = Array.isArray(data) ? data : [];
+      setTestCases(rows);
+      calculateCounts(rows);
     } catch (error) {
       console.error("Error fetching test cases:", error);
     }
@@ -80,10 +99,10 @@ const TestCaseDashboard = () => {
       major: 0,
       blocker: 0,
     };
+
     const mods = {};
 
     cases.forEach((tc) => {
-      // type
       switch ((tc.test_case_type || "").toLowerCase()) {
         case "functional":
           functionalCount++;
@@ -101,11 +120,9 @@ const TestCaseDashboard = () => {
           break;
       }
 
-      // severity
       const s = (tc.severity || "").toLowerCase();
       if (s in sev) sev[s]++;
 
-      // module
       if (tc.module_name) {
         mods[tc.module_name] = (mods[tc.module_name] || 0) + 1;
       }
@@ -123,11 +140,51 @@ const TestCaseDashboard = () => {
     setModuleCounts(mods);
   };
 
+  if (!projectId) {
+    return (
+      <div className="bg-white py-16 sm:py-20">
+        <div className="mx-auto container px-6 lg:px-8">
+          <div className="rounded-2xl border border-blue-100 bg-blue-50 p-6 shadow-sm">
+            <h2 className="text-xl font-bold text-blue-800">
+              Please Select a Project First
+            </h2>
+            <p className="mt-3 text-sm text-blue-700">
+              Test case dashboard needs a selected project. Please open your
+              assigned projects and select one project to view test cases,
+              modules, severity counts, defects, reports, and traceability
+              details.
+            </p>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                to={assignedProjectsLink}
+                state={{
+                  message:
+                    "Please select a project to view the test case dashboard.",
+                }}
+                className="rounded-xl bg-indigo-700 px-5 py-3 text-sm font-semibold text-white shadow hover:bg-indigo-900"
+              >
+                Go To Assigned Projects
+              </Link>
+
+              <button
+                type="button"
+                onClick={() => navigate(-1)}
+                className="rounded-xl bg-white px-5 py-3 text-sm font-semibold text-indigo-700 shadow hover:bg-gray-50"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* Header / controls — mirrors AllTestCases */}
-        <div className="flex justify-between items-center flex-wrap">
+      <div className="mx-auto px-6 lg:px-8">
+        <div className="flex justify-between items-center flex-wrap gap-4">
           <div>
             <h2 className="text-left font-semibold tracking-tight text-indigo-600 sm:text-1xl">
               Test Case Dashboard
@@ -179,27 +236,33 @@ const TestCaseDashboard = () => {
               />
             </div>
 
-            {/* Quick nav buttons to match AllTestCases button style */}
-            <div>
-              <a
-                href={`/single-project/${projectId}`}
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                Project Dashboard
-              </a>
-            </div>
-            <div>
-              <a
-                href="/all-bugs"
-                className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
-              >
-                Bugs
-              </a>
-            </div>
+            <Link
+              to={`/single-project/${projectId}`}
+              className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
+            >
+              Project Dashboard
+            </Link>
+
+            <Link
+              to={`/single-project/${projectId}/all-defects`}
+              className="bg-indigo-700 btn btn-sm text-light hover:bg-indigo-900"
+            >
+              Bugs
+            </Link>
+
+            <Link
+              to={assignedProjectsLink}
+              state={{
+                message:
+                  "Please select another project to view its test case dashboard.",
+              }}
+              className="bg-gray-700 btn btn-sm text-light hover:bg-gray-900"
+            >
+              Change Project
+            </Link>
           </div>
         </div>
 
-        {/* Summary tiles — styled to feel like AllTestCases’ clean cards */}
         <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div className="bg-white rounded-lg shadow p-4 flex items-center justify-between">
             <div>
@@ -260,12 +323,8 @@ const TestCaseDashboard = () => {
           </div>
         </div>
 
-        {/* 3 Views (list / grid / card) — matching spacing/shadows from AllTestCases */}
-
-        {/* LIST VIEW: show both severities and modules in stacked list cards */}
         {view === "list" && (
           <div className="mt-10 space-y-6">
-            {/* Severities */}
             <div className="flex items-center justify-between bg-white rounded-lg shadow relative p-4">
               <div className="flex flex-1 space-x-4">
                 <div className="flex flex-col w-4/12 border-r pr-2 border-gray-300">
@@ -295,7 +354,6 @@ const TestCaseDashboard = () => {
               </div>
             </div>
 
-            {/* Modules */}
             <div className="flex items-center justify-between bg-white rounded-lg shadow relative p-4">
               <div className="flex flex-1 space-x-4">
                 <div className="flex flex-col w-4/12 border-r pr-2 border-gray-300">
@@ -327,7 +385,6 @@ const TestCaseDashboard = () => {
           </div>
         )}
 
-        {/* GRID VIEW: modules as small tiles (mirrors grid cards in AllTestCases) */}
         {view === "grid" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mt-10">
             {moduleEntries.map(([mod, count]) => (
@@ -358,7 +415,6 @@ const TestCaseDashboard = () => {
           </div>
         )}
 
-        {/* CARD VIEW: severities as individual cards (mirrors card layout in AllTestCases) */}
         {view === "card" && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mt-10">
             {severityEntries.map(([sev, count]) => (

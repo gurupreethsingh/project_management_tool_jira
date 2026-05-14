@@ -2,66 +2,120 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import {
   FaClipboardList,
-  FaCalendarAlt,
   FaRegCalendarCheck,
   FaProjectDiagram,
   FaBug,
   FaThList,
   FaThLarge,
   FaTh,
+  FaCodeBranch,
+  FaUsers,
 } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import globalBackendRoute from "../../config/Config";
+
+const getUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem("user")) || {};
+  } catch {
+    return {};
+  }
+};
+
+const authHeaders = () => ({
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
 
 const DeveloperDashboard = () => {
   const [view, setView] = useState("grid");
   const [assignedProjects, setAssignedProjects] = useState(0);
   const [assignedDefects, setAssignedDefects] = useState(0);
-  const [assignedEvents, setAssignedEvents] = useState(0);
-  const [upcomingEvents, setUpcomingEvents] = useState(0);
-  const [scheduledMeetings, setScheduledMeetings] = useState(0);
+  const [attendanceCount, setAttendanceCount] = useState(0);
+  const [assignedProjectsList, setAssignedProjectsList] = useState([]);
+  const [error, setError] = useState("");
 
-  const [attendanceCount, setAttendanceCount] = useState(0); // ✅ State for attendance
-
-  const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user ? user.id : null;
-  const role = user ? user.role : "developer";
+  const user = getUser();
+  const userId = user?._id || user?.id;
+  const role = user?.role || "developer";
 
   useEffect(() => {
     if (userId && role) {
       fetchCounts();
     } else {
-      console.error("User ID or role not found in localStorage");
+      setError("User ID or role not found. Please login again.");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, role]);
 
   const fetchCounts = async () => {
     try {
-      // Assigned projects
-      const response = await axios.get(
+      setError("");
+
+      const projectCountRes = await axios.get(
         `${globalBackendRoute}/api/user-project-count/${userId}?role=${encodeURIComponent(
-          role
-        )}`
+          role,
+        )}`,
+        authHeaders(),
       );
-      setAssignedProjects(response.data.assignedProjectsCount);
 
-      // Assigned defects (developer-lead view for this user)
-      const defectRes = await axios.get(
-        `${globalBackendRoute}/api/developer-lead/${userId}/assigned-defects`
+      setAssignedProjects(
+        Number(projectCountRes?.data?.assignedProjectsCount || 0),
       );
-      setAssignedDefects(defectRes.data.defects.length);
 
-      // Attendance count for this employee (auth required)
-      const attendanceRes = await axios.get(
-        `${globalBackendRoute}/api/count-attendance/employee/${userId}`,
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
-      setAttendanceCount(attendanceRes.data.count);
+      try {
+        const assignedProjectsRes = await axios.get(
+          `${globalBackendRoute}/api/user-assigned-projects/${userId}`,
+          authHeaders(),
+        );
+
+        const projects =
+          assignedProjectsRes?.data?.assignedProjects ||
+          assignedProjectsRes?.data?.projects ||
+          [];
+
+        setAssignedProjectsList(projects);
+      } catch (projectListErr) {
+        console.error("Assigned projects list error:", projectListErr);
+      }
+
+      try {
+        const defectEndpoint =
+          role === "developer_lead"
+            ? `${globalBackendRoute}/api/developer-lead/${userId}/assigned-defects`
+            : `${globalBackendRoute}/api/developer/${userId}/assigned-defects`;
+
+        const defectRes = await axios.get(defectEndpoint, authHeaders());
+
+        setAssignedDefects(
+          Array.isArray(defectRes?.data?.defects)
+            ? defectRes.data.defects.length
+            : Number(defectRes?.data?.count || 0),
+        );
+      } catch (defectErr) {
+        console.error("Assigned defects count error:", defectErr);
+        setAssignedDefects(0);
+      }
+
+      try {
+        const attendanceRes = await axios.get(
+          `${globalBackendRoute}/api/count-attendance/employee/${userId}`,
+          authHeaders(),
+        );
+
+        setAttendanceCount(Number(attendanceRes?.data?.count || 0));
+      } catch (attendanceErr) {
+        console.error("Attendance count error:", attendanceErr);
+        setAttendanceCount(0);
+      }
     } catch (error) {
-      console.error("Error fetching dashboard data:", error);
+      console.error("Error fetching developer dashboard data:", error);
+      setError(
+        error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "Failed to fetch dashboard data.",
+      );
     }
   };
 
@@ -69,80 +123,93 @@ const DeveloperDashboard = () => {
     setView(viewType);
   };
 
-  const renderCounts = () => {
-    const counts = [
-      {
-        title: "Assigned Projects",
-        count: assignedProjects,
-        icon: <FaProjectDiagram className="text-blue-500" />,
-        linkText: "View Assigned Projects",
-        link: `/user-assigned-projects/${userId}`,
-      },
-      {
-        title: "Assigned Defects",
-        count: assignedDefects,
-        icon: <FaBug className="text-red-500" />,
-        linkText: "View Assigned Defects",
-        link: `/single-project/${userId}/developer/${userId}/view-assigned-defects`,
-      },
-      {
-        title: "Mark Attendance",
-        count: attendanceCount,
-        icon: <FaRegCalendarCheck className="text-green-600" />,
-        linkText: "Go to Attendance",
-        link: `/create-attendance`,
-      },
-      {
-        title: "Assigned Events",
-        count: assignedEvents,
-        icon: <FaClipboardList className="text-green-500" />,
-        linkText: "View Assigned Events",
-        link: "/assigned-events",
-      },
-      {
-        title: "Upcoming Events",
-        count: upcomingEvents,
-        icon: <FaRegCalendarCheck className="text-purple-500" />,
-        linkText: "View Upcoming Events",
-        link: "/upcoming-events",
-      },
-      {
-        title: "Scheduled Meetings",
-        count: scheduledMeetings,
-        icon: <FaCalendarAlt className="text-orange-500" />,
-        linkText: "View Scheduled Meetings",
-        link: "/scheduled-meetings",
-      },
-    ];
+  const dashboardTitle =
+    role === "developer_lead"
+      ? "Developer Lead Dashboard"
+      : "Developer Dashboard";
 
+  const counts = [
+    {
+      title: "Assigned Projects",
+      count: assignedProjects,
+      icon: <FaProjectDiagram className="text-blue-500" />,
+      linkText: "View Assigned Projects",
+      link: `/user-assigned-projects/${userId}`,
+    },
+    {
+      title: "Assigned Defects",
+      count: assignedDefects,
+      icon: <FaBug className="text-red-500" />,
+      linkText: "Select Project First",
+      link: `/user-assigned-projects/${userId}`,
+    },
+    {
+      title: "Mark Attendance",
+      count: attendanceCount,
+      icon: <FaRegCalendarCheck className="text-green-600" />,
+      linkText: "Go to Attendance",
+      link: "/create-attendance",
+    },
+    {
+      title: "Role",
+      count: role === "developer_lead" ? "Lead" : "Dev",
+      icon: <FaCodeBranch className="text-purple-500" />,
+      linkText: "View Profile",
+      link: `/profile/${userId}`,
+    },
+    {
+      title: "Project Members",
+      count: assignedProjectsList.length,
+      icon: <FaUsers className="text-orange-500" />,
+      linkText: "View Projects",
+      link: `/user-assigned-projects/${userId}`,
+    },
+  ];
+
+  const renderCounts = () => {
     return (
       <div
         className={`${
           view === "grid"
             ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4"
             : view === "card"
-            ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"
-            : "space-y-4"
+              ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6"
+              : "space-y-4"
         }`}
       >
         {counts.map((item, index) => (
           <div
             key={index}
-            className="bg-white p-4 shadow-lg rounded-lg flex flex-col items-center relative"
+            className={`bg-white p-4 shadow-lg rounded-lg ${
+              view === "list"
+                ? "flex flex-row items-center justify-between"
+                : "flex flex-col items-center"
+            }`}
           >
             <div className="text-4xl mb-2 flex justify-center">{item.icon}</div>
-            <h3 className="text-xs font-semibold text-gray-600">
-              {item.title}
-            </h3>
-            <p className="text-2xl font-semibold text-indigo-600 mt-2">
-              {item.count}
-            </p>
-            <Link
-              to={item.link}
-              className="mt-2 text-xs text-indigo-600 hover:text-indigo-800"
-            >
-              {item.linkText}
-            </Link>
+
+            <div className={view === "list" ? "flex-1 ml-4" : "text-center"}>
+              <h3 className="text-xs font-semibold text-gray-600">
+                {item.title}
+              </h3>
+
+              <p className="text-2xl font-semibold text-indigo-600 mt-2">
+                {item.count}
+              </p>
+
+              <Link
+                to={item.link}
+                state={{
+                  message:
+                    item.title === "Assigned Defects"
+                      ? "Please select a project to view project-specific assigned defects."
+                      : undefined,
+                }}
+                className="mt-2 inline-block text-xs text-indigo-600 hover:text-indigo-800"
+              >
+                {item.linkText}
+              </Link>
+            </div>
           </div>
         ))}
       </div>
@@ -151,11 +218,17 @@ const DeveloperDashboard = () => {
 
   return (
     <div className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto container">
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
-          <h3 className="text-2xl font-bold text-start text-indigo-600">
-            Developer Dashboard
-          </h3>
+          <div>
+            <h3 className="text-2xl font-bold text-start text-indigo-600">
+              {dashboardTitle}
+            </h3>
+            <p className="text-sm text-gray-600 mt-2">
+              Logged in as:{" "}
+              <span className="font-semibold text-gray-800">{role}</span>
+            </p>
+          </div>
 
           <div className="flex space-x-4 justify-center md:justify-start">
             <FaThList
@@ -178,6 +251,12 @@ const DeveloperDashboard = () => {
             />
           </div>
         </div>
+
+        {error && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+            {error}
+          </div>
+        )}
 
         {renderCounts()}
       </div>

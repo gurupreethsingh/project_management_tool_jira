@@ -443,7 +443,14 @@ const SingleProject = () => {
                   Generate Report
                 </Link>
 
-                <Link to={`/all-reports`} className={baseBtn}>
+                <Link
+                  to={`/single-project/${projectId}/all-reports`}
+                  state={{
+                    projectId,
+                    projectName: project.projectName,
+                  }}
+                  className={baseBtn}
+                >
                   <FaBusinessTime className="text-[10px]" />
                   View All Reports
                 </Link>

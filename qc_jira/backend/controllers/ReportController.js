@@ -25,6 +25,7 @@ function isValidObjectId(id) {
 function buildReportFilter(queryParams = {}) {
   const {
     project,
+    projectId,
     task,
     reporter,
     recipient,
@@ -36,52 +37,55 @@ function buildReportFilter(queryParams = {}) {
     onlyDeleted,
     q,
     isViewed,
-    onlyGeneral, // NEW OPTIONAL: filter only general reports (no project/task)
+    onlyGeneral,
   } = queryParams;
 
   const filter = {};
 
-  // Deleted flags
   if (onlyDeleted === "true" || onlyDeleted === true) {
     filter.isDeleted = true;
   } else if (includeDeleted === "true" || includeDeleted === true) {
-    // include all
+    // show both deleted and active
   } else {
     filter.isDeleted = false;
   }
 
-  // View status filter (handle string 'true'/'false' from query)
   if (typeof isViewed === "string") {
-    if (isViewed.toLowerCase() === "true") {
-      filter.isViewed = true;
-    } else if (isViewed.toLowerCase() === "false") {
-      filter.isViewed = false;
-    }
+    if (isViewed.toLowerCase() === "true") filter.isViewed = true;
+    if (isViewed.toLowerCase() === "false") filter.isViewed = false;
   } else if (isViewed === true || isViewed === false) {
     filter.isViewed = isViewed;
   }
 
-  // General vs linked reports
   if (onlyGeneral === "true") {
-    // reports with NO project AND NO task
     filter.project = { $exists: true, $eq: null };
     filter.task = { $exists: true, $eq: null };
   } else {
-    if (project) filter.project = project;
-    if (task) filter.task = task;
+    const finalProjectId = project || projectId;
+
+    if (finalProjectId && mongoose.Types.ObjectId.isValid(finalProjectId)) {
+      filter.project = finalProjectId;
+    }
+
+    if (task && mongoose.Types.ObjectId.isValid(task)) {
+      filter.task = task;
+    }
   }
 
-  if (reporter) filter.reporter = reporter;
-  if (recipient) filter.recipients = recipient;
+  if (reporter && mongoose.Types.ObjectId.isValid(reporter)) {
+    filter.reporter = reporter;
+  }
+
+  if (recipient && mongoose.Types.ObjectId.isValid(recipient)) {
+    filter.recipients = recipient;
+  }
+
   if (overallStatus) filter.overallStatus = overallStatus;
   if (taskStatus) filter.taskStatusAtReport = taskStatus;
 
-  // Date range on createdAt
   if (fromDate || toDate) {
     filter.createdAt = {};
-    if (fromDate) {
-      filter.createdAt.$gte = new Date(fromDate);
-    }
+    if (fromDate) filter.createdAt.$gte = new Date(fromDate);
     if (toDate) {
       const end = new Date(toDate);
       end.setHours(23, 59, 59, 999);
@@ -89,7 +93,6 @@ function buildReportFilter(queryParams = {}) {
     }
   }
 
-  // Simple text search
   if (q && typeof q === "string" && q.trim() !== "") {
     const regex = new RegExp(q.trim(), "i");
     filter.$or = [
@@ -299,14 +302,13 @@ async function listReports(req, res) {
   try {
     const {
       page = 1,
-      limit = 20,
+      limit = 100,
       sortBy = "createdAt",
       sortDir = "desc",
     } = req.query;
 
     const filter = buildReportFilter(req.query);
 
-    // Validate sort field
     const allowedSortFields = [
       "createdAt",
       "updatedAt",
@@ -319,12 +321,13 @@ async function listReports(req, res) {
       "isViewed",
       "viewedAt",
     ];
+
     const sortField = allowedSortFields.includes(sortBy) ? sortBy : "createdAt";
     const sortDirection = sortDir === "asc" ? 1 : -1;
     const sort = { [sortField]: sortDirection };
 
     const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 20;
+    const limitNum = parseInt(limit, 10) || 100;
     const skip = (pageNum - 1) * limitNum;
 
     const [items, total] = await Promise.all([
@@ -332,9 +335,11 @@ async function listReports(req, res) {
         .sort(sort)
         .skip(skip)
         .limit(limitNum)
-        .populate("project", "project_name name key")
-        .populate("task", "title status")
-        .populate("reporter", "name email"),
+        .populate("project", "projectName project_name name title key")
+        .populate("task", "title task_title status")
+        .populate("reporter", "name email")
+        .populate("recipients", "name email")
+        .lean(),
       Report.countDocuments(filter),
     ]);
 
@@ -348,6 +353,7 @@ async function listReports(req, res) {
         totalPages: Math.ceil(total / limitNum),
         sortBy: sortField,
         sortDir: sortDir === "asc" ? "asc" : "desc",
+        filter,
       },
     });
   } catch (err) {
@@ -406,7 +412,7 @@ async function updateReport(req, res) {
     const report = await Report.findOneAndUpdate(
       { _id: id, isDeleted: false },
       { $set: update },
-      { new: true }
+      { new: true },
     );
 
     if (!report) {
@@ -441,7 +447,7 @@ async function changeStatus(req, res) {
 
     if (
       !["draft", "submitted", "under_review", "approved", "rejected"].includes(
-        overallStatus
+        overallStatus,
       )
     ) {
       return res.status(400).json({
@@ -458,7 +464,7 @@ async function changeStatus(req, res) {
           updatedBy: currentUserId || undefined,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!report) {
@@ -551,7 +557,7 @@ async function softDeleteReport(req, res) {
           updatedBy: currentUserId || undefined,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!report) {
@@ -623,7 +629,7 @@ async function restoreReport(req, res) {
           updatedBy: currentUserId || undefined,
         },
       },
-      { new: true }
+      { new: true },
     );
 
     if (!report) {
@@ -692,7 +698,7 @@ async function countReportsGrouped(req, res) {
       return res.status(400).json({
         success: false,
         message: `Invalid groupBy value. Use one of: ${allowedGroupFields.join(
-          ", "
+          ", ",
         )}`,
       });
     }
@@ -830,7 +836,7 @@ async function bulkChangeStatus(req, res) {
 
     if (
       !["draft", "submitted", "under_review", "approved", "rejected"].includes(
-        overallStatus
+        overallStatus,
       )
     ) {
       return res.status(400).json({
@@ -846,7 +852,7 @@ async function bulkChangeStatus(req, res) {
           overallStatus,
           updatedBy: currentUserId || undefined,
         },
-      }
+      },
     );
 
     return res.status(200).json({
@@ -890,7 +896,7 @@ async function bulkSoftDeleteReports(req, res) {
           isDeleted: true,
           updatedBy: currentUserId || undefined,
         },
-      }
+      },
     );
 
     return res.status(200).json({
@@ -968,7 +974,7 @@ async function bulkRestoreReports(req, res) {
           isDeleted: false,
           updatedBy: currentUserId || undefined,
         },
-      }
+      },
     );
 
     return res.status(200).json({
@@ -1019,7 +1025,7 @@ async function bulkUpdateRecipients(req, res) {
           recipients,
           updatedBy: currentUserId || undefined,
         },
-      }
+      },
     );
 
     return res.status(200).json({
@@ -1100,7 +1106,7 @@ async function exportReport(req, res) {
       pushRow("Task", report.task?.title || "");
       pushRow(
         "Reporter",
-        report.reporter?.name || report.reporter?.email || ""
+        report.reporter?.name || report.reporter?.email || "",
       );
       pushRow("Overall Status", report.overallStatus || "");
       pushRow("Task Status @ Report", report.taskStatusAtReport || "");
@@ -1109,25 +1115,25 @@ async function exportReport(req, res) {
         "Planned Start",
         report.plannedStartDate
           ? new Date(report.plannedStartDate).toLocaleString()
-          : ""
+          : "",
       );
       pushRow(
         "Planned End",
         report.plannedEndDate
           ? new Date(report.plannedEndDate).toLocaleString()
-          : ""
+          : "",
       );
       pushRow(
         "Actual Start",
         report.actualStartDate
           ? new Date(report.actualStartDate).toLocaleString()
-          : ""
+          : "",
       );
       pushRow(
         "Actual End",
         report.actualEndDate
           ? new Date(report.actualEndDate).toLocaleString()
-          : ""
+          : "",
       );
       pushRow("Time Spent (mins)", report.timeSpentMinutes ?? "");
       pushRow("Remarks", report.remarks || "");
@@ -1140,15 +1146,15 @@ async function exportReport(req, res) {
               .map((u) => u.name || u.email || "")
               .filter(Boolean)
               .join(", ")
-          : ""
+          : "",
       );
       pushRow(
         "Created At",
-        report.createdAt ? new Date(report.createdAt).toLocaleString() : ""
+        report.createdAt ? new Date(report.createdAt).toLocaleString() : "",
       );
       pushRow(
         "Updated At",
-        report.updatedAt ? new Date(report.updatedAt).toLocaleString() : ""
+        report.updatedAt ? new Date(report.updatedAt).toLocaleString() : "",
       );
 
       // Header styling
@@ -1158,11 +1164,11 @@ async function exportReport(req, res) {
 
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       );
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${fileBaseName}.xlsx"`
+        `attachment; filename="${fileBaseName}.xlsx"`,
       );
 
       await workbook.xlsx.write(res);
@@ -1208,7 +1214,7 @@ async function exportReport(req, res) {
                 children: [
                   new TextRun({ text: "Reporter: ", bold: true }),
                   new TextRun(
-                    report.reporter?.name || report.reporter?.email || "N/A"
+                    report.reporter?.name || report.reporter?.email || "N/A",
                   ),
                 ],
               }),
@@ -1285,11 +1291,11 @@ async function exportReport(req, res) {
 
       res.setHeader(
         "Content-Type",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename="${fileBaseName}.docx"`
+        `attachment; filename="${fileBaseName}.docx"`,
       );
       return res.send(buffer);
     }

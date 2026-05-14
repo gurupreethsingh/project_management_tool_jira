@@ -33,8 +33,8 @@ const AllAssignedProjects = () => {
     try {
       const response = await axios.get(
         `${globalBackendRoute}/api/user-assigned-projects/${userId}?search=${encodeURIComponent(
-          searchTerm
-        )}`
+          searchTerm,
+        )}`,
       );
       setProjects(response.data.assignedProjects || []);
       setCurrentPage(1); // reset to first page after fetching results
@@ -64,7 +64,7 @@ const AllAssignedProjects = () => {
   const indexOfFirstProject = indexOfLastProject - projectsPerPage;
   const currentProjects = projects.slice(
     indexOfFirstProject,
-    indexOfLastProject
+    indexOfLastProject,
   );
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
@@ -176,7 +176,7 @@ const AllAssignedProjects = () => {
 
   return (
     <div className="py-16 sm:py-20">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto container px-6 lg:px-8">
         {/* All Assigned Projects title */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 space-y-4 md:space-y-0 md:space-x-6">
           <h3 className="text-2xl font-bold text-start text-indigo-600">

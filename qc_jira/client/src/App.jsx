@@ -158,6 +158,9 @@ import Careers from "./pages/careers_pages/Careers";
 import AllCareerApplications from "./pages/careers_pages/AllCareerApplications";
 import SingleCareerApplication from "./pages/careers_pages/SingleCareerApplication";
 
+// reports pages.
+import AllProjectReports from "./pages/report_pages/AllProjectReports";
+
 const PageTitle = ({ title, children }) => {
   useEffect(() => {
     BrokenLinksOperations;
@@ -361,11 +364,22 @@ function App() {
         />
 
         <Route
-          path="/all-reports"
+          path="/single-project/:projectId/all-reports"
           element={
             <PrivateRoute>
               <PageTitle title="All Reports">
                 <AllReports />
+              </PageTitle>
+            </PrivateRoute>
+          }
+        />
+
+        <Route
+          path="/all-project-reports"
+          element={
+            <PrivateRoute>
+              <PageTitle title="All Project Reports">
+                <AllProjectReports />
               </PageTitle>
             </PrivateRoute>
           }
